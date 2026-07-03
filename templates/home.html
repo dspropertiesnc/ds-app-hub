@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block nav %}{% if has_login %}<a href="/logout">Sign out</a>{% endif %}{% endblock %}
+{% block style %}
+  h2{font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent-dark);margin:22px 0 10px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+  .card{display:block;background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;text-decoration:none;color:inherit;transition:.12s}
+  .card:hover{border-color:var(--accent);box-shadow:0 2px 10px rgba(167,129,71,.12)}
+  .card.soon{opacity:.55;pointer-events:none}
+  .ic{font-size:24px}
+  .nm{font-weight:700;margin:8px 0 4px;color:var(--accent-dark)}
+  .ds{font-size:13px;color:var(--gray)}
+  .tag{display:inline-block;margin-top:10px;font-size:11px;background:var(--sub);color:var(--accent-dark);padding:3px 8px;border-radius:20px}
+  .lead{color:var(--gray);font-size:14px;margin:2px 0 6px}
+{% endblock %}
+{% block content %}
+  <h1 style="color:var(--accent-dark);margin:6px 0 0">Company Tools</h1>
+  <p class="lead">Pick a tool for what you're working on.</p>
+  {% for g in groups %}
+    <h2>{{ g.group }}</h2>
+    <div class="grid">
+      {% for t in g["items"] %}
+        <a class="card {{ '' if t.ready else 'soon' }}" href="{{ t.url }}">
+          <div class="ic">{{ t.icon }}</div>
+          <div class="nm">{{ t.name }}</div>
+          <div class="ds">{{ t.desc }}</div>
+          <span class="tag">{{ 'Open' if t.ready else 'Coming soon' }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% endfor %}
+{% endblock %}

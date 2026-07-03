@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: ds-tools
+    runtime: python
+    plan: free              # Word-only tools are light. Use "starter" (~$7/mo) to avoid cold starts.
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: PUNCHLIST_MODEL
+        value: claude-sonnet-4-6
+      - key: APP_PASSWORD
+        sync: false          # optional: set a shared team password. Leave unset = open.

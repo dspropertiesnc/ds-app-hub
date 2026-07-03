@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Sign in — Doss &amp; Spaulding Tools{% endblock %}
+{% block style %}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px;max-width:320px;margin:40px auto;text-align:center}
+  input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:16px}
+  button{width:100%;margin-top:12px;background:var(--accent);color:#fff;border:0;border-radius:10px;padding:13px;font-size:16px;font-weight:700;cursor:pointer}
+  .err{color:#b3261e;font-size:13px;min-height:16px;margin-top:10px}
+{% endblock %}
+{% block content %}
+  <form class="card" method="post">
+    <div style="font-weight:700;color:var(--accent-dark);margin-bottom:14px">Company Tools</div>
+    <input type="password" name="password" placeholder="Team password" autofocus autocomplete="current-password">
+    <button type="submit">Sign in</button>
+    <div class="err">{{ error }}</div>
+  </form>
+{% endblock %}
