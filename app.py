@@ -1,6 +1,7 @@
 import os
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from tools.punchlist import bp as punchlist_bp, META as PUNCHLIST_META
+from tools.listings import bp as listings_bp, META as LISTINGS_META
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24).hex())
@@ -8,14 +9,12 @@ app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024
 APP_PASSWORD = os.environ.get("APP_PASSWORD")  # unset = open (local/dev)
 
 app.register_blueprint(punchlist_bp)
+app.register_blueprint(listings_bp)
 
 # ---- Tool registry, grouped by workflow. Add a card here for each new tool. ----
 TOOL_GROUPS = [
     {"group": "Maintenance & Turns", "items": [PUNCHLIST_META]},
-    {"group": "Marketing", "items": [
-        {"name": "Listing Description Generator", "desc": "Draft listing copy from property details.",
-         "url": "#", "icon": "🏠", "ready": False},
-    ]},
+    {"group": "Marketing", "items": [LISTINGS_META]},
     {"group": "Leasing", "items": [
         {"name": "More tools coming", "desc": "Your other tools will live here.", "url": "#", "icon": "📋", "ready": False},
     ]},

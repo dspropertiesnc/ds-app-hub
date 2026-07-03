@@ -32,3 +32,6 @@ python app.py                               # http://localhost:5000
 ## Notes
 - Tools output Word (.docx); open and Save As PDF if a PDF is needed.
 - Cost: free Render instance + ~a cent or two of Anthropic usage per generation.
+
+## Listing generator model
+The listing tool uses `ANTHROPIC_MODEL` (default `claude-sonnet-4-5-20250929`); override with `LISTING_MODEL` if needed.

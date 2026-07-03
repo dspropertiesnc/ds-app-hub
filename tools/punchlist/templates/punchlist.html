@@ -22,8 +22,9 @@
   textarea{min-height:150px;resize:vertical;line-height:1.4}
   .photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-top:10px}
   .ph{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;position:relative}
-  .ph img{width:100%;height:90px;object-fit:cover;display:block}
+  .ph img{width:100%;height:90px;object-fit:cover;display:block;background:#eee}
   .ph .x{position:absolute;top:3px;right:4px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:50%;width:20px;height:20px;font-size:13px;cursor:pointer;line-height:1}
+  .ph.up{display:flex;align-items:center;justify-content:center;height:90px;color:var(--gray);font-size:12px}
   .toggle{display:flex;font-size:12px}
   .toggle button{flex:1;border:0;padding:7px 0;background:#f0ece4;color:#775f38;cursor:pointer}
   .toggle button.on{background:var(--accent);color:#fff;font-weight:600}
@@ -37,6 +38,7 @@
   .dl a{flex:1;text-align:center;text-decoration:none;background:var(--accent);color:#fff;padding:14px;border-radius:10px;font-weight:700}
   .sum{font-size:13px;color:#333;margin-top:6px}
   .warn{background:#fbf3e2;border:1px solid #e6cfa0;color:#7a5b1a;padding:10px;border-radius:8px;font-size:12px;margin-top:10px}
+  .newlink{display:inline-block;margin-top:12px;color:var(--accent-dark);font-weight:600;text-decoration:none;font-size:13px;cursor:pointer}
   .spin{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:s .8s linear infinite;vertical-align:-3px;margin-right:8px}
   @keyframes s{to{transform:rotate(360deg)}}
 </style>
@@ -66,7 +68,7 @@ Smoke detectors (3) - completed while at property"></textarea>
   <input id="clfiles" type="file" accept="image/*" multiple style="display:none">
   <div class="photos" id="clphotos"></div>
 
-  <label>Property photos <span class="hint">Add photos of the work, then tap Inside or Outside for each. Inside photos go at the end of the Interior section, Outside at the end of Exterior.</span></label>
+  <label>Property photos <span class="hint">Add photos of the work, then tap Inside or Outside for each. Each photo saves as soon as you add it, so taking them one-by-one is safe. Inside photos go at the end of the Interior section, Outside at the end of Exterior.</span></label>
   <label class="addbtn" for="filein">+ Add property photos</label>
   <input id="filein" type="file" accept="image/*" multiple style="display:none">
   <div class="photos" id="photos"></div>
@@ -76,71 +78,116 @@ Smoke detectors (3) - completed while at property"></textarea>
 </main>
 
 <script>
-let items=[]; let clItems=[];
+const LS='pl_state_v1';
+function newJob(){ let u=(crypto.randomUUID?crypto.randomUUID():('x'.repeat(32))).replace(/[^0-9a-f]/g,''); return (u+'0'.repeat(32)).slice(0,32); }
+let state = load() || {job:newJob(), address:'', checklist:'', items:[], cl:[]};
+let pending = 0;
+
+function load(){ try{ return JSON.parse(localStorage.getItem(LS)); }catch(e){ return null; } }
+function save(){
+  state.address=document.getElementById('address').value;
+  state.checklist=document.getElementById('checklist').value;
+  try{ localStorage.setItem(LS, JSON.stringify(state)); }catch(e){}
+}
+function resetAll(){
+  state={job:newJob(), address:'', checklist:'', items:[], cl:[]};
+  document.getElementById('address').value=''; document.getElementById('checklist').value='';
+  document.getElementById('result').style.display='none';
+  save(); render(); renderCl();
+}
+
 const photosEl=document.getElementById('photos');
 const clEl=document.getElementById('clphotos');
-async function toStored(f){
-  const buf=await f.arrayBuffer(); const type=f.type||'image/jpeg';
-  const name=f.name||('photo_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.jpg');
-  return {blob:new Blob([buf],{type}), name};
+
+async function uploadOne(file, kind){
+  const fd=new FormData(); fd.append('job',state.job); fd.append('kind',kind); fd.append('photo',file, file.name||'photo.jpg');
+  const r=await fetch('upload',{method:'POST',body:fd});
+  if(!r.ok){ throw new Error('upload failed'); }
+  return (await r.json()).id;
 }
-document.getElementById('filein').addEventListener('change',async e=>{
-  const files=[...e.target.files]; e.target.value='';
-  for(const f of files){ const s=await toStored(f); items.push({...s,tag:'interior'}); render(); }
-});
-document.getElementById('clfiles').addEventListener('change',async e=>{
-  const files=[...e.target.files]; e.target.value='';
-  for(const f of files){ const s=await toStored(f); clItems.push(s); renderCl(); }
-});
+
+async function handleAdd(files, kind){
+  for(const f of files){
+    pending++; renderPending(kind); syncGo();
+    try{
+      const id=await uploadOne(f, kind);
+      if(kind==='checklist') state.cl.push({id}); else state.items.push({id,tag:'interior'});
+      save();
+    }catch(e){ /* skip failed */ }
+    pending--; syncGo();
+    if(kind==='checklist') renderCl(); else render();
+  }
+}
+document.getElementById('filein').addEventListener('change',e=>{ const fs=[...e.target.files]; e.target.value=''; handleAdd(fs,'property'); });
+document.getElementById('clfiles').addEventListener('change',e=>{ const fs=[...e.target.files]; e.target.value=''; handleAdd(fs,'checklist'); });
+
+function thumb(kind,id){ return 'photo/'+state.job+'/'+kind+'/'+id; }
+function renderPending(kind){
+  const el = kind==='checklist'?clEl:photosEl;
+  const d=document.createElement('div'); d.className='ph up pend'; d.textContent='Uploading…'; el.appendChild(d);
+}
 function render(){
   photosEl.innerHTML='';
-  items.forEach((it,i)=>{
+  state.items.forEach((it,i)=>{
     const d=document.createElement('div'); d.className='ph';
-    const img=document.createElement('img'); img.src=URL.createObjectURL(it.blob); d.appendChild(img);
-    const x=document.createElement('button'); x.className='x'; x.textContent='×'; x.onclick=()=>{items.splice(i,1);render()}; d.appendChild(x);
+    const img=document.createElement('img'); img.src=thumb('property',it.id); img.onerror=()=>{state.items.splice(i,1);save();render();}; d.appendChild(img);
+    const x=document.createElement('button'); x.className='x'; x.textContent='×'; x.onclick=()=>{state.items.splice(i,1);save();render();}; d.appendChild(x);
     const t=document.createElement('div'); t.className='toggle';
     const bi=document.createElement('button'); bi.textContent='Inside';
     const bo=document.createElement('button'); bo.textContent='Outside';
     (it.tag==='interior'?bi:bo).classList.add('on');
-    bi.onclick=()=>{it.tag='interior';render()}; bo.onclick=()=>{it.tag='exterior';render()};
+    bi.onclick=()=>{it.tag='interior';save();render()}; bo.onclick=()=>{it.tag='exterior';save();render()};
     t.appendChild(bi); t.appendChild(bo); d.appendChild(t); photosEl.appendChild(d);
   });
 }
 function renderCl(){
   clEl.innerHTML='';
-  clItems.forEach((it,i)=>{
+  state.cl.forEach((it,i)=>{
     const d=document.createElement('div'); d.className='ph';
-    const img=document.createElement('img'); img.src=URL.createObjectURL(it.blob); d.appendChild(img);
-    const x=document.createElement('button'); x.className='x'; x.textContent='×'; x.onclick=()=>{clItems.splice(i,1);renderCl()}; d.appendChild(x);
+    const img=document.createElement('img'); img.src=thumb('checklist',it.id); img.onerror=()=>{state.cl.splice(i,1);save();renderCl();}; d.appendChild(img);
+    const x=document.createElement('button'); x.className='x'; x.textContent='×'; x.onclick=()=>{state.cl.splice(i,1);save();renderCl();}; d.appendChild(x);
     clEl.appendChild(d);
   });
 }
+function syncGo(){
+  const btn=document.getElementById('go');
+  if(pending>0){ btn.disabled=true; btn.innerHTML='<span class="spin"></span>Saving photos…'; }
+  else if(!btn.dataset.busy){ btn.disabled=false; btn.textContent='Generate punchlist'; }
+}
+
+document.getElementById('address').addEventListener('input',save);
+document.getElementById('checklist').addEventListener('input',save);
+
 document.getElementById('go').onclick=async()=>{
-  const address=document.getElementById('address').value.trim();
-  const checklist=document.getElementById('checklist').value.trim();
+  save();
   const res=document.getElementById('result');
-  if(!checklist && clItems.length===0){res.style.display='block';res.innerHTML='<b>Type a checklist or add a photo of one.</b>';return;}
-  const btn=document.getElementById('go'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>Generating…';
+  if(!state.checklist.trim() && state.cl.length===0){res.style.display='block';res.innerHTML='<b>Type a checklist or add a photo of one.</b>';return;}
+  if(pending>0){res.style.display='block';res.innerHTML='<b>Please wait — photos are still saving.</b>';return;}
+  const btn=document.getElementById('go'); btn.dataset.busy='1'; btn.disabled=true; btn.innerHTML='<span class="spin"></span>Generating…';
   const fd=new FormData();
-  fd.append('address',address); fd.append('checklist',checklist);
-  clItems.forEach(it=>fd.append('checklist_images',it.blob,it.name));
-  items.forEach(it=>{ fd.append('photos',it.blob,it.name); fd.append('tags',it.tag); });
+  fd.append('job',state.job); fd.append('address',state.address); fd.append('checklist',state.checklist);
+  fd.append('manifest', JSON.stringify({property:state.items, checklist:state.cl.map(c=>c.id)}));
   try{
     const r=await fetch('generate',{method:'POST',body:fd});
     const j=await r.json();
     if(!r.ok){throw new Error(j.error||'Generation failed');}
     let html='<b>Punchlist ready.</b><div class="dl">';
-    html+=`<a href="download/${j.job}/docx">Download Word (.docx)</a></div>`;
-    j.sections.forEach(s=>{
-      const subs=s.subs.map(x=>`${x.name} (${x.count})`).join(', ');
-      html+=`<div class="sum"><b>${s.name}</b>: ${subs||'—'} &middot; ${s.photos} photo(s)</div>`;
-    });
+    html+='<a href="download/'+j.job+'/docx">Download Word (.docx)</a></div>';
+    j.sections.forEach(s=>{ const subs=s.subs.map(x=>x.name+' ('+x.count+')').join(', ');
+      html+='<div class="sum"><b>'+s.name+'</b>: '+(subs||'—')+' &middot; '+s.photos+' photo(s)</div>'; });
     html+='<div class="sum" style="color:#666;margin-top:8px">Need a PDF? Open the file and choose File &rarr; Save As / Print &rarr; PDF.</div>';
-    if(j.mode==='fallback') html+='<div class="warn">Server has no AI key set, so tasks were only lightly organized and checklist photos can\'t be read. Add ANTHROPIC_API_KEY for full grouping, cleanup &amp; photo reading.</div>';
+    if(j.mode==='fallback') html+='<div class="warn">Server has no AI key set, so tasks were only lightly organized and checklist photos can\'t be read.</div>';
+    html+='<a class="newlink" id="startnew">+ Start a new punchlist</a>';
     res.innerHTML=html; res.style.display='block';
+    document.getElementById('startnew').onclick=resetAll;
   }catch(e){ res.innerHTML='<b>Error:</b> '+e.message; res.style.display='block'; }
-  btn.disabled=false; btn.textContent='Generate punchlist';
+  btn.dataset.busy=''; btn.disabled=false; btn.textContent='Generate punchlist';
 };
+
+// restore on load (survives the iOS camera page-reload)
+document.getElementById('address').value=state.address||'';
+document.getElementById('checklist').value=state.checklist||'';
+render(); renderCl(); save();
 </script>
 </body>
 </html>
