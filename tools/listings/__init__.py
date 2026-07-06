@@ -23,7 +23,7 @@ QUALIFICATIONS = (
     "Properties that allow pets or housing vouchers will state this in the listing"
 )
 QUAL_LENGTH = len(QUALIFICATIONS)
-MAX_TOTAL = 1000
+MAX_TOTAL = 1200
 MAX_DESC = MAX_TOTAL - QUAL_LENGTH
 
 SYSTEM_PROMPT = f"""You write rental listing descriptions for Doss & Spaulding Properties, a property management company in Greensboro, NC.

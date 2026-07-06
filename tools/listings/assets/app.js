@@ -122,7 +122,7 @@ function showResult(result) {
   // Update meter
   charMeter.hidden = false;
   const total = result.total_chars;
-  const pct = Math.min((total / 1000) * 100, 100);
+  const pct = Math.min((total / 1200) * 100, 100);
 
   totalCount.textContent = total;
   descCount.textContent = result.desc_chars;
@@ -132,7 +132,7 @@ function showResult(result) {
   totalCount.classList.remove('warn', 'over');
   progressFill.classList.remove('warn', 'over');
 
-  if (total > 1000) {
+  if (total > 1200) {
     totalCount.classList.add('over');
     progressFill.classList.add('over');
   } else if (total > 900) {
