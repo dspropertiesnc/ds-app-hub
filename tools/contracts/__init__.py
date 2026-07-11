@@ -63,6 +63,30 @@ def _img_block(fileobj):
     return {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
             "data": base64.b64encode(buf.getvalue()).decode()}}
 
+def _parse_json(raw):
+    import json as _j
+    raw = raw.strip()
+    start = raw.find("{")
+    if start > 0: raw = raw[start:]
+    try:
+        return _j.loads(raw)
+    except Exception:
+        pass
+    # attempt to close a truncated object: cut at last complete item, balance braces/brackets
+    cut = max(raw.rfind("}"), raw.rfind("]"))
+    frag = raw[:cut+1] if cut > 0 else raw
+    for _ in range(6):
+        try:
+            return _j.loads(frag)
+        except Exception:
+            # drop trailing incomplete fragment after the last comma, then re-balance
+            c = frag.rfind(",")
+            frag = frag[:c] if c > 0 else frag
+            opens = frag.count("{") - frag.count("}")
+            openb = frag.count("[") - frag.count("]")
+            frag = frag + "]" * max(0, openb) + "}" * max(0, opens)
+    return _j.loads(raw)  # re-raise original if unrecoverable
+
 @bp.route("/")
 def index():
     return render_template("contracts.html")
@@ -96,11 +120,12 @@ def extract():
     try:
         from anthropic import Anthropic
         client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-        msg = client.messages.create(model=MODEL, max_tokens=3000, system=SYSTEM,
+        msg = client.messages.create(model=MODEL, max_tokens=8000, system=SYSTEM,
                                       messages=[{"role": "user", "content": content}])
         raw = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
-        if raw.startswith("```"): raw = raw.strip("`").split("\n", 1)[1].rsplit("```", 1)[0]
-        data = json.loads(raw)
+        if raw.startswith("```"):
+            raw = raw.strip("`").split("\n", 1)[1].rsplit("```", 1)[0]
+        data = _parse_json(raw)
     except Exception as e:
         return jsonify({"error": f"Extraction failed: {e}"}), 502
     job = uuid.uuid4().hex[:12]
