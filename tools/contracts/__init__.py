@@ -44,6 +44,15 @@ Rules:
 - Keep "summary" to 2-4 plain sentences.
 - Output ONLY the JSON object, no prose, no code fences."""
 
+def _pdf_text(data):
+    try:
+        from pypdf import PdfReader
+        import io as _io
+        r = PdfReader(_io.BytesIO(data))
+        return "\n".join((pg.extract_text() or "") for pg in r.pages)
+    except Exception:
+        return ""
+
 def _docx_text(path):
     from docx import Document
     d = Document(path); out = []
@@ -104,8 +113,12 @@ def extract():
         try:
             if name.endswith(".pdf"):
                 data = f.read()
-                content.append({"type": "document", "source": {"type": "base64",
-                    "media_type": "application/pdf", "data": base64.b64encode(data).decode()}})
+                txt = _pdf_text(data)
+                if len(txt.strip()) >= 400:  # digital PDF with a real text layer -> fast text path
+                    content.append({"type": "text", "text": "[PDF text: %s]\n%s" % (f.filename, txt[:180000])})
+                else:  # scanned/image PDF -> let Claude read it visually
+                    content.append({"type": "document", "source": {"type": "base64",
+                        "media_type": "application/pdf", "data": base64.b64encode(data).decode()}})
             elif name.endswith(".docx"):
                 tmp = os.path.join(JOBS, "u_" + uuid.uuid4().hex[:8] + ".docx"); f.save(tmp)
                 txt = _docx_text(tmp)
