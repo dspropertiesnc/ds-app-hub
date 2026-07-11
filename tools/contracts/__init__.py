@@ -147,6 +147,25 @@ def extract():
     data["job"] = job
     return jsonify(data)
 
+import re as _re
+def _summary_filename(data):
+    dt = (data.get("doc_type") or "").lower()
+    if "lease" in dt:
+        prefix = "Lease"
+    elif "management" in dt or "pma" in dt:
+        prefix = "PMA"
+    else:
+        prefix = ""
+    addr = (data.get("property") or "").strip()
+    # ignore non-address placeholders
+    if addr and (len(addr) > 90 or addr.lower().startswith("see ")):
+        addr = ""
+    base = f"{prefix} Contract Summary".strip()
+    name = base + (f" - {addr}" if addr else "")
+    name = _re.sub(r'[\\/:*?"<>|\r\n]+', " ", name)   # strip filename-illegal chars
+    name = _re.sub(r"\s+", " ", name).strip()
+    return name[:120] + ".pdf"
+
 @bp.route("/download/<job>")
 def download(job):
     job = secure_filename(job)
@@ -155,7 +174,7 @@ def download(job):
     data = json.load(open(jp))
     pdf_path = os.path.join(JOBS, job + ".pdf")
     _build_pdf(data, pdf_path)
-    return send_file(pdf_path, as_attachment=True, download_name="Contract Summary.pdf")
+    return send_file(pdf_path, as_attachment=True, download_name=_summary_filename(data))
 
 def _build_pdf(data, out_path):
     from reportlab.lib.pagesizes import letter
