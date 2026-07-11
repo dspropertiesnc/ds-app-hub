@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Contract Term Extractor — Doss &amp; Spaulding</title>
+<style>
+  :root{--accent:#a78147;--accent-dark:#8f6c3c;--sub:#efe7d9;--gray:#666;--line:#e6e0d6;--dark:#6b4f22;}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#f7f5f1;color:#1a1a1a}
+  .topbar{background:#fff;border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:12px}
+  .topbar img{height:30px}
+  .topbar a{color:var(--accent-dark);text-decoration:none;font-size:13px;font-weight:600}
+  .topbar .sp{flex:1}
+  header.h{background:var(--accent);color:#fff;padding:16px}
+  header.h h1{font-size:18px;margin:0}
+  header.h p{margin:4px 0 0;font-size:12px;opacity:.9}
+  main{max-width:720px;margin:0 auto;padding:16px}
+  .hint{color:var(--gray);font-size:13px;margin:4px 0 14px}
+  .drop{border:1.5px dashed var(--accent);background:var(--sub);border-radius:12px;padding:22px;text-align:center;color:var(--accent-dark);font-weight:600;cursor:pointer}
+  .files{margin-top:10px;font-size:13px;color:#333}
+  .files div{padding:4px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+  .files button{background:none;border:0;color:#b3261e;cursor:pointer;font-size:13px}
+  #go{width:100%;margin-top:16px;background:var(--accent);color:#fff;border:0;border-radius:12px;padding:15px;font-size:16px;font-weight:700;cursor:pointer}
+  #go:disabled{opacity:.6}
+  #result{margin-top:22px;display:none}
+  .band{background:var(--accent);color:#fff;font-weight:700;font-size:13px;padding:7px 10px;border-radius:8px 8px 0 0;text-transform:uppercase;letter-spacing:.03em}
+  .card{background:#fff;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;padding:0;margin-bottom:14px;overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{background:var(--sub);color:var(--dark);text-align:left;padding:7px 10px;font-size:12px}
+  td{padding:7px 10px;border-top:1px solid var(--line);vertical-align:top}
+  td.k{width:38%;color:#333;font-weight:600}
+  .sumtext{padding:12px;font-size:14px;line-height:1.5}
+  .dl{display:inline-block;margin:2px 0 16px;background:var(--accent);color:#fff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700}
+  .warn{background:#fbf3e2;border:1px solid #e6cfa0;color:#7a5b1a;padding:10px;border-radius:8px;font-size:13px}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:s .8s linear infinite;vertical-align:-3px;margin-right:8px}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/"><img src="/static/logo.png" alt="Doss &amp; Spaulding"></a>
+  <span class="sp"></span>
+  <a href="/">&larr; All tools</a>
+</div>
+<header class="h">
+  <h1>Contract Term Extractor</h1>
+  <p>Doss &amp; Spaulding Properties</p>
+</header>
+<main>
+  <p class="hint">Upload a property management agreement or lease — PDF, Word, or photos/scans of the pages. It pulls out parties, dates, all fees, and the terms written into blank fields. Add multiple files if the contract is split across pages.</p>
+  <label class="drop" for="filein">+ Upload contract file(s)</label>
+  <input id="filein" type="file" accept=".pdf,.docx,image/*" multiple style="display:none">
+  <div class="files" id="files"></div>
+  <button id="go">Extract terms</button>
+  <div id="result"></div>
+</main>
+<script>
+let files=[];
+const filesEl=document.getElementById('files');
+document.getElementById('filein').addEventListener('change',e=>{ for(const f of e.target.files) files.push(f); e.target.value=''; renderFiles(); });
+function renderFiles(){
+  filesEl.innerHTML='';
+  files.forEach((f,i)=>{ const d=document.createElement('div');
+    d.innerHTML='<span>'+f.name+'</span>'; const b=document.createElement('button'); b.textContent='remove';
+    b.onclick=()=>{files.splice(i,1);renderFiles()}; d.appendChild(b); filesEl.appendChild(d); });
+}
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function kvTable(head, rows, k, v){
+  if(!rows||!rows.length) return '';
+  let h='<div class="card"><table><tr><th>'+esc(head[0])+'</th><th>'+esc(head[1])+'</th></tr>';
+  rows.forEach(r=>{ h+='<tr><td class="k">'+esc(k(r))+'</td><td>'+esc(v(r))+'</td></tr>'; });
+  return h+'</table></div>';
+}
+function section(title, inner){ return inner ? '<div class="band">'+esc(title)+'</div>'+inner : ''; }
+document.getElementById('go').onclick=async()=>{
+  const res=document.getElementById('result');
+  if(!files.length){ res.style.display='block'; res.innerHTML='<div class="warn">Please upload a contract file first.</div>'; return; }
+  const btn=document.getElementById('go'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>Reading contract…';
+  const fd=new FormData(); files.forEach(f=>fd.append('files',f,f.name));
+  try{
+    const r=await fetch('extract',{method:'POST',body:fd});
+    const d=await r.json();
+    if(!r.ok){ throw new Error(d.error||'Extraction failed'); }
+    let html='<a class="dl" href="download/'+d.job+'">Download PDF summary</a>';
+    if(d.summary) html+=section('Summary','<div class="card"><div class="sumtext">'+esc(d.summary)+'</div></div>');
+    html+=section('Parties', kvTable(['Role','Name'], d.parties, x=>x.role, x=>x.name));
+    let pt=[]; if(d.property) pt.push({k:'Property',v:d.property}); if(d.term) pt.push({k:'Term',v:d.term});
+    html+=section('Property & Term', kvTable(['Item','Detail'], pt.length?pt:null, x=>x.k, x=>x.v));
+    html+=section('Key Dates', kvTable(['Date','When / Note'], d.key_dates, x=>x.label, x=>[x.date,x.note].filter(Boolean).join(' — ')));
+    html+=section('Fees & Money', kvTable(['Fee','Amount / Note'], d.fees, x=>x.label, x=>[x.amount,x.note].filter(Boolean).join(' — ')));
+    html+=section('Terms Filled Into Blanks', kvTable(['Field','Filled-in value'], d.filled_blanks, x=>x.field, x=>x.value));
+    html+=section('Other Key Terms', kvTable(['Term','Detail'], d.other_terms, x=>x.label, x=>x.detail));
+    res.innerHTML=html; res.style.display='block';
+  }catch(e){ res.innerHTML='<div class="warn"><b>Error:</b> '+esc(e.message)+'</div>'; res.style.display='block'; }
+  btn.disabled=false; btn.textContent='Extract terms';
+};
+</script>
+</body>
+</html>

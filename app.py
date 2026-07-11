@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from tools.punchlist import bp as punchlist_bp, META as PUNCHLIST_META
 from tools.listings import bp as listings_bp, META as LISTINGS_META
+from tools.contracts import bp as contracts_bp, META as CONTRACTS_META
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24).hex())
@@ -10,14 +11,13 @@ APP_PASSWORD = os.environ.get("APP_PASSWORD")  # unset = open (local/dev)
 
 app.register_blueprint(punchlist_bp)
 app.register_blueprint(listings_bp)
+app.register_blueprint(contracts_bp)
 
 # ---- Tool registry, grouped by workflow. Add a card here for each new tool. ----
 TOOL_GROUPS = [
     {"group": "Maintenance & Turns", "items": [PUNCHLIST_META]},
     {"group": "Marketing", "items": [LISTINGS_META]},
-    {"group": "Leasing", "items": [
-        {"name": "More tools coming", "desc": "Your other tools will live here.", "url": "#", "icon": "📋", "ready": False},
-    ]},
+    {"group": "Leasing & Contracts", "items": [CONTRACTS_META]},
 ]
 
 @app.before_request

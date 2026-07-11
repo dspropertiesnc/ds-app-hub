@@ -4,3 +4,4 @@ Pillow>=10.0
 pillow-heif>=0.16
 anthropic>=0.40
 gunicorn>=21.0
+reportlab>=4.0
