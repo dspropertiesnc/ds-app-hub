@@ -83,14 +83,15 @@ document.getElementById('go').onclick=async()=>{
     const d=await r.json();
     if(!r.ok){ throw new Error(d.error||'Extraction failed'); }
     let html='<a class="dl" href="download/'+d.job+'">Download PDF summary</a>';
-    if(d.summary) html+=section('Summary','<div class="card"><div class="sumtext">'+esc(d.summary)+'</div></div>');
-    html+=section('Parties', kvTable(['Role','Name'], d.parties, x=>x.role, x=>x.name));
-    let pt=[]; if(d.property) pt.push({k:'Property',v:d.property}); if(d.term) pt.push({k:'Term',v:d.term});
-    html+=section('Property & Term', kvTable(['Item','Detail'], pt.length?pt:null, x=>x.k, x=>x.v));
-    html+=section('Key Dates', kvTable(['Date','When / Note'], d.key_dates, x=>x.label, x=>[x.date,x.note].filter(Boolean).join(' — ')));
-    html+=section('Fees & Money', kvTable(['Fee','Amount / Note'], d.fees, x=>x.label, x=>[x.amount,x.note].filter(Boolean).join(' — ')));
-    html+=section('Terms Filled Into Blanks', kvTable(['Field','Filled-in value'], d.filled_blanks, x=>x.field, x=>x.value));
-    html+=section('Other Key Terms', kvTable(['Term','Detail'], d.other_terms, x=>x.label, x=>x.detail));
+    if(d.property_address) html+='<div class="sum" style="margin:-6px 0 10px;font-weight:600;color:#5c4522">'+esc(d.doc_type||'')+(d.property_address?(' &middot; '+esc(d.property_address)):'')+'</div>';
+    (d.sections||[]).forEach(sec=>{
+      const rows=(sec.rows||[]).filter(r=>r&&r.value!=null&&String(r.value).trim()!=='');
+      if(!rows.length) return;
+      let t='<div class="card"><table>';
+      rows.forEach(r=>{ t+='<tr><td class="k">'+esc(r.label)+'</td><td>'+esc(r.value)+'</td></tr>'; });
+      t+='</table></div>';
+      html+=section(sec.name, t);
+    });
     res.innerHTML=html; res.style.display='block';
   }catch(e){ res.innerHTML='<div class="warn"><b>Error:</b> '+esc(e.message)+'</div>'; res.style.display='block'; }
   btn.disabled=false; btn.textContent='Extract terms';

@@ -17,32 +17,38 @@ MODEL = os.getenv("CONTRACT_MODEL", os.getenv("ANTHROPIC_MODEL", "claude-sonnet-
 META = {"name": "Contract Term Extractor", "desc": "Upload a lease or management agreement; pull out fees, dates, and filled-in terms.",
         "url": "/contracts/", "group": "Leasing & Contracts", "icon": "\U0001F4C4", "ready": True}
 
-SYSTEM = """You are a contract analyst for Doss & Spaulding Properties, a property management company.
-You receive a property management agreement (PMA) or a residential lease, possibly as a PDF, Word text, or photos/scans.
-Extract the key terms. Pay SPECIAL attention to:
-1) Values written or typed into blank fields (names, amounts, dates, checkboxes, hand-filled entries).
-2) All fees and money amounts (management fee %, leasing/placement fee, monthly rent, deposits, late fees, NSF fees, pet fees, renewal fees, admin fees, maintenance markups, early-termination fees, etc.).
-3) All dates and deadlines (effective date, term start/end, renewal date, notice periods expressed as day counts, move-in, etc.).
+SYSTEM = """You extract key terms from a property management agreement (PMA) or residential lease for Doss & Spaulding Properties.
+The output is a CONCISE 1-2 page reference sheet an administrator uses to input data into their system.
+Be brief: short labels, short values (numbers, %, $, dates, Yes/No). NO sentences, NO explanations, NO legal prose.
+Prioritize: all dates & terms, ALL fees and dollar/percent amounts, and values filled into blank fields.
 
-Return STRICT JSON only, matching:
+Return STRICT JSON only:
 {
   "doc_type": "Property Management Agreement | Residential Lease | Other",
-  "parties": [{"role": "", "name": ""}],
-  "property": "",
-  "term": "",
-  "key_dates": [{"label": "", "date": "", "note": ""}],
-  "fees": [{"label": "", "amount": "", "note": ""}],
-  "filled_blanks": [{"field": "", "value": ""}],
-  "other_terms": [{"label": "", "detail": ""}],
-  "summary": ""
+  "property_address": "",
+  "sections": [ {"name": "", "rows": [ {"label": "", "value": ""} ] } ]
 }
-Rules:
-- Only include information actually present. Do NOT invent or assume.
-- If a value is unclear or illegible, still list it and add "(unclear)" in the note/value.
-- Capture percentages, dollar amounts, and day counts exactly as written.
-- "filled_blanks" is for anything entered into an otherwise blank line/field of a template.
-- Keep "summary" to 2-4 plain sentences.
-- Output ONLY the JSON object, no prose, no code fences."""
+
+Include ONLY rows whose value is actually present in the document. Omit anything not stated. Keep values terse and exactly as written (e.g. "10.0% of gross rent", "$250", "30 days", "04/10/2026", "Yes", "No").
+
+For a PROPERTY MANAGEMENT AGREEMENT, use these sections and label ideas (skip any not present):
+- Owner Information: Name, Email, Phone, Mailing Address, Principal Contacts
+- Property Details: Address, County, Legal Description, Water/Sewage
+- Agreement Terms: Effective Date, Initial Term, Renewal Term, Termination Notice
+- Fee Schedule: Management Fee, Leasing/Placement, Onboarding/Setup, Lease Renewal, Project/Maintenance Oversight, Hourly (out-of-scope), Utility Mgmt Charge, Co-op Agent Cap, Self-Show Opt-Out, Sale-to-Tenant
+- Financial Setup: Reserve Fund, Max Repair (no approval), Max Lease Term, Late Fees To, Trust Interest To, Interest Rate, Owner Payment Due
+- Insurance: Company, Agent, Contact, Min Liability
+- Policies: Pets Allowed, Smoking, HOA, Vacancy Utilities, Self-Showings
+
+For a RESIDENTIAL LEASE, use these sections (skip any not present):
+- Tenant Information: Tenant(s), Email, Phone
+- Property: Address, Unit
+- Lease Terms: Start Date, End Date, Term Length, Renewal, Move-in Date, Notice to Vacate
+- Rent & Fees: Monthly Rent, Due Date, Late Fee, NSF Fee, Pet Fee/Rent, Other Fees
+- Deposits: Security Deposit, Pet Deposit, Other
+- Utilities & Policies: Utilities Paid By, Pets, Smoking, Occupancy Limit, Parking
+
+Output ONLY the JSON object, no prose, no code fences."""
 
 def _pdf_text(data):
     try:
@@ -156,7 +162,7 @@ def _summary_filename(data):
         prefix = "PMA"
     else:
         prefix = ""
-    addr = (data.get("property") or "").strip()
+    addr = (data.get("property_address") or data.get("property") or "").strip()
     # ignore non-address placeholders
     if addr and (len(addr) > 90 or addr.lower().startswith("see ")):
         addr = ""
@@ -182,69 +188,60 @@ def _build_pdf(data, out_path):
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table,
-                                    TableStyle, Image as RLImage)
-    ACCENT = colors.HexColor("#a78147"); SUB = colors.HexColor("#efe7d9"); DARK = colors.HexColor("#6b4f22")
+                                    TableStyle, Image as RLImage, KeepTogether)
+    ACCENT = colors.HexColor("#a78147"); SUB = colors.HexColor("#efe7d9")
+    DARK = colors.HexColor("#5c4522"); LINE = colors.HexColor("#e6e0d6")
+    dt = (data.get("doc_type") or "").lower()
+    kind = "PMA Summary" if ("management" in dt or "pma" in dt) else ("Lease Summary" if "lease" in dt else "Contract Summary")
+    addr = (data.get("property_address") or data.get("property") or "").strip()
+
     styles = getSampleStyleSheet()
-    h1 = ParagraphStyle("h1", parent=styles["Title"], fontSize=18, textColor=ACCENT, spaceAfter=2, alignment=0)
-    sub = ParagraphStyle("sub", parent=styles["Normal"], fontSize=9.5, textColor=colors.HexColor("#666666"), spaceAfter=10)
-    band = ParagraphStyle("band", parent=styles["Normal"], fontSize=11.5, textColor=colors.white, leftIndent=4, spaceBefore=4, spaceAfter=4)
-    body = ParagraphStyle("body", parent=styles["Normal"], fontSize=10, leading=13)
-    doc = SimpleDocTemplate(out_path, pagesize=letter, topMargin=0.6*inch, bottomMargin=0.6*inch,
-                            leftMargin=0.7*inch, rightMargin=0.7*inch)
+    h1 = ParagraphStyle("h1", parent=styles["Title"], fontSize=13, textColor=ACCENT, spaceAfter=0, alignment=0, leading=15)
+    sub = ParagraphStyle("sub", parent=styles["Normal"], fontSize=9, textColor=colors.HexColor("#666666"), spaceAfter=2)
+    band = ParagraphStyle("band", parent=styles["Normal"], fontSize=9.5, textColor=colors.white, fontName="Helvetica-Bold")
+    lbl = ParagraphStyle("lbl", parent=styles["Normal"], fontSize=8.4, textColor=DARK, fontName="Helvetica-Bold", leading=9.8)
+    val = ParagraphStyle("val", parent=styles["Normal"], fontSize=8.4, textColor=colors.HexColor("#1a1a1a"), leading=9.8)
+
+    doc = SimpleDocTemplate(out_path, pagesize=letter, topMargin=0.4*inch, bottomMargin=0.4*inch,
+                            leftMargin=0.6*inch, rightMargin=0.6*inch, title=kind)
+    W = 7.3*inch
     el = []
-    header_bits = []
+    logo = ""
     if os.path.exists(LOGO):
-        try:
-            img = RLImage(LOGO, width=1.7*inch, height=1.7*inch*303/1009)
-            header_bits.append(img)
-        except Exception: pass
-    title_tbl = Table([[Paragraph("Contract Summary", h1), header_bits[0] if header_bits else ""]],
-                      colWidths=[4.7*inch, 2.3*inch])
-    title_tbl.setStyle(TableStyle([("VALIGN", (0,0), (-1,-1), "TOP"), ("ALIGN", (1,0), (1,0), "RIGHT")]))
-    el.append(title_tbl)
-    el.append(Paragraph(f"Doss &amp; Spaulding Properties &nbsp;|&nbsp; {data.get('doc_type','Contract')}", sub))
+        try: logo = RLImage(LOGO, width=1.5*inch, height=1.5*inch*303/1009)
+        except Exception: logo = ""
+    head = Table([[Paragraph(kind + ((" &mdash; " + addr) if addr else ""), h1), logo]],
+                 colWidths=[W-1.7*inch, 1.7*inch])
+    head.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"MIDDLE"), ("ALIGN",(1,0),(1,0),"RIGHT"),
+                              ("LEFTPADDING",(0,0),(-1,-1),0), ("RIGHTPADDING",(0,0),(-1,-1),0)]))
+    el.append(head)
+    el.append(Paragraph("Doss &amp; Spaulding Properties &nbsp;|&nbsp; auto-extracted reference &mdash; verify against the signed agreement", sub))
+    el.append(Spacer(1, 5))
 
     def band_row(txt):
-        t = Table([[Paragraph(txt.upper(), band)]], colWidths=[7.1*inch])
-        t.setStyle(TableStyle([("BACKGROUND", (0,0), (-1,-1), ACCENT), ("LEFTPADDING",(0,0),(-1,-1),6),
-                               ("TOPPADDING",(0,0),(-1,-1),3), ("BOTTOMPADDING",(0,0),(-1,-1),3)]))
+        t = Table([[Paragraph(txt.upper(), band)]], colWidths=[W])
+        t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),ACCENT), ("LEFTPADDING",(0,0),(-1,-1),6),
+                               ("TOPPADDING",(0,0),(-1,-1),1.3), ("BOTTOMPADDING",(0,0),(-1,-1),1.3)]))
         return t
 
-    def kv_table(rows, c0="Item", c1="Detail", w0=2.4):
-        head = ParagraphStyle("th", parent=body, textColor=DARK, fontName="Helvetica-Bold", fontSize=9.5)
-        d = [[Paragraph(c0, head), Paragraph(c1, head)]]
-        for a, b in rows:
-            d.append([Paragraph(str(a or ""), body), Paragraph(str(b or ""), body)])
-        t = Table(d, colWidths=[w0*inch, (7.1-w0)*inch])
-        t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),SUB), ("GRID",(0,0),(-1,-1),0.4,colors.HexColor("#e6e0d6")),
-                               ("VALIGN",(0,0),(-1,-1),"TOP"), ("LEFTPADDING",(0,0),(-1,-1),6),
-                               ("RIGHTPADDING",(0,0),(-1,-1),6), ("TOPPADDING",(0,0),(-1,-1),3), ("BOTTOMPADDING",(0,0),(-1,-1),3)]))
+    def rows_table(rows):
+        data_rows = []
+        for r in rows:
+            v = r.get("value")
+            if v is None or str(v).strip() == "": continue
+            data_rows.append([Paragraph(str(r.get("label") or ""), lbl), Paragraph(str(v), val)])
+        if not data_rows: return None
+        t = Table(data_rows, colWidths=[2.15*inch, W-2.15*inch])
+        t.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"TOP"),
+                               ("LINEBELOW",(0,0),(-1,-2),0.3,LINE),
+                               ("LEFTPADDING",(0,0),(-1,-1),6), ("RIGHTPADDING",(0,0),(-1,-1),6),
+                               ("TOPPADDING",(0,0),(-1,-1),1.3), ("BOTTOMPADDING",(0,0),(-1,-1),1.3)]))
         return t
 
-    def sp(h=8): return Spacer(1, h)
-
-    if data.get("summary"):
-        el += [sp(6), band_row("Summary"), sp(4), Paragraph(data["summary"], body)]
-    if data.get("parties"):
-        el += [sp(8), band_row("Parties"), sp(4), kv_table([(p.get("role"), p.get("name")) for p in data["parties"]], "Role", "Name")]
-    prop_term = []
-    if data.get("property"): prop_term.append(("Property", data["property"]))
-    if data.get("term"): prop_term.append(("Term", data["term"]))
-    if prop_term:
-        el += [sp(8), band_row("Property & Term"), sp(4), kv_table(prop_term)]
-    if data.get("key_dates"):
-        el += [sp(8), band_row("Key Dates"), sp(4),
-               kv_table([(d.get("label"), " ".join(x for x in [d.get("date"), ("— "+d["note"]) if d.get("note") else ""] if x)) for d in data["key_dates"]], "Date", "When / Note")]
-    if data.get("fees"):
-        el += [sp(8), band_row("Fees & Money"), sp(4),
-               kv_table([(f.get("label"), " ".join(x for x in [str(f.get("amount") or ""), ("— "+f["note"]) if f.get("note") else ""] if x)) for f in data["fees"]], "Fee", "Amount / Note")]
-    if data.get("filled_blanks"):
-        el += [sp(8), band_row("Terms Filled Into Blanks"), sp(4),
-               kv_table([(b.get("field"), b.get("value")) for b in data["filled_blanks"]], "Field", "Filled-in value")]
-    if data.get("other_terms"):
-        el += [sp(8), band_row("Other Key Terms"), sp(4),
-               kv_table([(o.get("label"), o.get("detail")) for o in data["other_terms"]], "Term", "Detail")]
-    el += [sp(14), Paragraph("<i>Auto-extracted for internal reference. Verify against the signed agreement before relying on any term.</i>",
-                             ParagraphStyle("disc", parent=body, fontSize=8, textColor=colors.HexColor("#888888")))]
+    for sec in data.get("sections", []):
+        rt = rows_table(sec.get("rows", []))
+        if rt is None: continue
+        el.append(Spacer(1, 3))
+        el.append(KeepTogether([band_row(sec.get("name","")), Spacer(1,1), rt]))
     doc.build(el)
     return out_path
