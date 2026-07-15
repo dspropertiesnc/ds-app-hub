@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Unit Turn Punchlist — Doss &amp; Spaulding</title>
+<style>
+  :root{--accent:#a78147;--accent-dark:#8f6c3c;--sub:#efe7d9;--gray:#666;--line:#e6e0d6;}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#f7f5f1;color:#1a1a1a}
+  .topbar{background:#fff;border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:12px}
+  .topbar img{height:30px}
+  .topbar a{color:var(--accent-dark);text-decoration:none;font-size:13px;font-weight:600}
+  .topbar .sp{flex:1}
+  header.h{background:var(--accent);color:#fff;padding:16px}
+  header.h h1{font-size:18px;margin:0}
+  header.h p{margin:4px 0 0;font-size:12px;opacity:.9}
+  main{max-width:640px;margin:0 auto;padding:16px}
+  label{display:block;font-weight:600;font-size:14px;margin:16px 0 6px}
+  .hint{font-weight:400;color:var(--gray);font-size:12px}
+  input[type=text],textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:#fff}
+  textarea{min-height:150px;resize:vertical;line-height:1.4}
+  .photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-top:10px}
+  .ph{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;position:relative}
+  .ph img{width:100%;height:90px;object-fit:cover;display:block;background:#eee}
+  .ph .x{position:absolute;top:3px;right:4px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:50%;width:20px;height:20px;font-size:13px;cursor:pointer;line-height:1}
+  .ph.up{display:flex;align-items:center;justify-content:center;height:90px;color:var(--gray);font-size:12px}
+  .toggle{display:flex;font-size:12px}
+  .toggle button{flex:1;border:0;padding:7px 0;background:#f0ece4;color:#775f38;cursor:pointer}
+  .toggle button.on{background:var(--accent);color:#fff;font-weight:600}
+  .addbtn{margin-top:10px;display:inline-block;background:var(--sub);color:var(--accent-dark);
+    border:1px dashed var(--accent);border-radius:10px;padding:12px 16px;font-weight:600;cursor:pointer;font-size:14px}
+  .or{color:var(--gray);font-size:12px;margin:8px 0 0}
+  #go{width:100%;margin-top:22px;background:var(--accent);color:#fff;border:0;border-radius:12px;padding:16px;font-size:17px;font-weight:700;cursor:pointer}
+  #go:disabled{opacity:.6}
+  #result{margin-top:22px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;display:none}
+  .dl{display:flex;gap:10px;margin-top:12px}
+  .dl a{flex:1;text-align:center;text-decoration:none;background:var(--accent);color:#fff;padding:14px;border-radius:10px;font-weight:700}
+  .sum{font-size:13px;color:#333;margin-top:6px}
+  .warn{background:#fbf3e2;border:1px solid #e6cfa0;color:#7a5b1a;padding:10px;border-radius:8px;font-size:12px;margin-top:10px}
+  .newlink{display:inline-block;margin-top:12px;color:var(--accent-dark);font-weight:600;text-decoration:none;font-size:13px;cursor:pointer}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:s .8s linear infinite;vertical-align:-3px;margin-right:8px}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/"><img src="/static/logo.png" alt="Doss &amp; Spaulding"></a>
+  <span class="sp"></span>
+  <a href="/">&larr; All tools</a>
+</div>
+<header class="h">
+  <h1>Unit Turn Punchlist Generator</h1>
+  <p>Doss &amp; Spaulding Properties</p>
+</header>
+<main>
+  <label>Property address <span class="hint">e.g. 4109 Beckford Dr</span></label>
+  <input id="address" type="text" placeholder="Property address">
+
+  <label>Access information <span class="hint">Optional. Lockbox/gate codes, key location, alarm info, or who to call for entry — printed at the top of the punchlist so a contractor can get in to estimate.</span></label>
+  <textarea id="access" style="min-height:70px" placeholder="e.g. Lockbox on front door, code 4821. Gate code #1234. Call John 336-555-0100 before arrival."></textarea>
+
+  <label>Checklist <span class="hint">Type it below, one item per line — or add a photo of a written/on-screen checklist and it will be read for you. You can do both. Note anything already done.</span></label>
+  <textarea id="checklist" placeholder="Missing/broken window latches (4 - downstairs front window, 2 in den...)
+Replace broken blind in primary bedroom (39-40 inch)
+Basement back door does not latch smoothly
+Weed flower beds and freshen with pine needles
+Smoke detectors (3) - completed while at property"></textarea>
+  <p class="or">or</p>
+  <label class="addbtn" for="clfiles">+ Add photo of checklist</label>
+  <input id="clfiles" type="file" accept="image/*" multiple style="display:none">
+  <div class="photos" id="clphotos"></div>
+
+  <label>Property photos <span class="hint">Add photos of the work, then tap Inside or Outside for each. Each photo saves as soon as you add it, so taking them one-by-one is safe. Inside photos go at the end of the Interior section, Outside at the end of Exterior.</span></label>
+  <label class="addbtn" for="filein">+ Add property photos</label>
+  <input id="filein" type="file" accept="image/*" multiple style="display:none">
+  <div class="photos" id="photos"></div>
+
+  <button id="go">Generate punchlist</button>
+  <div id="result"></div>
+</main>
+
+<script>
+const LS='pl_state_v1';
+function newJob(){ let u=(crypto.randomUUID?crypto.randomUUID():('x'.repeat(32))).replace(/[^0-9a-f]/g,''); return (u+'0'.repeat(32)).slice(0,32); }
+let state = load() || {job:newJob(), address:'', checklist:'', access:'', items:[], cl:[]};
+let pending = 0;
+
+function load(){ try{ return JSON.parse(localStorage.getItem(LS)); }catch(e){ return null; } }
+function save(){
+  state.address=document.getElementById('address').value;
+  state.checklist=document.getElementById('checklist').value;
+  state.access=document.getElementById('access').value;
+  try{ localStorage.setItem(LS, JSON.stringify(state)); }catch(e){}
+}
+function resetAll(){
+  state={job:newJob(), address:'', checklist:'', access:'', items:[], cl:[]};
+  document.getElementById('address').value=''; document.getElementById('checklist').value=''; document.getElementById('access').value='';
+  document.getElementById('result').style.display='none';
+  save(); render(); renderCl();
+}
+
+const photosEl=document.getElementById('photos');
+const clEl=document.getElementById('clphotos');
+
+async function uploadOne(file, kind){
+  const fd=new FormData(); fd.append('job',state.job); fd.append('kind',kind); fd.append('photo',file, file.name||'photo.jpg');
+  const r=await fetch('upload',{method:'POST',body:fd});
+  if(!r.ok){ throw new Error('upload failed'); }
+  return (await r.json()).id;
+}
+
+async function handleAdd(files, kind){
+  for(const f of files){
+    pending++; renderPending(kind); syncGo();
+    try{
+      const id=await uploadOne(f, kind);
+      if(kind==='checklist') state.cl.push({id}); else state.items.push({id,tag:'interior'});
+      save();
+    }catch(e){ /* skip failed */ }
+    pending--; syncGo();
+    if(kind==='checklist') renderCl(); else render();
+  }
+}
+document.getElementById('filein').addEventListener('change',e=>{ const fs=[...e.target.files]; e.target.value=''; handleAdd(fs,'property'); });
+document.getElementById('clfiles').addEventListener('change',e=>{ const fs=[...e.target.files]; e.target.value=''; handleAdd(fs,'checklist'); });
+
+function thumb(kind,id){ return 'photo/'+state.job+'/'+kind+'/'+id; }
+function renderPending(kind){
+  const el = kind==='checklist'?clEl:photosEl;
+  const d=document.createElement('div'); d.className='ph up pend'; d.textContent='Uploading…'; el.appendChild(d);
+}
+function render(){
+  photosEl.innerHTML='';
+  state.items.forEach((it,i)=>{
+    const d=document.createElement('div'); d.className='ph';
+    const img=document.createElement('img'); img.src=thumb('property',it.id); img.onerror=()=>{state.items.splice(i,1);save();render();}; d.appendChild(img);
+    const x=document.createElement('button'); x.className='x'; x.textContent='×'; x.onclick=()=>{state.items.splice(i,1);save();render();}; d.appendChild(x);
+    const t=document.createElement('div'); t.className='toggle';
+    const bi=document.createElement('button'); bi.textContent='Inside';
+    const bo=document.createElement('button'); bo.textContent='Outside';
+    (it.tag==='interior'?bi:bo).classList.add('on');
+    bi.onclick=()=>{it.tag='interior';save();render()}; bo.onclick=()=>{it.tag='exterior';save();render()};
+    t.appendChild(bi); t.appendChild(bo); d.appendChild(t); photosEl.appendChild(d);
+  });
+}
+function renderCl(){
+  clEl.innerHTML='';
+  state.cl.forEach((it,i)=>{
+    const d=document.createElement('div'); d.className='ph';
+    const img=document.createElement('img'); img.src=thumb('checklist',it.id); img.onerror=()=>{state.cl.splice(i,1);save();renderCl();}; d.appendChild(img);
+    const x=document.createElement('button'); x.className='x'; x.textContent='×'; x.onclick=()=>{state.cl.splice(i,1);save();renderCl();}; d.appendChild(x);
+    clEl.appendChild(d);
+  });
+}
+function syncGo(){
+  const btn=document.getElementById('go');
+  if(pending>0){ btn.disabled=true; btn.innerHTML='<span class="spin"></span>Saving photos…'; }
+  else if(!btn.dataset.busy){ btn.disabled=false; btn.textContent='Generate punchlist'; }
+}
+
+document.getElementById('address').addEventListener('input',save);
+document.getElementById('checklist').addEventListener('input',save);
+document.getElementById('access').addEventListener('input',save);
+
+document.getElementById('go').onclick=async()=>{
+  save();
+  const res=document.getElementById('result');
+  if(!state.checklist.trim() && state.cl.length===0){res.style.display='block';res.innerHTML='<b>Type a checklist or add a photo of one.</b>';return;}
+  if(pending>0){res.style.display='block';res.innerHTML='<b>Please wait — photos are still saving.</b>';return;}
+  const btn=document.getElementById('go'); btn.dataset.busy='1'; btn.disabled=true; btn.innerHTML='<span class="spin"></span>Generating…';
+  const fd=new FormData();
+  fd.append('job',state.job); fd.append('address',state.address); fd.append('checklist',state.checklist); fd.append('access',state.access||'');
+  fd.append('manifest', JSON.stringify({property:state.items, checklist:state.cl.map(c=>c.id)}));
+  try{
+    const r=await fetch('generate',{method:'POST',body:fd});
+    const j=await r.json();
+    if(!r.ok){throw new Error(j.error||'Generation failed');}
+    let html='<b>Punchlist ready.</b><div class="dl">';
+    html+='<a href="download/'+j.job+'/docx">Download Word (.docx)</a></div>';
+    j.sections.forEach(s=>{ const subs=s.subs.map(x=>x.name+' ('+x.count+')').join(', ');
+      html+='<div class="sum"><b>'+s.name+'</b>: '+(subs||'—')+' &middot; '+s.photos+' photo(s)</div>'; });
+    html+='<div class="sum" style="color:#666;margin-top:8px">Need a PDF? Open the file and choose File &rarr; Save As / Print &rarr; PDF.</div>';
+    if(j.mode==='fallback') html+='<div class="warn">Server has no AI key set, so tasks were only lightly organized and checklist photos can\'t be read.</div>';
+    html+='<a class="newlink" id="startnew">+ Start a new punchlist</a>';
+    res.innerHTML=html; res.style.display='block';
+    document.getElementById('startnew').onclick=resetAll;
+  }catch(e){ res.innerHTML='<b>Error:</b> '+e.message; res.style.display='block'; }
+  btn.dataset.busy=''; btn.disabled=false; btn.textContent='Generate punchlist';
+};
+
+// restore on load (survives the iOS camera page-reload)
+document.getElementById('address').value=state.address||'';
+document.getElementById('checklist').value=state.checklist||'';
+document.getElementById('access').value=state.access||'';
+render(); renderCl(); save();
+</script>
+</body>
+</html>
