@@ -36,6 +36,7 @@ For a PROPERTY MANAGEMENT AGREEMENT, use these sections and label ideas (skip an
 - Property Details: Address, County, Legal Description, Water/Sewage
 - Agreement Terms: Effective Date, Initial Term, Renewal Term, Termination Notice
 - Fee Schedule: Management Fee, Leasing/Placement, Onboarding/Setup, Lease Renewal, Project/Maintenance Oversight, Hourly (out-of-scope), Utility Mgmt Charge, Co-op Agent Cap, Self-Show Opt-Out, Sale-to-Tenant
+- Fee Splits / Retained Fees: how fees are split or who keeps them (Owner vs Agent) - e.g. Late Fees, Lease Violation Fees (Pet/Unauthorized Occupant), Admin Fees, Payment Processing, Convenience Fees, Tenant Add-on Revenue. Report exactly as marked (e.g. "50/50 split", "Agent", "Owner").
 - Financial Setup: Reserve Fund, Max Repair (no approval), Max Lease Term, Late Fees To, Trust Interest To, Interest Rate, Owner Payment Due
 - Insurance: Company, Agent, Contact, Min Liability
 - Policies: Pets Allowed, Smoking, HOA, Vacancy Utilities, Self-Showings
@@ -47,6 +48,17 @@ For a RESIDENTIAL LEASE, use these sections (skip any not present):
 - Rent & Fees: Monthly Rent, Due Date, Late Fee, NSF Fee, Pet Fee/Rent, Other Fees
 - Deposits: Security Deposit, Pet Deposit, Other
 - Utilities & Policies: Utilities Paid By, Pets, Smoking, Occupancy Limit, Parking
+
+FILLED-IN AMOUNTS (read carefully):
+- A filled-in value often appears on the LINE BELOW or just after its "$_____" blank. Attach each amount to the fee it belongs to by position on the page. Read the pages visually to get this right.
+- Do NOT swap or reuse amounts between different fees. Onboarding/Setup, Lease Renewal, and Project Oversight cap are DIFFERENT fees with DIFFERENT amounts - list each with its own value, and if you are unsure which number belongs to a fee, add "(verify)".
+- Capture every fee-split / fee-retention arrangement, including tables showing which party (Owner vs Agent) keeps a fee or that a fee is split (e.g. "Lease Violation Fees: 50/50 split"). Do not skip these.
+
+CHECKBOXES & MARKS (critical - these are NC Realtor forms):
+- An option is SELECTED only if it has a visible mark (X, checkmark, or filled box) on/next to it. Read the marks from the page, not just nearby words.
+- Utilities & Services matrix: each row offers Landlord / Tenant / N/A. Report the party whose box is marked. If a "WiFi/Internet", "Snow/Ice removal", or any "Other:" line has a party marked, report that party - do NOT default to N/A.
+- ADDENDA: forms list possible addenda (e.g. Pet Addendum, Maintenance Addendum, Assistance Animal) each with a checkbox. Report an addendum ONLY if its box is checked/marked. Do NOT report an addendum that is merely listed as an available option or referenced in boilerplate text. If the pet addendum box is not checked, do not mention any pet addendum or pet policy.
+- If a selection or blank is unmarked/empty, OMIT it. Never infer standard or boilerplate terms that are not actually marked or filled in on THIS document. When a mark is ambiguous, add "(verify)" to the value rather than guessing.
 
 Output ONLY the JSON object, no prose, no code fences."""
 
@@ -102,6 +114,36 @@ def _parse_json(raw):
             frag = frag + "]" * max(0, openb) + "}" * max(0, opens)
     return _j.loads(raw)  # re-raise original if unrecoverable
 
+def _text_of(msg):
+    raw = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
+    if raw.startswith("```"):
+        raw = raw.strip("`").split("\n", 1)[1].rsplit("```", 1)[0]
+    return raw
+
+VERIFY_SYSTEM = """You are a meticulous contract auditor for Doss & Spaulding Properties.
+You receive a contract (as document images/text) and a DRAFT summary JSON extracted from it.
+Audit the draft against the actual contract and return a CORRECTED version in the SAME schema
+(doc_type, property_address, sections[] with rows[] of {label, value}).
+
+Check especially:
+- Every FEE AMOUNT: confirm each $ or % is attached to the CORRECT fee. Fill-in numbers may sit on the line BELOW their "$___" blank. Never swap amounts between different fees (Onboarding, Lease Renewal, Project Oversight, etc). Fix any wrong amount.
+- Every DATE, term length, and notice period.
+- CHECKBOX selections (utilities matrix Landlord/Tenant/N/A -> report the MARKED party; addenda -> only those actually checked).
+- FEE SPLITS / retained fees (e.g. "Lease Violation Fees: 50/50 split") - add any that are present but missing from the draft.
+Remove anything not actually in the contract. Keep values terse and exact. Output ONLY the corrected JSON object, no prose, no code fences."""
+
+def _verify(client, media, draft):
+    try:
+        c = list(media) + [{"type": "text", "text": "DRAFT SUMMARY TO AUDIT AND CORRECT:\n" + json.dumps(draft, ensure_ascii=False)}]
+        msg = client.messages.create(model=MODEL, max_tokens=8000, system=VERIFY_SYSTEM,
+                                     messages=[{"role": "user", "content": c}])
+        corrected = _parse_json(_text_of(msg))
+        if isinstance(corrected, dict) and corrected.get("sections"):
+            return corrected
+    except Exception as e:
+        print("verify pass failed, using draft:", e)
+    return draft
+
 @bp.route("/")
 def index():
     return render_template("contracts.html")
@@ -113,38 +155,32 @@ def extract():
     files = [f for f in request.files.getlist("files") if f and f.filename]
     if not files:
         return jsonify({"error": "Please upload a contract file."}), 400
-    content = []
+    media = []
     for f in files:
         name = f.filename.lower()
         try:
             if name.endswith(".pdf"):
                 data = f.read()
-                txt = _pdf_text(data)
-                if len(txt.strip()) >= 400:  # digital PDF with a real text layer -> fast text path
-                    content.append({"type": "text", "text": "[PDF text: %s]\n%s" % (f.filename, txt[:180000])})
-                else:  # scanned/image PDF -> let Claude read it visually
-                    content.append({"type": "document", "source": {"type": "base64",
-                        "media_type": "application/pdf", "data": base64.b64encode(data).decode()}})
+                media.append({"type": "document", "source": {"type": "base64",
+                    "media_type": "application/pdf", "data": base64.b64encode(data).decode()}})
             elif name.endswith(".docx"):
                 tmp = os.path.join(JOBS, "u_" + uuid.uuid4().hex[:8] + ".docx"); f.save(tmp)
                 txt = _docx_text(tmp)
                 try: os.remove(tmp)
                 except OSError: pass
-                content.append({"type": "text", "text": "[Word document contents]\n" + txt})
-            else:  # image / scan / photo
-                content.append(_img_block(f.stream))
+                media.append({"type": "text", "text": "[Word document contents]\n" + txt})
+            else:
+                media.append(_img_block(f.stream))
         except Exception as e:
             return jsonify({"error": f"Could not read {f.filename}: {e}"}), 400
-    content.append({"type": "text", "text": "Extract the terms from the contract above as specified."})
     try:
         from anthropic import Anthropic
         client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        c1 = list(media) + [{"type": "text", "text": "Extract the terms from the contract above as specified."}]
         msg = client.messages.create(model=MODEL, max_tokens=8000, system=SYSTEM,
-                                      messages=[{"role": "user", "content": content}])
-        raw = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
-        if raw.startswith("```"):
-            raw = raw.strip("`").split("\n", 1)[1].rsplit("```", 1)[0]
-        data = _parse_json(raw)
+                                      messages=[{"role": "user", "content": c1}])
+        data = _parse_json(_text_of(msg))
+        data = _verify(client, media, data)   # second-pass audit of fees/dates/splits
     except Exception as e:
         return jsonify({"error": f"Extraction failed: {e}"}), 502
     job = uuid.uuid4().hex[:12]

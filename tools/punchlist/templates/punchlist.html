@@ -57,6 +57,9 @@
   <label>Property address <span class="hint">e.g. 4109 Beckford Dr</span></label>
   <input id="address" type="text" placeholder="Property address">
 
+  <label>Access information <span class="hint">Optional. Lockbox/gate codes, key location, alarm info, or who to call for entry — printed at the top of the punchlist so a contractor can get in to estimate.</span></label>
+  <textarea id="access" style="min-height:70px" placeholder="e.g. Lockbox on front door, code 4821. Gate code #1234. Call John 336-555-0100 before arrival."></textarea>
+
   <label>Checklist <span class="hint">Type it below, one item per line — or add a photo of a written/on-screen checklist and it will be read for you. You can do both. Note anything already done.</span></label>
   <textarea id="checklist" placeholder="Missing/broken window latches (4 - downstairs front window, 2 in den...)
 Replace broken blind in primary bedroom (39-40 inch)
@@ -80,18 +83,19 @@ Smoke detectors (3) - completed while at property"></textarea>
 <script>
 const LS='pl_state_v1';
 function newJob(){ let u=(crypto.randomUUID?crypto.randomUUID():('x'.repeat(32))).replace(/[^0-9a-f]/g,''); return (u+'0'.repeat(32)).slice(0,32); }
-let state = load() || {job:newJob(), address:'', checklist:'', items:[], cl:[]};
+let state = load() || {job:newJob(), address:'', checklist:'', access:'', items:[], cl:[]};
 let pending = 0;
 
 function load(){ try{ return JSON.parse(localStorage.getItem(LS)); }catch(e){ return null; } }
 function save(){
   state.address=document.getElementById('address').value;
   state.checklist=document.getElementById('checklist').value;
+  state.access=document.getElementById('access').value;
   try{ localStorage.setItem(LS, JSON.stringify(state)); }catch(e){}
 }
 function resetAll(){
-  state={job:newJob(), address:'', checklist:'', items:[], cl:[]};
-  document.getElementById('address').value=''; document.getElementById('checklist').value='';
+  state={job:newJob(), address:'', checklist:'', access:'', items:[], cl:[]};
+  document.getElementById('address').value=''; document.getElementById('checklist').value=''; document.getElementById('access').value='';
   document.getElementById('result').style.display='none';
   save(); render(); renderCl();
 }
@@ -157,6 +161,7 @@ function syncGo(){
 
 document.getElementById('address').addEventListener('input',save);
 document.getElementById('checklist').addEventListener('input',save);
+document.getElementById('access').addEventListener('input',save);
 
 document.getElementById('go').onclick=async()=>{
   save();
@@ -165,7 +170,7 @@ document.getElementById('go').onclick=async()=>{
   if(pending>0){res.style.display='block';res.innerHTML='<b>Please wait — photos are still saving.</b>';return;}
   const btn=document.getElementById('go'); btn.dataset.busy='1'; btn.disabled=true; btn.innerHTML='<span class="spin"></span>Generating…';
   const fd=new FormData();
-  fd.append('job',state.job); fd.append('address',state.address); fd.append('checklist',state.checklist);
+  fd.append('job',state.job); fd.append('address',state.address); fd.append('checklist',state.checklist); fd.append('access',state.access||'');
   fd.append('manifest', JSON.stringify({property:state.items, checklist:state.cl.map(c=>c.id)}));
   try{
     const r=await fetch('generate',{method:'POST',body:fd});
@@ -187,6 +192,7 @@ document.getElementById('go').onclick=async()=>{
 // restore on load (survives the iOS camera page-reload)
 document.getElementById('address').value=state.address||'';
 document.getElementById('checklist').value=state.checklist||'';
+document.getElementById('access').value=state.access||'';
 render(); renderCl(); save();
 </script>
 </body>

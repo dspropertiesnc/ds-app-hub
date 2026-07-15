@@ -76,7 +76,7 @@ function section(title, inner){ return inner ? '<div class="band">'+esc(title)+'
 document.getElementById('go').onclick=async()=>{
   const res=document.getElementById('result');
   if(!files.length){ res.style.display='block'; res.innerHTML='<div class="warn">Please upload a contract file first.</div>'; return; }
-  const btn=document.getElementById('go'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>Reading contract…';
+  const btn=document.getElementById('go'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>Reading & verifying contract…';
   const fd=new FormData(); files.forEach(f=>fd.append('files',f,f.name));
   try{
     const r=await fetch('extract',{method:'POST',body:fd});

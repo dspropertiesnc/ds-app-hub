@@ -44,6 +44,14 @@ def _h2(doc,t):
     p=doc.add_paragraph(); _sp(p,10,3); _shade(p,SUBBAR)
     r=p.add_run("  "+t); r.bold=True; r.font.size=Pt(11); r.font.color.rgb=RGBColor.from_string(H2TEXT)
 
+
+def _access(doc, text):
+    p = doc.add_paragraph(); _sp(p, 10, 2); _shade(p, ACCENT)
+    r = p.add_run("  ACCESS INFORMATION"); r.bold = True; r.font.size = Pt(11); r.font.color.rgb = RGBColor(0xff,0xff,0xff)
+    for line in [ln for ln in text.splitlines() if ln.strip()]:
+        bp = doc.add_paragraph(); _sp(bp, 1, 1); bp.paragraph_format.left_indent = Inches(0.1)
+        rr = bp.add_run(line.strip()); rr.font.size = Pt(10.5)
+
 def _item(doc,task,note=None,done=False):
     p=doc.add_paragraph(); _sp(p,3,1); p.paragraph_format.left_indent=Inches(0.1)
     box=p.add_run("☑ " if done else "☐ "); box.font.name="Segoe UI Symbol"; box.font.size=Pt(12)
@@ -73,6 +81,8 @@ def build(spec,out_path,photo_dir="",logo_path=None):
     for s in doc.sections:
         s.top_margin=Inches(0.7); s.bottom_margin=Inches(0.7); s.left_margin=Inches(0.8); s.right_margin=Inches(0.8)
     _title(doc,spec["title"],spec.get("subtitle",""),logo_path)
+    if spec.get("access"):
+        _access(doc, spec["access"])
     for sec in spec["sections"]:
         _h1(doc,sec["name"])
         for sub in sec.get("subsections",[]):

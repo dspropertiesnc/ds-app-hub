@@ -63,6 +63,7 @@ def generate():
     job = _safe_id(request.form.get("job"))
     if not job: return jsonify({"error": "bad job"}), 400
     address = (request.form.get("address") or "Property").strip()
+    access = (request.form.get("access") or "").strip()
     checklist = (request.form.get("checklist") or "").strip()
     try:
         manifest = json.loads(request.form.get("manifest") or "{}")
@@ -87,6 +88,7 @@ def generate():
         p = os.path.join(cdir, cid + ".jpg")
         if os.path.exists(p): checklist_images.append(p)
     spec, mode = structuring.make_spec(address, checklist, interior, exterior, checklist_images=checklist_images)
+    if access: spec["access"] = access
     safe = secure_filename(address) or "punchlist"
     docx_path = os.path.join(JOBS, job, f"{safe} Punchlist.docx")
     B.build(spec, docx_path, photo_dir=pdir, logo_path=LOGO)
