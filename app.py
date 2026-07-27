@@ -6,7 +6,7 @@ from tools.contracts import bp as contracts_bp, META as CONTRACTS_META
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24).hex())
-app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 40 * 1024 * 1024
 APP_PASSWORD = os.environ.get("APP_PASSWORD")  # unset = open (local/dev)
 
 app.register_blueprint(punchlist_bp)

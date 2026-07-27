@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env
+punchlist_jobs/
+*.docx
+.DS_Store
