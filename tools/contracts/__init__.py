@@ -1,4 +1,4 @@
-import os, json, base64, io, uuid, tempfile
+import os, json, base64, io, uuid, tempfile, gc
 try:
     import pillow_heif; pillow_heif.register_heif_opener()
 except Exception:
@@ -163,6 +163,7 @@ def extract():
                 data = f.read()
                 media.append({"type": "document", "source": {"type": "base64",
                     "media_type": "application/pdf", "data": base64.b64encode(data).decode()}})
+                del data
             elif name.endswith(".docx"):
                 tmp = os.path.join(JOBS, "u_" + uuid.uuid4().hex[:8] + ".docx"); f.save(tmp)
                 txt = _docx_text(tmp)
@@ -181,6 +182,7 @@ def extract():
                                       messages=[{"role": "user", "content": c1}])
         data = _parse_json(_text_of(msg))
         data = _verify(client, media, data)   # second-pass audit of fees/dates/splits
+        media = None; gc.collect()
     except Exception as e:
         return jsonify({"error": f"Extraction failed: {e}"}), 502
     job = uuid.uuid4().hex[:12]

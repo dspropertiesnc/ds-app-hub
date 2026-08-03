@@ -1,4 +1,5 @@
-import os, uuid, shutil, tempfile, json
+import os, uuid, shutil, tempfile, json, smtplib, ssl
+from email.message import EmailMessage
 try:
     import pillow_heif; pillow_heif.register_heif_opener()
 except Exception:
@@ -62,8 +63,8 @@ def photo(job, kind, pid):
 def generate():
     job = _safe_id(request.form.get("job"))
     if not job: return jsonify({"error": "bad job"}), 400
-    address = (request.form.get("address") or "Property").strip()
-    access = (request.form.get("access") or "").strip()
+    address = (request.form.get("address") or "Property").strip()[:75]
+    access = (request.form.get("access") or "").strip()[:100]
     checklist = (request.form.get("checklist") or "").strip()
     try:
         manifest = json.loads(request.form.get("manifest") or "{}")
@@ -92,10 +93,65 @@ def generate():
     safe = secure_filename(address) or "punchlist"
     docx_path = os.path.join(JOBS, job, f"{safe} Punchlist.docx")
     B.build(spec, docx_path, photo_dir=pdir, logo_path=LOGO)
+    try:
+        with open(os.path.join(jd, "meta.json"), "w") as mfh:
+            json.dump({"address": address}, mfh)
+    except Exception:
+        pass
     return jsonify({"job": job, "mode": mode, "docx": True, "pdf": False,
                     "sections": [{"name": s["name"],
                                   "subs": [{"name": ss["name"], "count": len(ss.get("items", []))} for ss in s.get("subsections", [])],
                                   "photos": len(s.get("photos", []))} for s in spec["sections"]]})
+
+EMAIL_TARGETS = {
+    "info": ["info@dspropertiesnc.com"],
+    "admin": ["admin@dspropertiesnc.com"],
+    "john": ["john@dspropertiesnc.com"],
+    "alina": ["alina@dspropertiesnc.com"],
+}
+
+def _send_email(recipients, subject, body, attach_path):
+    host = os.getenv("SMTP_HOST"); port = int(os.getenv("SMTP_PORT", "587"))
+    user = os.getenv("SMTP_USER"); pw = os.getenv("SMTP_PASS")
+    sender = os.getenv("SMTP_FROM", user)
+    if not (host and user and pw):
+        raise RuntimeError("Email is not configured on the server (set SMTP_HOST, SMTP_USER, SMTP_PASS).")
+    msg = EmailMessage()
+    msg["From"] = sender; msg["To"] = ", ".join(recipients); msg["Subject"] = subject
+    msg.set_content(body)
+    with open(attach_path, "rb") as fh:
+        msg.add_attachment(fh.read(), maintype="application",
+                           subtype="vnd.openxmlformats-officedocument.wordprocessingml.document",
+                           filename=os.path.basename(attach_path))
+    ctx = ssl.create_default_context()
+    with smtplib.SMTP(host, port, timeout=30) as srv:
+        srv.starttls(context=ctx); srv.login(user, pw); srv.send_message(msg)
+
+@bp.route("/email", methods=["POST"])
+def email():
+    job = _safe_id(request.form.get("job"))
+    target = request.form.get("target")
+    recipients = EMAIL_TARGETS.get(target)
+    if not job or not recipients:
+        return jsonify({"error": "Bad request."}), 400
+    jd = os.path.join(JOBS, job)
+    if not os.path.isdir(jd):
+        return jsonify({"error": "Punchlist not found. Generate it again."}), 404
+    docx = next((os.path.join(jd, fn) for fn in os.listdir(jd) if fn.endswith(".docx")), None)
+    if not docx:
+        return jsonify({"error": "Punchlist file not found."}), 404
+    address = "the property"
+    try:
+        address = json.load(open(os.path.join(jd, "meta.json"))).get("address") or address
+    except Exception:
+        pass
+    try:
+        _send_email(recipients, f"Unit Turn Punchlist \u2014 {address}",
+                    f"Attached is the unit turn punchlist for {address}.\n\nGenerated via the Doss & Spaulding tools hub.",
+                    docx)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
+    return jsonify({"ok": True, "sent_to": recipients})
 
 @bp.route("/download/<job>/<fmt>")
 def download(job, fmt):

@@ -35,3 +35,10 @@ python app.py                               # http://localhost:5000
 
 ## Listing generator model
 The listing tool uses `ANTHROPIC_MODEL` (default `claude-sonnet-4-5-20250929`); override with `LISTING_MODEL` if needed.
+
+## Email buttons (punchlist)
+The punchlist "Email a copy" buttons send the generated .docx as an attachment. Configure SMTP:
+- `SMTP_HOST` (e.g. smtp.gmail.com), `SMTP_PORT` (587), `SMTP_USER` (sending mailbox), `SMTP_PASS` (app password), optional `SMTP_FROM`.
+- For Google Workspace (dspropertiesnc.com): enable 2-Step Verification on the sending account and create an App Password, then use it as `SMTP_PASS`.
+- If SMTP isn't set, the buttons return a clear "email not configured" message; downloads still work.
+Recipients are fixed: info@, admin@, and John+Alina.

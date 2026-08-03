@@ -14,3 +14,13 @@ services:
         value: claude-sonnet-4-6
       - key: APP_PASSWORD
         sync: false          # optional: set a shared team password. Leave unset = open.
+      - key: SMTP_HOST
+        sync: false          # e.g. smtp.gmail.com (for the email buttons)
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false          # the sending mailbox, e.g. info@dspropertiesnc.com
+      - key: SMTP_PASS
+        sync: false          # app password for that mailbox
+      - key: SMTP_FROM
+        sync: false          # optional; defaults to SMTP_USER
