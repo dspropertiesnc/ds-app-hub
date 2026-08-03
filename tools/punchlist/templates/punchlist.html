@@ -41,6 +41,9 @@
   .emailbtn{flex:1 1 45%;background:#fff;color:var(--accent-dark);border:1.5px solid var(--accent);border-radius:10px;padding:11px 8px;font-weight:600;font-size:13px;cursor:pointer}
   .emailbtn:disabled{opacity:.6}
   .emailbtn.sent{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .customrow{display:flex;gap:8px;margin-top:8px}
+  .customrow input{flex:1 1 60%;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:14px}
+  .customrow .emailbtn{flex:0 0 90px}
   .sum{font-size:13px;color:#333;margin-top:6px}
   .warn{background:#fbf3e2;border:1px solid #e6cfa0;color:#7a5b1a;padding:10px;border-radius:8px;font-size:12px;margin-top:10px}
   .newlink{display:inline-block;margin-top:12px;color:var(--accent-dark);font-weight:600;text-decoration:none;font-size:13px;cursor:pointer}
@@ -156,11 +159,10 @@ document.getElementById('address').addEventListener('input',save);
 document.getElementById('checklist').addEventListener('input',save);
 document.getElementById('access').addEventListener('input',save);
 
-async function sendEmail(target, btn){
-  if(!lastJob) return;
-  const label=btn.textContent; btn.disabled=true; btn.textContent='Sending…';
+async function doEmail(fd, btn, label){
+  btn.disabled=true; btn.textContent='Sending…';
   try{
-    const fd=new FormData(); fd.append('job',lastJob); fd.append('target',target);
+    fd.append('address', state.address||'');
     const r=await fetch('email',{method:'POST',body:fd}); const j=await r.json();
     if(!r.ok) throw new Error(j.error||'Failed to send');
     btn.classList.add('sent'); btn.textContent='Sent ✓';
@@ -168,6 +170,18 @@ async function sendEmail(target, btn){
     btn.disabled=false; btn.textContent=label;
     document.getElementById('emailmsg').innerHTML='<div class="warn">'+e.message+'</div>';
   }
+}
+function sendEmail(target, btn){
+  if(!lastJob) return;
+  const fd=new FormData(); fd.append('job',lastJob); fd.append('target',target);
+  doEmail(fd, btn, btn.textContent);
+}
+function sendCustom(btn){
+  if(!lastJob) return;
+  const to=(document.getElementById('customemail').value||'').trim();
+  if(!to){ document.getElementById('emailmsg').innerHTML='<div class="warn">Enter an email address.</div>'; return; }
+  const fd=new FormData(); fd.append('job',lastJob); fd.append('target','custom'); fd.append('to',to);
+  doEmail(fd, btn, 'Send');
 }
 
 document.getElementById('go').onclick=async()=>{
@@ -191,14 +205,17 @@ document.getElementById('go').onclick=async()=>{
     html+='<button class="emailbtn" data-t="admin">admin@dspropertiesnc.com</button>';
     html+='<button class="emailbtn" data-t="john">john@dspropertiesnc.com</button>';
     html+='<button class="emailbtn" data-t="alina">alina@dspropertiesnc.com</button>';
-    html+='</div><div id="emailmsg"></div>';
+    html+='</div>';
+    html+='<div class="customrow"><input id="customemail" type="email" inputmode="email" placeholder="Or type an email address\u2026"><button class="emailbtn" id="customsend">Send</button></div>';
+    html+='<div id="emailmsg"></div>';
     j.sections.forEach(s=>{ const subs=s.subs.map(x=>x.name+' ('+x.count+')').join(', ');
       html+='<div class="sum"><b>'+s.name+'</b>: '+(subs||'—')+' &middot; '+s.photos+' photo(s)</div>'; });
     html+='<div class="sum" style="color:#666;margin-top:8px">Need a PDF? Open the file and choose File &rarr; Save As / Print &rarr; PDF.</div>';
     if(j.mode==='fallback') html+='<div class="warn">Server has no AI key set, so tasks were only lightly organized.</div>';
     html+='<a class="newlink" id="startnew">+ Start a new punchlist</a>';
     res.innerHTML=html; res.style.display='block';
-    res.querySelectorAll('.emailbtn').forEach(b=>{ b.onclick=()=>sendEmail(b.dataset.t, b); });
+    res.querySelectorAll('.emailbtn[data-t]').forEach(b=>{ b.onclick=()=>sendEmail(b.dataset.t, b); });
+    document.getElementById('customsend').onclick=()=>sendCustom(document.getElementById('customsend'));
     document.getElementById('startnew').onclick=()=>{ if(confirm('Clear this punchlist and start a new one?')) resetAll(); };
   }catch(e){ res.innerHTML='<b>Error:</b> '+e.message; res.style.display='block'; }
   btn.dataset.busy=''; btn.disabled=false; btn.textContent='Generate punchlist';

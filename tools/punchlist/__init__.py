@@ -1,4 +1,4 @@
-import os, uuid, shutil, tempfile, json, smtplib, ssl
+import os, re, uuid, shutil, tempfile, json, smtplib, ssl
 from email.message import EmailMessage
 try:
     import pillow_heif; pillow_heif.register_heif_opener()
@@ -103,6 +103,9 @@ def generate():
                                   "subs": [{"name": ss["name"], "count": len(ss.get("items", []))} for ss in s.get("subsections", [])],
                                   "photos": len(s.get("photos", []))} for s in spec["sections"]]})
 
+def _valid_email(e):
+    return bool(re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", (e or "").strip()))
+
 EMAIL_TARGETS = {
     "info": ["info@dspropertiesnc.com"],
     "admin": ["admin@dspropertiesnc.com"],
@@ -131,7 +134,13 @@ def _send_email(recipients, subject, body, attach_path):
 def email():
     job = _safe_id(request.form.get("job"))
     target = request.form.get("target")
-    recipients = EMAIL_TARGETS.get(target)
+    if target == "custom":
+        to = (request.form.get("to") or "").strip()
+        if not _valid_email(to):
+            return jsonify({"error": "Enter a valid email address."}), 400
+        recipients = [to]
+    else:
+        recipients = EMAIL_TARGETS.get(target)
     if not job or not recipients:
         return jsonify({"error": "Bad request."}), 400
     jd = os.path.join(JOBS, job)
@@ -140,11 +149,14 @@ def email():
     docx = next((os.path.join(jd, fn) for fn in os.listdir(jd) if fn.endswith(".docx")), None)
     if not docx:
         return jsonify({"error": "Punchlist file not found."}), 404
-    address = "the property"
-    try:
-        address = json.load(open(os.path.join(jd, "meta.json"))).get("address") or address
-    except Exception:
-        pass
+    address = (request.form.get("address") or "").strip()[:75]
+    if not address:
+        try:
+            address = json.load(open(os.path.join(jd, "meta.json"))).get("address") or ""
+        except Exception:
+            address = ""
+    if not address:
+        address = "the property"
     try:
         _send_email(recipients, f"Unit Turn Punchlist \u2014 {address}",
                     f"Attached is the unit turn punchlist for {address}.\n\nGenerated via the Doss & Spaulding tools hub.",
