@@ -24,3 +24,5 @@ services:
         sync: false          # app password for that mailbox
       - key: SMTP_FROM
         sync: false          # optional; defaults to SMTP_USER
+      - key: LISTING_FROM
+        value: listing-input@dspropertiesnc.com   # Listing Input Sheet sends from this alias

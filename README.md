@@ -42,3 +42,26 @@ The punchlist "Email a copy" buttons send the generated .docx as an attachment. 
 - For Google Workspace (dspropertiesnc.com): enable 2-Step Verification on the sending account and create an App Password, then use it as `SMTP_PASS`.
 - If SMTP isn't set, the buttons return a clear "email not configured" message; downloads still work.
 Recipients are fixed: info@, admin@, and John+Alina.
+
+## Eviction Prep Packet (/eviction/)
+Upload NC summary ejectment case documents (lease, AOC-CVM-201 complaint, AOC-CVM-100 summons incl. the
+sheriff's return, tenant ledger, demand notice, SCRA declaration). Produces two Word downloads: a 1-2 page
+courtroom quick-reference card and the full prep binder.
+
+Money math: payments are applied to the OLDEST outstanding charge first (as the ledger does), then
+  rent ask = accrued rent through the hearing date - payments applied to that rent (+ any prior unpaid rent)
+  total ask = rent ask + court costs        (late/add-on fees excluded)
+Both figures are shown: the accrued-through-court-date ask (lead) and the full-month alternative
+(rent charged - paid), so the rep can follow the magistrate. Payments may be entered either as
+type="payment" or as a negative amount. `landlord.article` controls "the Smith Trust" vs "Bartola Lisbon".
+The allocation is printed in the packet, the ledger is cross-checked against the stated balance, and any
+partial payment is flagged prominently. Optional `EVICTION_MODEL` env var overrides the model.
+
+## Listing Input Sheet (/listing-input/)
+Field staff capture property details (built from the marked-up Triad MLS Residential Rental Input Form:
+struck items omitted, highlighted-and-not-struck items required). Conditional fields: Pool Features appear
+only when Pool = Yes; Fireplace Location when fireplaces > 0; Garage description when spaces > 0; Unit #/floor
+for Condominium/Townhouse/Duplex. "Lock Box Info" is relabeled **ShowMojo Box Serial #**.
+Produces a branded PDF and emails it from `LISTING_FROM` (default listing-input@dspropertiesnc.com) with
+one-click buttons for admin@, support@, info@, plus a custom address. Entries are saved in the browser as
+you type; a Clear-all button (with confirmation) resets the sheet.

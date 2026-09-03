@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Listing Input Sheet — Doss &amp; Spaulding</title>
+<style>
+  :root{--accent:#a78147;--accent-dark:#8f6c3c;--sub:#efe7d9;--gray:#666;--line:#e6e0d6;--dark:#5c4522;}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#f7f5f1;color:#1a1a1a}
+  .topbar{background:#fff;border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:12px}
+  .topbar img{height:30px}.topbar a{color:var(--accent-dark);text-decoration:none;font-size:13px;font-weight:600}
+  .topbar .sp{flex:1}
+  header.h{background:var(--accent);color:#fff;padding:16px}
+  header.h h1{font-size:18px;margin:0}header.h p{margin:4px 0 0;font-size:12px;opacity:.9}
+  main{max-width:720px;margin:0 auto;padding:16px}
+  .sec{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden}
+  .sec>summary{background:var(--sub);color:var(--dark);font-weight:700;font-size:14px;padding:12px 14px;cursor:pointer;list-style:none;display:flex;justify-content:space-between}
+  .sec>summary::-webkit-details-marker{display:none}
+  .sec>summary .cnt{font-weight:400;color:var(--gray);font-size:12px}
+  .body{padding:12px 14px}
+  .f{margin-bottom:14px}
+  .f>label{display:block;font-weight:600;font-size:13.5px;margin-bottom:5px}
+  .req{color:#b3261e;font-weight:700}
+  .hint{font-weight:400;color:var(--gray);font-size:11.5px;display:block;margin-top:2px}
+  input[type=text],input[type=number],select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;font-size:15px;background:#fff}
+  textarea{min-height:70px;resize:vertical}
+  .yn{display:flex;gap:8px}
+  .yn button{flex:1;border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px;font-size:14px;cursor:pointer;color:#555}
+  .yn button.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+  .opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:5px 10px;max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:9px;padding:9px;background:#fff}
+  .opts label{display:flex;gap:6px;align-items:flex-start;font-size:12.8px;font-weight:400;cursor:pointer}
+  .opts input{margin-top:2px}
+  .miss{border-color:#b3261e !important;background:#fff8f7}
+  #go{width:100%;margin-top:6px;background:var(--accent);color:#fff;border:0;border-radius:12px;padding:15px;font-size:16px;font-weight:700;cursor:pointer}
+  #go:disabled{opacity:.6}
+  #result{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;display:none}
+  .dl{display:flex;gap:10px;margin:10px 0}
+  .dl a{flex:1;text-align:center;text-decoration:none;background:var(--accent);color:#fff;padding:13px;border-radius:10px;font-weight:700}
+  .emailhead{font-size:13px;font-weight:700;color:var(--accent-dark);margin:14px 0 6px}
+  .emailrow{display:flex;flex-wrap:wrap;gap:8px}
+  .emailbtn{flex:1 1 45%;background:#fff;color:var(--accent-dark);border:1.5px solid var(--accent);border-radius:10px;padding:11px 8px;font-weight:600;font-size:13px;cursor:pointer}
+  .emailbtn:disabled{opacity:.6}.emailbtn.sent{background:var(--accent);color:#fff}
+  .customrow{display:flex;gap:8px;margin-top:8px}
+  .customrow input{flex:1 1 60%}.customrow .emailbtn{flex:0 0 90px}
+  .warn{background:#fbf3e2;border:1px solid #e6cfa0;color:#7a5b1a;padding:10px;border-radius:8px;font-size:12.5px;margin-bottom:10px}
+  .clearwrap{margin:26px 0 10px;border-top:1px solid var(--line);padding-top:14px;text-align:center}
+  .clearbtn{background:none;border:1px solid #d9c9b0;color:#9a7d4f;border-radius:8px;padding:9px 16px;font-size:12.5px;cursor:pointer}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:s .8s linear infinite;vertical-align:-3px;margin-right:8px}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/"><img src="/static/logo.png" alt="Doss &amp; Spaulding"></a>
+  <span class="sp"></span><a href="/">&larr; All tools</a>
+</div>
+<header class="h">
+  <h1>Listing Input Sheet</h1>
+  <p>Capture it in the field &rarr; send to admin for MLS / Rentvine entry</p>
+</header>
+<main>
+  <div class="warn"><b>Red&nbsp;*</b> fields are required by the MLS. Everything else is optional but fill in as much as you can — it saves the admin a trip back to the property.</div>
+  <form id="form">
+  {% for s in sections %}
+    <details class="sec" {% if loop.index <= 2 %}open{% endif %}>
+      <summary>{{ s.name }} <span class="cnt">{{ s.fields|length }} fields</span></summary>
+      <div class="body">
+      {% for f in s.fields %}
+        <div class="f" data-k="{{ f.k }}"
+             {% if f.dep %}data-dep='{{ f.dep|tojson }}'{% endif %}>
+          <label for="{{ f.k }}">{{ f.l }}{% if f.req %} <span class="req">*</span>{% endif %}
+            {% if f.h %}<span class="hint">{{ f.h }}</span>{% endif %}</label>
+          {% if f.t == 'text' %}
+            <input type="text" id="{{ f.k }}" name="{{ f.k }}"
+                   {% if f.ph %}placeholder="{{ f.ph }}"{% endif %}
+                   {% if f.pattern %}pattern="{{ f.pattern }}"{% endif %}
+                   {% if f.fmt %}data-fmt="{{ f.fmt }}" inputmode="numeric"{% endif %}>
+          {% elif f.t == 'number' %}
+            <input type="number" inputmode="numeric" min="0" id="{{ f.k }}" name="{{ f.k }}">
+          {% elif f.t == 'textarea' %}
+            <textarea id="{{ f.k }}" name="{{ f.k }}"></textarea>
+          {% elif f.t == 'select' %}
+            <select id="{{ f.k }}" name="{{ f.k }}">
+              <option value="">— select —</option>
+              {% for o in f.o %}<option value="{{ o }}">{{ o }}</option>{% endfor %}
+            </select>
+          {% elif f.t == 'yesno' %}
+            <div class="yn" data-yn="{{ f.k }}">
+              <button type="button" data-v="Yes">Yes</button>
+              <button type="button" data-v="No">No</button>
+            </div>
+            <input type="hidden" id="{{ f.k }}" name="{{ f.k }}">
+          {% elif f.t == 'multi' %}
+            <div class="opts">
+              {% for o in f.o %}
+              <label><input type="checkbox" name="{{ f.k }}" value="{{ o }}"><span>{{ o }}</span></label>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+      </div>
+    </details>
+  {% endfor %}
+  </form>
+  <button id="go">Create sheet</button>
+  <div id="result"></div>
+  <div class="clearwrap"><button class="clearbtn" id="clearbtn">Clear all fields &amp; start over</button></div>
+</main>
+<script>
+const LS='listing_state_v1';
+const form=document.getElementById('form');
+let lastJob=null;
+
+// ---- yes/no toggles ----
+document.querySelectorAll('[data-yn]').forEach(g=>{
+  const hidden=document.getElementById(g.dataset.yn);
+  g.querySelectorAll('button').forEach(b=>{
+    b.onclick=()=>{
+      const on=b.classList.contains('on');
+      g.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      if(!on){ b.classList.add('on'); hidden.value=b.dataset.v; } else { hidden.value=''; }
+      hidden.dispatchEvent(new Event('change',{bubbles:true})); save(); applyDeps();
+    };
+  });
+});
+
+// ---- ShowMojo serial auto-format (###-##-###) ----
+document.querySelectorAll('[data-fmt="showmojo"]').forEach(inp=>{
+  inp.addEventListener('input',()=>{
+    const d=inp.value.replace(/\D/g,'').slice(0,8);
+    let out=d.slice(0,3);
+    if(d.length>3) out+='-'+d.slice(3,5);
+    if(d.length>5) out+='-'+d.slice(5,8);
+    inp.value=out;
+    inp.setCustomValidity(out.length && out.length<10 ? 'Format is ###-##-###' : '');
+  });
+});
+
+// ---- conditional logic ----
+function valOf(k){
+  const el=document.getElementById(k);
+  if(el) return el.value;
+  const checked=form.querySelectorAll('input[name="'+k+'"]:checked');
+  return checked.length?checked[0].value:'';
+}
+function applyDeps(){
+  document.querySelectorAll('.f[data-dep]').forEach(div=>{
+    let dep; try{ dep=JSON.parse(div.dataset.dep); }catch(e){ return; }
+    const v=valOf(dep.f); let show=false;
+    if(dep.eq!==undefined) show = (v===dep.eq);
+    else if(dep.in!==undefined) show = dep.in.indexOf(v)>=0;
+    else if(dep.gt!==undefined) show = (parseFloat(v||'0')>dep.gt);
+    div.style.display = show ? '' : 'none';
+    if(!show){ // clear hidden dependents so stale values aren't submitted
+      div.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=false);
+      div.querySelectorAll('input[type=text],input[type=number],select,textarea').forEach(i=>i.value='');
+    }
+  });
+}
+form.addEventListener('input',()=>{applyDeps();save();});
+form.addEventListener('change',()=>{applyDeps();save();});
+
+// ---- persistence ----
+function save(){
+  const d={};
+  new FormData(form).forEach((v,k)=>{ if(d[k]){ if(!Array.isArray(d[k])) d[k]=[d[k]]; d[k].push(v);} else d[k]=v; });
+  try{ localStorage.setItem(LS, JSON.stringify(d)); }catch(e){}
+}
+function restore(){
+  let d; try{ d=JSON.parse(localStorage.getItem(LS)); }catch(e){ return; }
+  if(!d) return;
+  Object.keys(d).forEach(k=>{
+    const vals=Array.isArray(d[k])?d[k]:[d[k]];
+    const boxes=form.querySelectorAll('input[type=checkbox][name="'+k+'"]');
+    if(boxes.length){ boxes.forEach(b=>{ if(vals.indexOf(b.value)>=0) b.checked=true; }); return; }
+    const el=document.getElementById(k);
+    if(el){ el.value=vals[0]; 
+      const g=document.querySelector('[data-yn="'+k+'"]');
+      if(g) g.querySelectorAll('button').forEach(b=>{ if(b.dataset.v===vals[0]) b.classList.add('on'); });
+    }
+  });
+}
+function clearAll(){
+  form.reset();
+  form.querySelectorAll('input[type=hidden]').forEach(h=>h.value='');
+  document.querySelectorAll('.yn button').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.miss').forEach(e=>e.classList.remove('miss'));
+  document.getElementById('result').style.display='none';
+  try{ localStorage.removeItem(LS); }catch(e){}
+  applyDeps();
+}
+document.getElementById('clearbtn').onclick=()=>{
+  if(confirm('Clear ALL fields on this sheet and start over? This cannot be undone.')) clearAll();
+};
+
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+// ---- submit ----
+document.getElementById('go').onclick=async()=>{
+  const res=document.getElementById('result');
+  document.querySelectorAll('.miss').forEach(e=>e.classList.remove('miss'));
+  const btn=document.getElementById('go'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>Creating sheet…';
+  try{
+    const r=await fetch('submit',{method:'POST',body:new FormData(form)});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||'Could not create the sheet');
+    lastJob=d.job;
+    let html='';
+    if(d.missing && d.missing.length){
+      html+='<div class="warn"><b>Still missing (required):</b> '+esc(d.missing.join(', '))
+          + '<br>The sheet was still created and flags these at the top — but please fill them in if you can.</div>';
+    }
+    html+='<div><b>'+esc(d.address)+'</b> &middot; '+d.filled+' fields captured</div>';
+    html+='<div class="dl"><a href="download/'+d.job+'">Download PDF</a></div>';
+    html+='<div class="emailhead">Send to</div><div class="emailrow">'
+        + '<button class="emailbtn" data-t="admin">admin@dspropertiesnc.com</button>'
+        + '<button class="emailbtn" data-t="support">support@dspropertiesnc.com</button>'
+        + '<button class="emailbtn" data-t="info">info@dspropertiesnc.com</button>'
+        + '</div><div class="customrow"><input type="email" id="customemail" placeholder="Or type an email address…">'
+        + '<button class="emailbtn" id="customsend">Send</button></div><div id="emailmsg"></div>';
+    res.innerHTML=html; res.style.display='block';
+    res.querySelectorAll('.emailbtn[data-t]').forEach(b=>b.onclick=()=>sendEmail(b.dataset.t,b));
+    document.getElementById('customsend').onclick=()=>sendCustom(document.getElementById('customsend'));
+    res.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(e){ res.innerHTML='<div class="warn"><b>Error:</b> '+esc(e.message)+'</div>'; res.style.display='block'; }
+  btn.disabled=false; btn.textContent='Create sheet';
+};
+
+async function doEmail(fd,btn,label){
+  btn.disabled=true; btn.textContent='Sending…';
+  try{
+    const r=await fetch('email',{method:'POST',body:fd}); const j=await r.json();
+    if(!r.ok) throw new Error(j.error||'Failed to send');
+    btn.classList.add('sent'); btn.textContent='Sent ✓';
+  }catch(e){ btn.disabled=false; btn.textContent=label;
+    document.getElementById('emailmsg').innerHTML='<div class="warn">'+esc(e.message)+'</div>'; }
+}
+function sendEmail(t,btn){ if(!lastJob) return;
+  const fd=new FormData(); fd.append('job',lastJob); fd.append('target',t); doEmail(fd,btn,btn.textContent); }
+function sendCustom(btn){ if(!lastJob) return;
+  const to=(document.getElementById('customemail').value||'').trim();
+  if(!to){ document.getElementById('emailmsg').innerHTML='<div class="warn">Enter an email address.</div>'; return; }
+  const fd=new FormData(); fd.append('job',lastJob); fd.append('target','custom'); fd.append('to',to);
+  doEmail(fd,btn,'Send'); }
+
+restore(); applyDeps();
+</script>
+</body>
+</html>

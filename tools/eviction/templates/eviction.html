@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eviction Prep Packet — Doss &amp; Spaulding</title>
+<style>
+  :root{--accent:#a78147;--accent-dark:#8f6c3c;--sub:#efe7d9;--gray:#666;--line:#e6e0d6;--dark:#5c4522;}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#f7f5f1;color:#1a1a1a}
+  .topbar{background:#fff;border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:12px}
+  .topbar img{height:30px}
+  .topbar a{color:var(--accent-dark);text-decoration:none;font-size:13px;font-weight:600}
+  .topbar .sp{flex:1}
+  header.h{background:var(--accent);color:#fff;padding:16px}
+  header.h h1{font-size:18px;margin:0}
+  header.h p{margin:4px 0 0;font-size:12px;opacity:.9}
+  main{max-width:720px;margin:0 auto;padding:16px}
+  label{display:block;font-weight:600;font-size:14px;margin:16px 0 6px}
+  .hint{font-weight:400;color:var(--gray);font-size:12px}
+  input[type=text],textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:15px;background:#fff}
+  textarea{min-height:90px;resize:vertical;line-height:1.4}
+  .drop{display:block;border:1.5px dashed var(--accent);background:var(--sub);border-radius:12px;padding:20px;text-align:center;color:var(--accent-dark);font-weight:600;cursor:pointer;margin-top:6px}
+  .files{margin-top:10px;font-size:13px}
+  .files div{padding:5px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+  .files button{background:none;border:0;color:#b3261e;cursor:pointer;font-size:13px}
+  .doclist{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:12.5px;color:#555;margin-top:8px}
+  .doclist b{color:var(--dark)}
+  details{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+  summary{font-weight:600;font-size:14px;cursor:pointer;color:var(--accent-dark)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .grid2 label{margin:6px 0 4px;font-size:12.5px}
+  #go{width:100%;margin-top:20px;background:var(--accent);color:#fff;border:0;border-radius:12px;padding:15px;font-size:16px;font-weight:700;cursor:pointer}
+  #go:disabled{opacity:.6}
+  #result{margin-top:22px;display:none}
+  .band{background:var(--accent);color:#fff;font-weight:700;font-size:13px;padding:7px 10px;border-radius:8px 8px 0 0;text-transform:uppercase;letter-spacing:.03em}
+  .card{background:#fff;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;padding:0;margin-bottom:14px;overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  td{padding:7px 10px;border-top:1px solid var(--line);vertical-align:top}
+  td.k{width:42%;color:#333;font-weight:600}
+  .dl{display:flex;gap:10px;margin:4px 0 14px;flex-wrap:wrap}
+  .dl a{flex:1 1 45%;text-align:center;text-decoration:none;background:var(--accent);color:#fff;padding:14px;border-radius:10px;font-weight:700}
+  .warn{background:#fbf3e2;border:1px solid #e6cfa0;color:#7a5b1a;padding:10px;border-radius:8px;font-size:13px;margin-bottom:12px}
+  .disc{font-size:11.5px;color:#888;margin-top:16px;font-style:italic}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:s .8s linear infinite;vertical-align:-3px;margin-right:8px}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/"><img src="/static/logo.png" alt="Doss &amp; Spaulding"></a>
+  <span class="sp"></span>
+  <a href="/">&larr; All tools</a>
+</div>
+<header class="h">
+  <h1>Eviction Prep Packet</h1>
+  <p>NC summary ejectment — courtroom quick-reference card + full prep binder</p>
+</header>
+<main>
+  <label>Case documents</label>
+  <div class="doclist">
+    Upload what you have — PDF, Word, or photos/scans. The more of these, the more the packet fills itself in:
+    <b>lease</b> (NCAR 410-T) + addenda &middot; <b>Complaint in Summary Ejectment</b> (AOC-CVM-201) &middot;
+    <b>Magistrate Summons</b> (AOC-CVM-100, including the sheriff's return of service) &middot;
+    <b>tenant ledger</b> &middot; <b>Notice &amp; Demand for Possession</b> &middot; <b>SCRA declaration</b> (AOC-G-250).
+    Missing documents are OK — gaps get flagged rather than guessed.
+  </div>
+  <label class="drop" for="filein">+ Upload case documents</label>
+  <input id="filein" type="file" accept=".pdf,.docx,image/*" multiple style="display:none">
+  <div class="files" id="files"></div>
+
+  <details>
+    <summary>Who is appearing (prefilled — edit if someone else is standing in)</summary>
+    <div class="grid2">
+      <div><label>Firm</label><input type="text" id="firm_name" value="{{ firm.name }}"></div>
+      <div><label>Firm license</label><input type="text" id="firm_license" value="{{ firm.license }}"></div>
+      <div><label>Agent appearing</label><input type="text" id="firm_managerName" value="{{ firm.managerName }}"></div>
+      <div><label>Agent license</label><input type="text" id="firm_managerLicense" value="{{ firm.managerLicense }}"></div>
+      <div><label>Office phone</label><input type="text" id="firm_phone" value="{{ firm.phone }}"></div>
+      <div><label>Office email</label><input type="text" id="firm_email" value="{{ firm.email }}"></div>
+    </div>
+  </details>
+
+  <label>Background <span class="hint">Optional. Case history that isn't on the forms — e.g. "chronically late; paid in full before judgment in June", "tenancy inherited from prior management".</span></label>
+  <textarea id="background" maxlength="1200" placeholder="Anything the person appearing should know that the paperwork doesn't say."></textarea>
+
+  <button id="go">Build packet</button>
+  <div id="result"></div>
+  <p class="disc">Internal preparation aid — not legal advice, not prepared by an attorney. Verify every figure against the case documents and confirm local practice with counsel and the Clerk before the hearing.</p>
+</main>
+<script>
+let files=[];
+const filesEl=document.getElementById('files');
+document.getElementById('filein').addEventListener('change',e=>{ for(const f of e.target.files) files.push(f); e.target.value=''; renderFiles(); });
+function renderFiles(){
+  filesEl.innerHTML='';
+  files.forEach((f,i)=>{ const d=document.createElement('div');
+    d.innerHTML='<span>'+esc(f.name)+'</span>'; const b=document.createElement('button'); b.textContent='remove';
+    b.onclick=()=>{files.splice(i,1);renderFiles()}; d.appendChild(b); filesEl.appendChild(d); });
+}
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function row(k,v){ return v?'<tr><td class="k">'+esc(k)+'</td><td>'+esc(v)+'</td></tr>':''; }
+
+document.getElementById('go').onclick=async()=>{
+  const res=document.getElementById('result');
+  if(!files.length){ res.style.display='block'; res.innerHTML='<div class="warn">Please upload at least one case document.</div>'; return; }
+  const btn=document.getElementById('go'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>Reading case documents…';
+  const fd=new FormData();
+  files.forEach(f=>fd.append('files',f,f.name));
+  ['name','license','managerName','managerLicense','phone','email'].forEach(k=>{
+    const el=document.getElementById('firm_'+k); if(el) fd.append('firm_'+k, el.value);
+  });
+  fd.append('background', document.getElementById('background').value||'');
+  try{
+    const r=await fetch('build',{method:'POST',body:fd});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||'Could not build the packet');
+    let html='<div class="dl"><a href="download/'+d.job+'/quickref">Download Quick Reference</a>'
+           + '<a href="download/'+d.job+'/packet">Download Full Packet</a></div>';
+    if(d.mismatch) html+='<div class="warn"><b>Ledger check:</b> '+esc(d.mismatch)+'</div>';
+    if(d.unapplied) html+='<div class="warn"><b>'+esc(d.unapplied)+'</b> of payment was not applied to any charge — verify the ledger.</div>';
+    html+='<div class="band">The money ask</div><div class="card"><table>';
+    html+=row('Rent accrued through court date', d.accrued+' ('+d.prorated_days+' days × '+d.daily+')');
+    html+=row('Less payments applied to that rent', d.paid_toward_rent?'('+d.paid_toward_rent+')':'');
+    html+=row('Plus prior unpaid rent', d.prior_unpaid);
+    html+=row('Rent ask', d.rent_ask);
+    html+=row('Court costs', d.costs);
+    html+=row('TOTAL money ask', d.total);
+    html+=row('Full-month alternative (rent)', d.month_ask);
+    html+=row('Fees left out of the ask', d.fees_excluded);
+    html+='</table></div>';
+    if(d.allocations && d.allocations.length){
+      html+='<div class="band">Payments applied (oldest charge first)</div><div class="card"><table>';
+      d.allocations.forEach(a=>{ html+='<tr><td class="k">'+esc(a.date||'')+' — '+esc(a.amount)+'</td><td>'+esc(a.to||'')+'</td></tr>'; });
+      html+='</table></div>';
+    }
+    html+='<div class="band">Case</div><div class="card"><table>';
+    html+=row('Tenant', d.tenant); html+=row('Property', d.property);
+    html+=row('Hearing', d.hearing); html+=row('File no.', d.fileNo);
+    html+=row('Service', d.service||'Not stated — check the sheriff’s return');
+    html+='</table></div>';
+    res.innerHTML=html; res.style.display='block';
+  }catch(e){ res.innerHTML='<div class="warn"><b>Error:</b> '+esc(e.message)+'</div>'; res.style.display='block'; }
+  btn.disabled=false; btn.textContent='Build packet';
+};
+</script>
+</body>
+</html>

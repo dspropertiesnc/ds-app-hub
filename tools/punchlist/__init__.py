@@ -7,6 +7,7 @@ except Exception:
 from flask import Blueprint, request, jsonify, send_file, render_template, abort
 from werkzeug.utils import secure_filename
 from PIL import Image, ImageOps
+from .. import mailer
 from . import structuring
 from . import builder as B
 
@@ -114,21 +115,8 @@ EMAIL_TARGETS = {
 }
 
 def _send_email(recipients, subject, body, attach_path):
-    host = os.getenv("SMTP_HOST"); port = int(os.getenv("SMTP_PORT", "587"))
-    user = os.getenv("SMTP_USER"); pw = os.getenv("SMTP_PASS")
-    sender = os.getenv("SMTP_FROM", user)
-    if not (host and user and pw):
-        raise RuntimeError("Email is not configured on the server (set SMTP_HOST, SMTP_USER, SMTP_PASS).")
-    msg = EmailMessage()
-    msg["From"] = sender; msg["To"] = ", ".join(recipients); msg["Subject"] = subject
-    msg.set_content(body)
-    with open(attach_path, "rb") as fh:
-        msg.add_attachment(fh.read(), maintype="application",
-                           subtype="vnd.openxmlformats-officedocument.wordprocessingml.document",
-                           filename=os.path.basename(attach_path))
-    ctx = ssl.create_default_context()
-    with smtplib.SMTP(host, port, timeout=30) as srv:
-        srv.starttls(context=ctx); srv.login(user, pw); srv.send_message(msg)
+    mailer.send(recipients, subject, body, attach_path,
+                from_addr=os.getenv("PUNCHLIST_FROM") or os.getenv("SMTP_FROM"))
 
 @bp.route("/email", methods=["POST"])
 def email():
