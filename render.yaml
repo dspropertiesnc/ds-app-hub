@@ -2,9 +2,12 @@ services:
   - type: web
     name: ds-tools
     runtime: python
-    plan: free              # Word-only tools are light. Use "starter" (~$7/mo) to avoid cold starts.
+    # MUST stay on a paid instance: Render blocks outbound SMTP (ports 25/465/587)
+    # on FREE web services, which makes the email buttons hang. Starter also keeps
+    # the service awake (no cold starts).
+    plan: starter
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 600 --max-requests 60 --max-requests-jitter 15
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 6 --timeout 600 --max-requests 60 --max-requests-jitter 15
     healthCheckPath: /
     autoDeploy: true
     envVars:

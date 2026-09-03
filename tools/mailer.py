@@ -17,6 +17,14 @@ def send(recipients, subject, body, attach_path=None, from_addr=None,
             msg.add_attachment(fh.read(), maintype=mime[0], subtype=mime[1],
                                filename=os.path.basename(attach_path))
     ctx = ssl.create_default_context()
-    with smtplib.SMTP(host, port, timeout=45) as srv:
-        srv.starttls(context=ctx); srv.login(user, pw); srv.send_message(msg)
+    try:
+        with smtplib.SMTP(host, port, timeout=20) as srv:
+            srv.starttls(context=ctx); srv.login(user, pw); srv.send_message(msg)
+    except smtplib.SMTPAuthenticationError:
+        raise RuntimeError("Email login rejected — check SMTP_USER and the app password (SMTP_PASS).")
+    except smtplib.SMTPRecipientsRefused:
+        raise RuntimeError("The recipient address was refused by the mail server.")
+    except (smtplib.SMTPException, OSError) as e:
+        raise RuntimeError("Mail server error: %s" % e)
+    print("[mail] sent to %s as %s" % (", ".join(recipients), sender))
     return sender

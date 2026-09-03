@@ -65,3 +65,8 @@ for Condominium/Townhouse/Duplex. "Lock Box Info" is relabeled **ShowMojo Box Se
 Produces a branded PDF and emails it from `LISTING_FROM` (default listing-input@dspropertiesnc.com) with
 one-click buttons for admin@, support@, info@, plus a custom address. Entries are saved in the browser as
 you type; a Clear-all button (with confirmation) resets the sheet.
+
+## IMPORTANT — the service must stay on a PAID Render instance
+Render blocks outbound SMTP (ports 25 / 465 / 587) on **free** web services, so the email buttons
+will hang ("Sending..." forever) if the service is on the Free instance. `render.yaml` pins
+`plan: starter` for this reason — do not change it back to `free` while email is in use.

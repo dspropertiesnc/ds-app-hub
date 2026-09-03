@@ -231,10 +231,15 @@ document.getElementById('go').onclick=async()=>{
 async function doEmail(fd,btn,label){
   btn.disabled=true; btn.textContent='Sending…';
   try{
-    const r=await fetch('email',{method:'POST',body:fd}); const j=await r.json();
+    const ctl=new AbortController();
+    const timer=setTimeout(()=>ctl.abort(), 45000);
+    let r,j;
+    try{ r=await fetch('email',{method:'POST',body:fd,signal:ctl.signal}); j=await r.json(); }
+    finally{ clearTimeout(timer); }
     if(!r.ok) throw new Error(j.error||'Failed to send');
     btn.classList.add('sent'); btn.textContent='Sent ✓';
   }catch(e){ btn.disabled=false; btn.textContent=label;
+    if(e.name==='AbortError') e={message:'The mail server did not respond. The sheet is saved — try the button again, or download and send it manually.'};
     document.getElementById('emailmsg').innerHTML='<div class="warn">'+esc(e.message)+'</div>'; }
 }
 function sendEmail(t,btn){ if(!lastJob) return;

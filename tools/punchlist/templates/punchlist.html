@@ -163,10 +163,15 @@ async function doEmail(fd, btn, label){
   btn.disabled=true; btn.textContent='Sending…';
   try{
     fd.append('address', state.address||'');
-    const r=await fetch('email',{method:'POST',body:fd}); const j=await r.json();
+    const ctl=new AbortController();
+    const timer=setTimeout(()=>ctl.abort(), 45000);
+    let r,j;
+    try{ r=await fetch('email',{method:'POST',body:fd,signal:ctl.signal}); j=await r.json(); }
+    finally{ clearTimeout(timer); }
     if(!r.ok) throw new Error(j.error||'Failed to send');
     btn.classList.add('sent'); btn.textContent='Sent ✓';
   }catch(e){
+    if(e.name==='AbortError') e={message:'The mail server did not respond. The punchlist is saved — try again, or download and send it manually.'};
     btn.disabled=false; btn.textContent=label;
     document.getElementById('emailmsg').innerHTML='<div class="warn">'+e.message+'</div>';
   }
