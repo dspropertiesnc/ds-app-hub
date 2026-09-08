@@ -13,17 +13,16 @@ MODEL = os.getenv("LISTING_MODEL", os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4
 
 QUALIFICATIONS = (
     "\nQualification Requirements:\n"
-    "Each occupant 18+ must submit a separate application and consent to credit, background, and rental history checks\n"
-    "Combined gross income must be at least 3x the monthly rent\n"
-    "Credit score of 650+ preferred (may consider lower with extra deposit)\n"
+    "All occupants 18+ apply separately and undergo credit, background, and rental history checks\n"
+    "Minimum combined gross income 3x monthly rent\n"
+    "Credit 650+ preferred (may consider lower with increased deposit)\n"
     "No prior evictions or unpaid landlord judgments\n"
-    "Non-smoking only\n"
-    "Max occupancy of 2 persons per bedroom\n"
-    "Application fee is $70 per applicant and NON-REFUNDABLE, even if denied occupancy\n"
-    "Properties that allow pets or housing vouchers will state this in the listing"
+    "$70 application fee per applicant, non-refundable even if denied\n"
+    "Max of 2 people per bedroom\n"
+    "Non-smoking"
 )
 QUAL_LENGTH = len(QUALIFICATIONS)
-MAX_TOTAL = 1200
+MAX_TOTAL = 1100
 MAX_DESC = MAX_TOTAL - QUAL_LENGTH
 
 SYSTEM_PROMPT = f"""You write rental listing descriptions for Doss & Spaulding Properties, a property management company in Greensboro, NC.
