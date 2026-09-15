@@ -53,6 +53,7 @@ Rules:
 - Lead with neighborhood/location and the property's most compelling feature.
 - Weave interior features, condition/updates, outdoor details, and area highlights naturally through the middle.
 - The Additional notes field contains practical terms (lease length, utility responsibility, pet policy, included services, etc.) that MUST be incorporated at the end of the description body, as the final sentence or two. Do not omit this information - it is required practical detail. Phrase it naturally, not as a bullet list.
+- PETS: if the input indicates pets are allowed / accepted / welcome in any wording, the description MUST also state that pets are subject to BREED RESTRICTIONS, a PET FEE, and monthly PET RENT. Work all three into the practical-terms sentence naturally - e.g. "Pets are welcome subject to breed restrictions, a pet fee, and monthly pet rent." If pets are not allowed, or pets are not mentioned at all, say nothing about pets.
 - If an availability date is provided, mention it near the end as well.
 - Do not fabricate details that weren't given.
 - Do not include any qualifications text - that will be appended separately.
@@ -65,6 +66,42 @@ FIELDS = [("property_type","Property type"),("beds","Bedrooms"),("baths","Bathro
           ("available","Available"),("neighborhood","Neighborhood/location"),
           ("interior","Interior features"),("exterior","Exterior/outdoor features"),
           ("area","Area highlights"),("extras","Additional notes")]
+
+# ---- pet policy handling -------------------------------------------------
+# When the input says pets are accepted, the listing must always disclose that
+# they're subject to breed restrictions, a pet fee, and monthly pet rent.
+PET_SENTENCE = "Pets are welcome subject to breed restrictions, a pet fee, and monthly pet rent."
+
+_PET_NO = ("no pets", "no pet ", "pets not allowed", "pet not allowed", "pets prohibited",
+           "not pet friendly", "not pet-friendly", "without pets", "pets no", "no animals")
+_PET_YES = ("pet friendly", "pet-friendly", "pets allowed", "pet allowed", "pets ok", "pet ok",
+            "pets okay", "pets welcome", "pets accepted", "accepts pets", "accept pets",
+            "pets considered", "pets negotiable", "dogs allowed", "cats allowed",
+            "dogs ok", "cats ok", "pets permitted", "pets: yes", "pets yes")
+
+def pets_allowed(text):
+    """True only when the input clearly says pets ARE accepted."""
+    t = " %s " % (text or "").lower().replace("\n", " ")
+    if any(n in t for n in _PET_NO):
+        return False
+    return any(y in t for y in _PET_YES)
+
+def mentions_pet_terms(desc):
+    """Does the description already disclose all three pet conditions?"""
+    d = (desc or "").lower()
+    return ("breed" in d) and ("pet fee" in d) and ("pet rent" in d)
+
+def ensure_pet_terms(description, limit):
+    """Append the pet disclosure if it's missing, trimming to stay within limit."""
+    if mentions_pet_terms(description):
+        return description
+    sep = "" if (not description or description.endswith((" ", "\n"))) else " "
+    addition = sep + PET_SENTENCE
+    if len(description) + len(addition) > limit:
+        room = limit - len(addition)
+        description = description[:max(0, room)].rsplit(" ", 1)[0] if room > 0 else ""
+        addition = ("" if not description else " ") + PET_SENTENCE
+    return description + addition
 
 @bp.route("/")
 def index():
@@ -108,6 +145,9 @@ def generate():
         headline = headline[:80].rsplit(" ", 1)[0]
     if len(description) > MAX_DESC:
         description = description[:MAX_DESC].rsplit(" ", 1)[0]
+    # safety net: if the input says pets are accepted, guarantee the disclosure
+    if pets_allowed(user_prompt):
+        description = ensure_pet_terms(description, MAX_DESC)
     full = description + QUALIFICATIONS
     return jsonify({"headline": headline, "headline_chars": len(headline),
                     "description": description, "qualifications": QUALIFICATIONS,
