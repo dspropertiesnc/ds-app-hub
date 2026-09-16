@@ -73,7 +73,7 @@ Turn/Make-Ready Checklist. Flow: setup (address, inspector, access info, propert
 → one area per screen, each item marked **OK / Needs attention / N/A** with a plain-English
 hint → note + photos on anything flagged → review screen → punchlist.
 
-- `checklist.py` — the master schema. 24 base areas, ~130 base items, every item carries a
+- `checklist.py` — the master schema. 24 base areas, ~135 base items, every item carries a
   `hint`. Sections and individual items can be gated on a profile key (`when` / 3rd tuple
   element); `repeat` expands Bedroom 1..N and Bathroom 1..N. Item keys are stable strings so
   a walkthrough saved on someone's phone survives a deploy. **Edit this file to add, remove

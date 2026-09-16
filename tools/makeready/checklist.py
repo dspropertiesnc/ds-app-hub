@@ -43,8 +43,16 @@ PROFILE_DEFAULTS = {p["key"]: p["default"] for p in PROFILE}
 # --------------------------------------------------------------------------
 # Master checklist.  ("label", "hint")  — hint may be "" but shouldn't be.
 # --------------------------------------------------------------------------
+# Every room with a door gets this same line, so no door in the unit goes unchecked.
+_DOOR_OK = ("Door operates, latches and has a door stop",
+            "Open and close it. It should swing without rubbing or dragging, latch without "
+            "lifting or shoving, and have a stop so the knob can't hit the wall.")
+_EXT_DOOR_OK = ("Door operates, latches, locks and has a door stop",
+                "Open and close it. No rubbing, latches without shoving, the lock throws "
+                "properly, and there's a stop so the knob can't hit the wall.")
+
 _DOOR = [
-    ("Closes correctly", "Close it fully. It should latch without lifting, shoving or slamming."),
+    ("Closes and latches correctly", "Close it fully. It should latch without lifting, shoving or slamming."),
     ("Weather stripping", "Close the door and look for daylight around the edges. Stripping should be soft, not cracked or flattened."),
     ("Door stops", "Is there a stop on the wall or floor so the knob can't punch a hole?"),
     ("Deadbolt", "With the door closed, turn it. The bolt should throw all the way into the frame with no force."),
@@ -71,6 +79,7 @@ SECTIONS = [
         ("Bookcase / built-ins", "Any built-in shelving solid and not sagging?"),
         ("Blinds installed and in good condition", "Raise and lower each one. Bent slats, missing wands, broken cords?"),
         ("Receptacle & switch covers installed", "Every outlet and switch needs a cover plate."),
+        _DOOR_OK,
     ]},
 
     {"id": "fireplace", "zone": "Interior", "name": "Fireplace", "when": "fireplace", "items": [
@@ -91,14 +100,14 @@ SECTIONS = [
         ("Lights & fixtures", "Switch on. Bulbs working and the fixture secure to the ceiling?"),
         ("Shelves / cabinets", "Built-ins solid, doors close, shelves not sagging?"),
         ("Screens", "Window screens present and intact?"),
-        ("Doors", "Open, close and latch without rubbing?"),
+        _DOOR_OK,
     ]},
 
     {"id": "den", "zone": "Interior", "name": "Den", "when": "den", "items": [
         ("Lights & fixtures", "Switch on. Bulbs working and the fixture secure?"),
         ("Shelves / cabinets", "Built-ins solid, doors close, shelves not sagging?"),
         ("Screens", "Window screens present and intact?"),
-        ("Doors", "Open, close and latch without rubbing?"),
+        _DOOR_OK,
     ]},
 
     {"id": "range", "zone": "Interior", "name": "Kitchen — Range & Vent Hood", "items": [
@@ -173,7 +182,7 @@ SECTIONS = [
         ("Exhaust fan works", "Turn it on and hold a tissue to the grille — it should hold against it. Listen for rattling."),
         ("Cabinets & drawers work", "Doors close and drawers slide."),
         ("Shower rod & ends", "Rod up, both end caps on, not sliding down."),
-        ("Door stop", "Stop present so the knob doesn't hit the wall."),
+        _DOOR_OK,
         ("Medicine cabinet", "Door, hinges, shelves and mirror all sound?"),
         ("Mirror(s)", "Cracked, de-silvered (black creeping in at the edges) or loose?"),
         ("Linen closet shelves", "Level and supported."),
@@ -191,7 +200,7 @@ SECTIONS = [
         ("Screens", "Screen on every window, no holes."),
         ("Closet poles", "Pole present and seated in both brackets. Push up on it."),
         ("Closet shelves", "Level, not sagging or pulled loose from the wall."),
-        ("Door stop", "Stop present behind the door."),
+        _DOOR_OK,
         ("All windows open and stay open", "Open and close every window. It should stay up on its own."),
         ("Window locks", "Each window latches. Missing latches are a security and code issue."),
         ("Receptacle & switch covers installed", "Every outlet and switch has a cover plate."),
@@ -206,9 +215,8 @@ SECTIONS = [
     {"id": "laundry", "zone": "Interior", "name": "Washer / Dryer Room", "when": "laundry", "items": [
         ("Washer & dryer connections", "Hot and cold valves present, turn freely and don't drip. Drain standpipe in place."),
         ("Dryer vent clear", "Pull the vent hose off. Look for lint packed in the duct or a crushed hose."),
-        ("Dryer outlet / gas connection correct", "Confirm it matches the dryer type the unit is set up for."),
         ("Shelving", "Shelf present and anchored."),
-        ("Doors", "Door or bi-fold opens and closes on its track."),
+        ("Door or bi-fold operates and latches", "Runs on its track without jumping off, closes fully, and has a stop if it's a swing door."),
         ("Flooring", "Check under and behind for old water stains or soft spots."),
     ]},
 
@@ -216,11 +224,9 @@ SECTIONS = [
         ("Smoke alarm present on each floor & working", "One per floor minimum. Press the test button on each and listen."),
         ("Smoke alarm present in each bedroom", "Every bedroom needs its own. Test each one."),
         ("CO alarm present on each level", "Required where there's gas, a fireplace or an attached garage. Press test."),
-        ("Alarm batteries fresh / units not expired", "Look at the date stamped on the back. Smoke alarms expire at 10 years."),
         ("Handrail present & secure for more than 3 steps", "Any stair run over 3 steps needs a rail. Grab it and pull — no wobble."),
         ("Extinguisher present & fully charged", "The gauge needle should sit in the green."),
         ("All switches & receptacles have covers", "Walk every room. A missing or cracked cover plate is a flag."),
-        ("Electrical panel labeled and accessible", "Breakers labeled and nothing stacked in front of the panel."),
     ]},
 
     {"id": "hvac", "zone": "Interior", "name": "Heating & Cooling Systems", "items": [
@@ -243,7 +249,6 @@ SECTIONS = [
         ("Connections tight / pan / no rust", "Drip pan in place, no rust streaks running down the tank."),
         ("Correct thermostat setting", "120°F is the target. Higher than that is a scald risk."),
         ("Check for operation", "Run hot water at the nearest fixture and confirm it gets hot and stays hot."),
-        ("T&P relief valve and discharge pipe present", "There should be a pipe running from the valve down toward the floor."),
     ]},
 
     {"id": "carpet", "zone": "Interior", "name": "Carpet", "when": "carpet", "items": [
@@ -252,7 +257,6 @@ SECTIONS = [
         ("Carpet needs replacement", "Your call — is this cleanable, or does it need replacing? Flag it if it needs replacing."),
         ("Carpet cleaned (if not replaced)", "Has it actually been professionally cleaned for this turn?"),
         ("Tack strips or Z-bar", "Check thresholds and edges for exposed tack strip — that's a safety issue."),
-        ("Padding sound, no ripples", "Walk it barefoot-flat. Ripples and crunching mean the pad is gone."),
     ]},
 
     {"id": "paint", "zone": "Interior", "name": "Paint, Sheetrock, Moldings & Other", "items": [
@@ -262,12 +266,14 @@ SECTIONS = [
         ("Hardware & other fixtures", "Knobs, handles, switch plates and registers all present and matching."),
         ("Ceilings painted if necessary", "Look for stains, cobwebs and roller marks."),
         ("Trim & doors painted if necessary", "Baseboards, casings and door faces."),
-        ("Interior doors operate and latch", "Walk through every interior door — rubbing, missing stops, loose knobs."),
+        ("Every remaining interior door operates, latches and has a stop",
+         "The doors not covered in a room above — hallway, closets, pantry, linen, stairwell. "
+         "Open and close each one: no rubbing, latches properly, knob can't hit the wall."),
     ]},
 
     # ---------------- EXTERIOR ----------------
     {"id": "utility", "zone": "Exterior", "name": "Outside Utility Room", "when": "utility", "items": [
-        ("Condition of doors", "Opens, closes, latches and locks."),
+        _EXT_DOOR_OK,
         ("Shelf", "Present and solid."),
         ("Paint / sheetrock", "Any holes, water stains or peeling?"),
     ]},
@@ -289,8 +295,10 @@ SECTIONS = [
         ("Siding and trim sound", "Loose boards, holes, cracked vinyl, and wasp nests in the corners."),
         ("Soffits & fascia clean, free of rot and flaking paint", "Look up along the roof edge. Dark streaks or holes mean rot or animals getting in."),
         ("Shed / storage area clean and in good shape", "Door latches, roof sound, nothing left inside.", "shed"),
+        ("Shed / outbuilding door operates, latches and locks", "Open and close it. No dragging, and the latch or lock actually holds.", "shed"),
         ("Basement / garage broom-swept, free of trash and belongings", "Nothing left behind, floor swept.", "garage"),
-        ("Garage door opens, closes and auto-reverses", "Run the opener, then block the beam or lay something in the path — it must reverse.", "garage"),
+        ("Garage / basement entry door operates, latches, locks and has a stop",
+         "The walk-through door, not the overhead. No rubbing, latches without shoving, lock throws, stop present.", "garage"),
         ("Crawlspace free of musty odors and standing water", "Open the access and smell it. Damp or musty means a moisture problem — flag it.", "crawlspace"),
         ("Crawlspace vents and access door secure", "Screens intact, door latched so animals stay out.", "crawlspace"),
     ]},
