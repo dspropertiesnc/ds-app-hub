@@ -64,16 +64,24 @@ def _item(doc,task,note=None,done=False):
         nr=np.add_run("Note: "+note); nr.italic=True; nr.font.size=Pt(9.5); nr.font.color.rgb=NOTE_GRAY
 
 def _photos(doc,paths,cols=2,width=3.15):
-    paths=[p for p in paths if os.path.exists(p)]
-    if not paths: return
+    """paths: list of file paths, or (path, caption) pairs. Captions print under
+    each photo so a contractor can match a picture to the item it came from."""
+    entries=[]
+    for p in paths:
+        path,cap=(p if isinstance(p,(tuple,list)) else (p,None))
+        if os.path.exists(path): entries.append((path,cap))
+    if not entries: return
     _h2(doc,"Photos")
-    rows=(len(paths)+cols-1)//cols
+    rows=(len(entries)+cols-1)//cols
     tbl=doc.add_table(rows=rows,cols=cols); tbl.alignment=WD_TABLE_ALIGNMENT.CENTER
-    for i,path in enumerate(paths):
+    for i,(path,cap) in enumerate(entries):
         cell=tbl.rows[i//cols].cells[i%cols]
-        cp=cell.paragraphs[0]; cp.alignment=WD_ALIGN_PARAGRAPH.CENTER
+        cp=cell.paragraphs[0]; cp.alignment=WD_ALIGN_PARAGRAPH.CENTER; _sp(cp,2,0)
         try: cp.add_run().add_picture(path,width=Inches(width))
         except Exception as e: print("skip img",path,e)
+        if cap:
+            kp=cell.add_paragraph(); kp.alignment=WD_ALIGN_PARAGRAPH.CENTER; _sp(kp,1,6)
+            kr=kp.add_run(cap); kr.font.size=Pt(8.5); kr.italic=True; kr.font.color.rgb=SUB_GRAY
 
 def build(spec,out_path,photo_dir="",logo_path=None):
     """spec: {title, subtitle, sections:[{name, subsections:[{name, items:[{task,note,done}]}], photos:[filenames]}]}"""
@@ -89,7 +97,10 @@ def build(spec,out_path,photo_dir="",logo_path=None):
             _h2(doc,sub["name"])
             for it in sub.get("items",[]):
                 _item(doc,it["task"],it.get("note"),it.get("done",False))
-        photos=[p if os.path.isabs(p) else os.path.join(photo_dir,p) for p in sec.get("photos",[])]
+        photos=[]
+        for p in sec.get("photos",[]):
+            path,cap=(p if isinstance(p,(tuple,list)) else (p,None))
+            photos.append((path if os.path.isabs(path) else os.path.join(photo_dir,path), cap))
         _photos(doc,photos)
     doc.save(out_path)
     return out_path

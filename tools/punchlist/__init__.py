@@ -92,7 +92,8 @@ def generate():
     spec, mode = structuring.make_spec(address, checklist, interior, exterior, checklist_images=checklist_images)
     if access: spec["access"] = access
     safe = secure_filename(address) or "punchlist"
-    docx_path = os.path.join(JOBS, job, f"{safe} Punchlist.docx")
+    jd = os.path.join(JOBS, job)
+    docx_path = os.path.join(jd, f"{safe} Punchlist.docx")
     B.build(spec, docx_path, photo_dir=pdir, logo_path=LOGO)
     try:
         with open(os.path.join(jd, "meta.json"), "w") as mfh:

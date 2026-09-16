@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Make-Ready Inspection — Doss &amp; Spaulding</title>
+<style>
+  :root{--accent:#a78147;--accent-dark:#8f6c3c;--sub:#efe7d9;--gray:#666;--line:#e6e0d6;
+        --ok:#3f7d53;--flag:#b4442f;--na:#8a8a8a;}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#f7f5f1;color:#1a1a1a}
+  .topbar{background:#fff;border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:12px}
+  .topbar img{height:30px}
+  .topbar a{color:var(--accent-dark);text-decoration:none;font-size:13px;font-weight:600}
+  .topbar .sp{flex:1}
+  header.h{background:var(--accent);color:#fff;padding:16px}
+  header.h h1{font-size:18px;margin:0}
+  header.h p{margin:4px 0 0;font-size:12px;opacity:.9}
+  main{max-width:660px;margin:0 auto;padding:16px 16px 40px}
+  label.f{display:block;font-weight:600;font-size:14px;margin:16px 0 6px}
+  .hint{font-weight:400;color:var(--gray);font-size:12px}
+  input[type=text],textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:#fff;font-family:inherit}
+  textarea{resize:vertical;line-height:1.4}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:14px}
+  .card h3{margin:0 0 4px;font-size:14px;color:var(--accent-dark)}
+  .card p.sh{margin:0 0 10px;font-size:12px;color:var(--gray)}
+  .prow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #f0ece4}
+  .prow:first-of-type{border-top:0}
+  .prow span{flex:1;font-size:14px}
+  .cnt{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .cnt button{width:34px;height:34px;border:0;background:#f4f0e9;color:var(--accent-dark);font-size:17px;cursor:pointer}
+  .cnt b{width:32px;text-align:center;font-size:15px}
+  .sw{position:relative;width:48px;height:28px;flex:0 0 48px;background:#ddd6c9;border-radius:99px;cursor:pointer;transition:background .15s;border:0}
+  .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;background:#fff;border-radius:50%;transition:left .15s}
+  .sw.on{background:var(--accent)}
+  .sw.on::after{left:23px}
+  .btn{width:100%;background:var(--accent);color:#fff;border:0;border-radius:12px;padding:16px;font-size:17px;font-weight:700;cursor:pointer;margin-top:20px}
+  .btn:disabled{opacity:.55}
+  .btn.ghost{background:#fff;color:var(--accent-dark);border:1.5px solid var(--accent)}
+  /* walkthrough */
+  .sticky{position:sticky;top:0;z-index:5;background:#f7f5f1;padding:10px 0 8px;margin:-16px 0 0}
+  .pbar{height:7px;background:#e6e0d6;border-radius:99px;overflow:hidden}
+  .pfill{height:100%;background:var(--accent);width:0;transition:width .2s}
+  .pmeta{display:flex;gap:8px;align-items:baseline;font-size:12px;color:var(--gray);margin-top:7px}
+  .pmeta b{font-size:16px;color:#1a1a1a;flex:1}
+  .allok{background:var(--sub);border:1px solid var(--line);color:var(--accent-dark);border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;cursor:pointer;width:100%;margin:10px 0 4px}
+  .item{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px}
+  .item.flagged{border-color:var(--flag);box-shadow:0 0 0 1px rgba(180,68,47,.18)}
+  .item.done{opacity:.72}
+  .ilabel{font-size:14.5px;font-weight:600;line-height:1.35}
+  .ihint{font-size:12px;color:var(--gray);margin-top:4px;line-height:1.45}
+  .states{display:flex;gap:6px;margin-top:10px}
+  .states button{flex:1;border:1px solid var(--line);background:#fff;color:#555;border-radius:9px;padding:10px 4px;font-size:13px;font-weight:600;cursor:pointer}
+  .states button.on.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+  .states button.on.flag{background:var(--flag);border-color:var(--flag);color:#fff}
+  .states button.on.na{background:var(--na);border-color:var(--na);color:#fff}
+  .detail{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+  .detail textarea{min-height:64px;font-size:15px}
+  .addph{display:inline-block;margin-top:8px;background:var(--sub);color:var(--accent-dark);
+    border:1px dashed var(--accent);border-radius:9px;padding:9px 14px;font-weight:600;cursor:pointer;font-size:13px}
+  .phs{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .ph{position:relative;width:76px;height:76px;border-radius:9px;overflow:hidden;border:1px solid var(--line);background:#eee}
+  .ph img{width:100%;height:100%;object-fit:cover;display:block}
+  .ph .x{position:absolute;top:2px;right:3px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:50%;width:19px;height:19px;font-size:12px;cursor:pointer;line-height:1}
+  .ph.up{display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--gray)}
+  .nav{display:flex;gap:10px;margin-top:20px}
+  .nav button{flex:1;border-radius:11px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;border:0}
+  .nav .back{background:#fff;color:var(--accent-dark);border:1.5px solid var(--line);flex:0 0 96px}
+  .nav .next{background:var(--accent);color:#fff}
+  .jump{width:100%;margin-top:12px;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff}
+  /* review */
+  .rgroup{margin-top:16px}
+  .rgroup h4{margin:0 0 6px;font-size:13px;color:#fff;background:var(--accent);padding:7px 10px;border-radius:8px}
+  .rzone{font-size:12px;font-weight:700;color:var(--accent-dark);text-transform:uppercase;letter-spacing:.05em;margin-top:22px}
+  .empty{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--gray);font-size:14px;margin-top:16px}
+  .dl{display:flex;gap:10px;margin-top:12px}
+  .dl a{flex:1;text-align:center;text-decoration:none;background:var(--accent);color:#fff;padding:14px;border-radius:10px;font-weight:700}
+  .emailhead{font-size:13px;font-weight:700;color:var(--accent-dark);margin:16px 0 6px}
+  .emailrow{display:flex;flex-wrap:wrap;gap:8px}
+  .emailbtn{flex:1 1 45%;background:#fff;color:var(--accent-dark);border:1.5px solid var(--accent);border-radius:10px;padding:11px 8px;font-weight:600;font-size:13px;cursor:pointer}
+  .emailbtn:disabled{opacity:.6}
+  .emailbtn.sent{background:var(--accent);color:#fff}
+  .customrow{display:flex;gap:8px;margin-top:8px}
+  .customrow input{flex:1 1 60%;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:14px}
+  .customrow .emailbtn{flex:0 0 90px}
+  .sum{font-size:13px;color:#333;margin-top:6px}
+  .warn{background:#fbf3e2;border:1px solid #e6cfa0;color:#7a5b1a;padding:10px;border-radius:8px;font-size:12.5px;margin-top:10px}
+  .tip{background:var(--sub);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:#5c4522;margin-top:10px}
+  .cleararea{margin:42px 0 10px;border-top:1px solid var(--line);padding-top:16px;text-align:center}
+  .clearbtn{background:none;border:1px solid #d9c9b0;color:#9a7d4f;border-radius:8px;padding:9px 16px;font-size:12.5px;cursor:pointer}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:s .8s linear infinite;vertical-align:-3px;margin-right:8px}
+  @keyframes s{to{transform:rotate(360deg)}}
+  .hide{display:none}
+  .resume{background:#fff;border:1px solid var(--accent);border-radius:12px;padding:14px;margin-bottom:6px}
+  .resume b{display:block;font-size:14px;margin-bottom:4px}
+  .resume .row{display:flex;gap:8px;margin-top:10px}
+  .resume .row button{flex:1;border-radius:9px;padding:11px;font-size:13.5px;font-weight:600;cursor:pointer;border:1.5px solid var(--accent);background:var(--accent);color:#fff}
+  .resume .row button.alt{background:#fff;color:var(--accent-dark)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/"><img src="/static/logo.png" alt="Doss &amp; Spaulding"></a>
+  <span class="sp"></span>
+  <a href="/">&larr; All tools</a>
+</div>
+<header class="h">
+  <h1>Make-Ready Inspection</h1>
+  <p>Doss &amp; Spaulding Properties</p>
+</header>
+<main>
+
+<!-- ============ SETUP ============ -->
+<section id="v-setup">
+  <div id="resumebox" class="resume hide">
+    <b>You have an inspection in progress</b>
+    <div class="hint" id="resumewhat"></div>
+    <div class="row">
+      <button id="resumeyes">Pick up where I left off</button>
+      <button class="alt" id="resumeno">Start a new one</button>
+    </div>
+  </div>
+
+  <label class="f">Property address <span class="hint">max 75 characters</span></label>
+  <input id="address" type="text" maxlength="75" placeholder="e.g. 4109 Beckford Dr">
+
+  <label class="f">Your name <span class="hint">Who is doing the walkthrough</span></label>
+  <input id="inspector" type="text" maxlength="60" placeholder="e.g. Alina">
+
+  <label class="f">Access information <span class="hint">Optional &middot; max 100 characters. Printed at the top of the punchlist so a contractor can get in to estimate.</span></label>
+  <textarea id="access" maxlength="100" style="min-height:64px" placeholder="e.g. Lockbox front door code 4821. Gate #1234."></textarea>
+
+  <div class="card">
+    <h3>What does this property have?</h3>
+    <p class="sh">This only controls which items you get asked about. Skip anything the property doesn't have and it won't show up in the walkthrough.</p>
+    <div id="profilerows"></div>
+  </div>
+
+  <button class="btn" id="startbtn">Start the walkthrough</button>
+  <div class="tip"><b>Before you start:</b> turn the oven on to 350&deg; and start the dishwasher now, then check them when you get there in the list. Set the thermostat to heat, and switch it to cool about ten minutes later.</div>
+</section>
+
+<!-- ============ WALKTHROUGH ============ -->
+<section id="v-walk" class="hide">
+  <div class="sticky">
+    <div class="pbar"><div class="pfill" id="pfill"></div></div>
+    <div class="pmeta"><b id="secname"></b><span id="pcount"></span></div>
+  </div>
+  <button class="allok" id="allok">Everything in this area is OK &mdash; mark them all</button>
+  <div id="items"></div>
+  <label class="f">Anything else in this area? <span class="hint">Optional &mdash; anything not on the list above</span></label>
+  <textarea id="other" style="min-height:64px" placeholder="e.g. ceiling fan wobbles badly on high"></textarea>
+  <div class="nav">
+    <button class="back" id="prevbtn">Back</button>
+    <button class="next" id="nextbtn">Next</button>
+  </div>
+  <select class="jump" id="jump"></select>
+</section>
+
+<!-- ============ REVIEW ============ -->
+<section id="v-review" class="hide">
+  <h2 style="font-size:18px;margin:6px 0 2px">Review what you flagged</h2>
+  <p class="hint" style="margin:0">Everything below goes on the punchlist. Fix the wording, add a photo you forgot, or remove anything that turned out to be fine.</p>
+  <div id="reviewbody"></div>
+  <label class="f">Anything else for the punchlist? <span class="hint">Optional &mdash; general notes for whoever does the work</span></label>
+  <textarea id="extranotes" style="min-height:70px" placeholder="e.g. owner wants the whole unit repainted regardless"></textarea>
+  <button class="btn" id="genbtn">Generate punchlist</button>
+  <button class="btn ghost" id="backtowalk">Back to the checklist</button>
+  <div id="result" class="card hide"></div>
+  <div class="cleararea">
+    <button class="clearbtn" id="clearbtn">Clear this inspection &amp; start over</button>
+  </div>
+</section>
+
+</main>
+
+<script>
+const LS='mr_state_v1';
+const PROFILE={{ profile|tojson }};
+
+function newJob(){ let u=(crypto.randomUUID?crypto.randomUUID():'').replace(/[^0-9a-f]/g,''); while(u.length<32)u+=Math.floor(Math.random()*16).toString(16); return u.slice(0,32); }
+function blank(){ const pr={}; PROFILE.forEach(p=>pr[p.key]=p.default);
+  return {job:newJob(), address:'', inspector:'', access:'', profile:pr, sections:null, marks:{}, others:{}, idx:0, extra:'', started:false}; }
+
+let state=blank(), pending=0, lastJob=null;
+function load(){ try{ return JSON.parse(localStorage.getItem(LS)); }catch(e){ return null; } }
+function save(){ try{ localStorage.setItem(LS, JSON.stringify(state)); }catch(e){} }
+function $(id){ return document.getElementById(id); }
+function show(v){ ['setup','walk','review'].forEach(n=>$('v-'+n).classList.toggle('hide', n!==v)); window.scrollTo(0,0); }
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ---------- setup ---------- */
+function renderProfile(){
+  const box=$('profilerows'); box.innerHTML='';
+  PROFILE.forEach(p=>{
+    const row=document.createElement('div'); row.className='prow';
+    const lab=document.createElement('span'); lab.textContent=p.label; row.appendChild(lab);
+    if(p.type==='count'){
+      const w=document.createElement('div'); w.className='cnt';
+      const m=document.createElement('button'); m.textContent='−';
+      const b=document.createElement('b'); b.textContent=state.profile[p.key];
+      const pl=document.createElement('button'); pl.textContent='+';
+      m.onclick=()=>{ state.profile[p.key]=Math.max(p.min,(state.profile[p.key]|0)-1); b.textContent=state.profile[p.key]; save(); };
+      pl.onclick=()=>{ state.profile[p.key]=Math.min(p.max,(state.profile[p.key]|0)+1); b.textContent=state.profile[p.key]; save(); };
+      w.appendChild(m); w.appendChild(b); w.appendChild(pl); row.appendChild(w);
+    }else{
+      const sw=document.createElement('button'); sw.className='sw'+(state.profile[p.key]?' on':''); sw.type='button';
+      sw.setAttribute('aria-label',p.label);
+      sw.onclick=()=>{ state.profile[p.key]=!state.profile[p.key]; sw.classList.toggle('on',state.profile[p.key]); save(); };
+      row.appendChild(sw);
+    }
+    box.appendChild(row);
+  });
+}
+['address','inspector','access'].forEach(k=>{
+  $(k).addEventListener('input',()=>{ state[k]=$(k).value; save(); });
+});
+
+$('startbtn').onclick=async()=>{
+  state.address=$('address').value.trim(); state.inspector=$('inspector').value.trim(); state.access=$('access').value.trim();
+  if(!state.address){ alert('Enter the property address first.'); return; }
+  const b=$('startbtn'); b.disabled=true; b.innerHTML='<span class="spin"></span>Building your checklist…';
+  try{
+    const r=await fetch('sections',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:state.profile})});
+    const j=await r.json();
+    state.sections=j.sections; state.idx=0; state.started=true; save();
+    show('walk'); renderWalk();
+  }catch(e){ alert('Could not build the checklist: '+e.message); }
+  b.disabled=false; b.textContent='Start the walkthrough';
+};
+
+/* ---------- walkthrough ---------- */
+function totals(){
+  let t=0,d=0;
+  (state.sections||[]).forEach(s=>s.items.forEach(i=>{ t++; if(state.marks[i.key]&&state.marks[i.key].s) d++; }));
+  return {t,d};
+}
+function secDone(s){ return s.items.every(i=>state.marks[i.key]&&state.marks[i.key].s); }
+
+function renderWalk(){
+  const s=state.sections[state.idx];
+  $('secname').textContent=s.name;
+  const tt=totals();
+  $('pcount').textContent='Area '+(state.idx+1)+' of '+state.sections.length+' · '+tt.d+' of '+tt.t+' checked';
+  $('pfill').style.width=(tt.t?Math.round(tt.d/tt.t*100):0)+'%';
+  const box=$('items'); box.innerHTML='';
+  s.items.forEach(it=>box.appendChild(itemEl(it)));
+  $('other').value=state.others[s.id]||'';
+  $('nextbtn').textContent=(state.idx===state.sections.length-1)?'Finish → Review':'Next';
+  const jp=$('jump'); jp.innerHTML='';
+  state.sections.forEach((sec,i)=>{
+    const o=document.createElement('option'); o.value=i;
+    o.textContent=(secDone(sec)?'✓ ':'• ')+sec.name; if(i===state.idx)o.selected=true;
+    jp.appendChild(o);
+  });
+  save();
+}
+
+function itemEl(it){
+  const m=state.marks[it.key]||(state.marks[it.key]={s:'',n:'',p:[]});
+  const d=document.createElement('div'); d.className='item'+(m.s==='flag'?' flagged':'')+(m.s&&m.s!=='flag'?' done':'');
+  d.innerHTML='<div class="ilabel">'+esc(it.label)+'</div><div class="ihint">'+esc(it.hint)+'</div>';
+  const st=document.createElement('div'); st.className='states';
+  [['ok','OK'],['flag','Needs attention'],['na','N/A']].forEach(([k,txt])=>{
+    const b=document.createElement('button'); b.className=k+(m.s===k?' on':''); b.textContent=txt;
+    b.onclick=()=>{ m.s=(m.s===k?'':k); if(m.s!=='flag'){m.n='';} save(); renderWalk(); };
+    st.appendChild(b);
+  });
+  d.appendChild(st);
+  if(m.s==='flag') d.appendChild(detailEl(it,m));
+  return d;
+}
+
+function detailEl(it,m){
+  const w=document.createElement('div'); w.className='detail';
+  const ta=document.createElement('textarea');
+  ta.placeholder='What is wrong with it? e.g. "torn at the bottom, daylight showing"';
+  ta.value=m.n||'';
+  ta.addEventListener('input',()=>{ m.n=ta.value; save(); });
+  w.appendChild(ta);
+  const lab=document.createElement('label'); lab.className='addph'; lab.textContent='+ Add photo';
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.multiple=true; inp.style.display='none';
+  const iid='f_'+it.key.replace(/[^a-z0-9]/gi,'_'); inp.id=iid; lab.setAttribute('for',iid);
+  inp.addEventListener('change',e=>{ const fs=[...e.target.files]; e.target.value=''; addPhotos(m,fs); });
+  w.appendChild(lab); w.appendChild(inp);
+  const ph=document.createElement('div'); ph.className='phs';
+  (m.p||[]).forEach((pid,i)=>{
+    const c=document.createElement('div'); c.className='ph';
+    const img=document.createElement('img'); img.src='photo/'+state.job+'/'+pid;
+    img.onerror=()=>{ m.p.splice(i,1); save(); renderWalk(); };
+    const x=document.createElement('button'); x.className='x'; x.textContent='×';
+    x.onclick=()=>{ m.p.splice(i,1); save(); renderWalk(); };
+    c.appendChild(img); c.appendChild(x); ph.appendChild(c);
+  });
+  for(let i=0;i<(m.up||0);i++){ const u=document.createElement('div'); u.className='ph up'; u.textContent='Saving…'; ph.appendChild(u); }
+  w.appendChild(ph);
+  return w;
+}
+
+async function addPhotos(m,files){
+  m.p=m.p||[];
+  for(const f of files){
+    m.up=(m.up||0)+1; pending++; renderCurrent();
+    try{
+      const fd=new FormData(); fd.append('job',state.job); fd.append('photo',f,f.name||'photo.jpg');
+      const r=await fetch('upload',{method:'POST',body:fd});
+      if(!r.ok) throw new Error('upload failed');
+      m.p.push((await r.json()).id); save();
+    }catch(e){}
+    m.up--; pending--; renderCurrent();
+  }
+}
+function renderCurrent(){ if(!$('v-walk').classList.contains('hide')) renderWalk(); else if(!$('v-review').classList.contains('hide')) renderReview(); }
+
+$('other').addEventListener('input',()=>{ state.others[state.sections[state.idx].id]=$('other').value; save(); });
+$('allok').onclick=()=>{
+  const s=state.sections[state.idx];
+  s.items.forEach(i=>{ const m=state.marks[i.key]||(state.marks[i.key]={s:'',n:'',p:[]}); if(!m.s) m.s='ok'; });
+  save(); renderWalk();
+};
+$('prevbtn').onclick=()=>{ if(state.idx>0){ state.idx--; renderWalk(); window.scrollTo(0,0);} else { show('setup'); } };
+$('nextbtn').onclick=()=>{
+  if(state.idx<state.sections.length-1){ state.idx++; renderWalk(); window.scrollTo(0,0); }
+  else { show('review'); renderReview(); }
+};
+$('jump').onchange=e=>{ state.idx=+e.target.value; renderWalk(); window.scrollTo(0,0); };
+
+/* ---------- review ---------- */
+function flagged(){
+  const out=[];
+  (state.sections||[]).forEach(s=>{
+    s.items.forEach(i=>{ const m=state.marks[i.key];
+      if(m&&m.s==='flag') out.push({zone:s.zone,room:s.name,label:i.label,note:m.n||'',photos:m.p||[],key:i.key}); });
+    const o=(state.others[s.id]||'').trim();
+    if(o) out.push({zone:s.zone,room:s.name,label:'Other item noted in this area',note:o,photos:[],key:'other:'+s.id});
+  });
+  return out;
+}
+function renderReview(){
+  const fl=flagged(); const body=$('reviewbody'); body.innerHTML='';
+  if(!fl.length){
+    body.innerHTML='<div class="empty"><b>Nothing flagged.</b><br>Either the property is ready, or you still have items to check. There is no punchlist to build until something is flagged.</div>';
+    $('genbtn').disabled=true; return;
+  }
+  $('genbtn').disabled=false;
+  let zone='';
+  fl.forEach(f=>{
+    if(f.zone!==zone){ zone=f.zone; const z=document.createElement('div'); z.className='rzone'; z.textContent=zone; body.appendChild(z); }
+    const g=document.createElement('div'); g.className='rgroup';
+    g.innerHTML='<h4>'+esc(f.room)+'</h4>';
+    const c=document.createElement('div'); c.className='item flagged';
+    c.innerHTML='<div class="ilabel">'+esc(f.label)+'</div>';
+    const ta=document.createElement('textarea'); ta.style.marginTop='8px'; ta.style.minHeight='56px';
+    ta.placeholder='What is wrong with it?'; ta.value=f.note;
+    ta.addEventListener('input',()=>{
+      if(f.key.indexOf('other:')===0) state.others[f.key.slice(6)]=ta.value;
+      else state.marks[f.key].n=ta.value;
+      save();
+    });
+    c.appendChild(ta);
+    if(f.photos.length){
+      const ph=document.createElement('div'); ph.className='phs';
+      f.photos.forEach(pid=>{ const d=document.createElement('div'); d.className='ph';
+        const im=document.createElement('img'); im.src='photo/'+state.job+'/'+pid; d.appendChild(im); ph.appendChild(d); });
+      c.appendChild(ph);
+    }
+    const rm=document.createElement('button'); rm.className='addph'; rm.style.borderColor='#c9a9a0'; rm.style.color='#b4442f';
+    rm.style.background='#fbeeea'; rm.textContent='Remove from punchlist';
+    rm.onclick=()=>{ if(f.key.indexOf('other:')===0) state.others[f.key.slice(6)]='';
+                     else { state.marks[f.key].s='ok'; state.marks[f.key].n=''; }
+                     save(); renderReview(); };
+    c.appendChild(rm);
+    g.appendChild(c); body.appendChild(g);
+  });
+}
+$('extranotes').addEventListener('input',()=>{ state.extra=$('extranotes').value; save(); });
+$('backtowalk').onclick=()=>{ show('walk'); renderWalk(); };
+
+$('genbtn').onclick=async()=>{
+  if(pending>0){ alert('Hang on — photos are still saving.'); return; }
+  const res=$('result'); const b=$('genbtn');
+  b.disabled=true; b.innerHTML='<span class="spin"></span>Building the punchlist…';
+  const fd=new FormData();
+  fd.append('job',state.job); fd.append('address',state.address); fd.append('access',state.access||'');
+  fd.append('inspector',state.inspector||''); fd.append('notes',state.extra||'');
+  fd.append('flags',JSON.stringify(flagged().map(f=>({zone:f.zone,room:f.room,label:f.label,note:f.note,photos:f.photos}))));
+  try{
+    const r=await fetch('generate',{method:'POST',body:fd});
+    const j=await r.json();
+    if(!r.ok) throw new Error(j.error||'Generation failed');
+    lastJob=j.job;
+    let h='<b>Punchlist ready.</b> <span class="hint">'+j.flagged+' item(s) flagged · '+j.photos+' photo(s)</span>';
+    h+='<div class="dl"><a href="download/'+j.job+'/docx">Download Word (.docx)</a></div>';
+    h+='<div class="emailhead">Email a copy</div><div class="emailrow">';
+    h+='<button class="emailbtn" data-t="info">info@dspropertiesnc.com</button>';
+    h+='<button class="emailbtn" data-t="admin">admin@dspropertiesnc.com</button>';
+    h+='<button class="emailbtn" data-t="john">john@dspropertiesnc.com</button>';
+    h+='<button class="emailbtn" data-t="alina">alina@dspropertiesnc.com</button></div>';
+    h+='<div class="customrow"><input id="customemail" type="email" inputmode="email" placeholder="Or type an email address…"><button class="emailbtn" id="customsend">Send</button></div>';
+    h+='<div id="emailmsg"></div>';
+    j.sections.forEach(s=>{ const subs=s.subs.map(x=>x.name+' ('+x.count+')').join(', ');
+      h+='<div class="sum"><b>'+s.name+'</b>: '+(subs||'—')+' · '+s.photos+' photo(s)</div>'; });
+    h+='<div class="sum" style="color:#666;margin-top:8px">Need a PDF? Open the file and choose File → Save As / Print → PDF.</div>';
+    if(j.mode==='fallback') h+='<div class="warn">Server has no AI key set, so items were listed exactly as flagged rather than rewritten as repair instructions.</div>';
+    res.innerHTML=h; res.classList.remove('hide');
+    res.querySelectorAll('.emailbtn[data-t]').forEach(x=>{ x.onclick=()=>sendEmail(x.dataset.t,x); });
+    $('customsend').onclick=()=>sendCustom($('customsend'));
+    res.scrollIntoView({behavior:'smooth'});
+  }catch(e){ res.innerHTML='<b>Error:</b> '+esc(e.message); res.classList.remove('hide'); }
+  b.disabled=false; b.textContent='Generate punchlist';
+};
+
+async function doEmail(fd,btn,label){
+  btn.disabled=true; btn.textContent='Sending…';
+  try{
+    fd.append('address',state.address||''); fd.append('inspector',state.inspector||'');
+    const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(),45000);
+    let r,j;
+    try{ r=await fetch('email',{method:'POST',body:fd,signal:ctl.signal}); j=await r.json(); }
+    finally{ clearTimeout(timer); }
+    if(!r.ok) throw new Error(j.error||'Failed to send');
+    btn.classList.add('sent'); btn.textContent='Sent ✓';
+  }catch(e){
+    if(e.name==='AbortError') e={message:'The mail server did not respond. The punchlist is saved — try again, or download and send it manually.'};
+    btn.disabled=false; btn.textContent=label;
+    $('emailmsg').innerHTML='<div class="warn">'+esc(e.message)+'</div>';
+  }
+}
+function sendEmail(t,btn){ if(!lastJob)return; const fd=new FormData(); fd.append('job',lastJob); fd.append('target',t); doEmail(fd,btn,btn.textContent); }
+function sendCustom(btn){
+  if(!lastJob)return;
+  const to=($('customemail').value||'').trim();
+  if(!to){ $('emailmsg').innerHTML='<div class="warn">Enter an email address.</div>'; return; }
+  const fd=new FormData(); fd.append('job',lastJob); fd.append('target','custom'); fd.append('to',to);
+  doEmail(fd,btn,'Send');
+}
+
+$('clearbtn').onclick=()=>{
+  if(confirm('Clear this whole inspection — address, every item you checked, notes and photos — and start over? This cannot be undone.')){
+    state=blank(); save();
+    $('address').value=''; $('inspector').value=''; $('access').value=''; $('extranotes').value=''; $('result').classList.add('hide');
+    renderProfile(); show('setup');
+  }
+};
+
+/* ---------- boot (survives the iOS camera page reload) ---------- */
+(function boot(){
+  const saved=load();
+  if(saved&&saved.job){
+    state=Object.assign(blank(),saved);
+    state.marks=state.marks||{}; state.others=state.others||{};
+    Object.values(state.marks).forEach(m=>{ m.up=0; });
+  }
+  $('address').value=state.address||''; $('inspector').value=state.inspector||'';
+  $('access').value=state.access||''; $('extranotes').value=state.extra||'';
+  renderProfile();
+  if(state.started&&state.sections&&state.sections.length){
+    const tt=totals();
+    $('resumewhat').textContent=(state.address||'Unsaved property')+' — '+tt.d+' of '+tt.t+' items checked';
+    $('resumebox').classList.remove('hide');
+    $('resumeyes').onclick=()=>{ $('resumebox').classList.add('hide'); show('walk'); renderWalk(); };
+    $('resumeno').onclick=()=>{ if(confirm('Discard the inspection in progress and start a new one?')){ state=blank(); save();
+      $('address').value=''; $('inspector').value=''; $('access').value=''; renderProfile(); $('resumebox').classList.add('hide'); } };
+  }
+  show('setup');
+})();
+</script>
+</body>
+</html>

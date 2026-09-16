@@ -1,6 +1,7 @@
 import os
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from tools.punchlist import bp as punchlist_bp, META as PUNCHLIST_META
+from tools.makeready import bp as makeready_bp, META as MAKEREADY_META
 from tools.listings import bp as listings_bp, META as LISTINGS_META
 from tools.contracts import bp as contracts_bp, META as CONTRACTS_META
 from tools.eviction import bp as eviction_bp, META as EVICTION_META
@@ -12,6 +13,7 @@ app.config["MAX_CONTENT_LENGTH"] = 40 * 1024 * 1024
 APP_PASSWORD = os.environ.get("APP_PASSWORD")  # unset = open (local/dev)
 
 app.register_blueprint(punchlist_bp)
+app.register_blueprint(makeready_bp)
 app.register_blueprint(listings_bp)
 app.register_blueprint(contracts_bp)
 app.register_blueprint(eviction_bp)
@@ -19,7 +21,7 @@ app.register_blueprint(listing_input_bp)
 
 # ---- Tool registry, grouped by workflow. Add a card here for each new tool. ----
 TOOL_GROUPS = [
-    {"group": "Maintenance & Turns", "items": [PUNCHLIST_META]},
+    {"group": "Maintenance & Turns", "items": [MAKEREADY_META, PUNCHLIST_META]},
     {"group": "Marketing", "items": [LISTING_INPUT_META, LISTINGS_META]},
     {"group": "Leasing & Contracts", "items": [CONTRACTS_META, EVICTION_META]},
 ]

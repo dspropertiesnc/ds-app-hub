@@ -6,6 +6,7 @@ organized by task. One URL, one login, consistent branding.
 ## What's here
 - Home dashboard (`/`) — tool cards grouped by workflow (Maintenance, Marketing, ...).
 - Unit Turn Punchlist tool (`/punchlist/`) — the first tool, fully working.
+- Make-Ready Inspection (`/makeready/`) — guided walkthrough that produces the punchlist.
 - Shared team login (optional).
 
 ## Add a new tool (e.g. Listing Description Generator)
@@ -65,6 +66,31 @@ for Condominium/Townhouse/Duplex. "Lock Box Info" is relabeled **ShowMojo Box Se
 Produces a branded PDF and emails it from `LISTING_FROM` (default listing-input@dspropertiesnc.com) with
 one-click buttons for admin@, support@, info@, plus a custom address. Entries are saved in the browser as
 you type; a Clear-all button (with confirmation) resets the sheet.
+
+## Make-Ready Inspection (/makeready/)
+A guided walkthrough for a less-experienced staff member, built from the hard-copy
+Turn/Make-Ready Checklist. Flow: setup (address, inspector, access info, property profile)
+→ one area per screen, each item marked **OK / Needs attention / N/A** with a plain-English
+hint → note + photos on anything flagged → review screen → punchlist.
+
+- `checklist.py` — the master schema. 24 base areas, ~130 base items, every item carries a
+  `hint`. Sections and individual items can be gated on a profile key (`when` / 3rd tuple
+  element); `repeat` expands Bedroom 1..N and Bathroom 1..N. Item keys are stable strings so
+  a walkthrough saved on someone's phone survives a deploy. **Edit this file to add, remove
+  or reword checklist items** — the UI and the document both follow it.
+- `structuring.py` — turns flags into repair instructions ("Toilet working & flappers good"
+  + "runs constantly" → "Replace the toilet flapper and fill valve"). Without
+  `ANTHROPIC_API_KEY` it falls back to listing items exactly as flagged, grouped by room —
+  still a usable document.
+- Output uses the shared punchlist builder, so the document is identical in style to
+  `/punchlist/`. Photos attach per flagged item but print in the **end-of-section grid**
+  (Interior photos after Interior, Exterior after Exterior) with a small caption naming the
+  room and item they came from.
+- Same email buttons as the punchlist tool (info@, admin@, john@, alina@, plus a custom
+  address), sent from `PUNCHLIST_FROM`.
+- Progress autosaves to the phone after every tap and photos upload one at a time, so the
+  iOS camera page-reload can't lose a walkthrough. On return the setup screen offers
+  "Pick up where I left off".
 
 ## IMPORTANT — the service must stay on a PAID Render instance
 Render blocks outbound SMTP (ports 25 / 465 / 587) on **free** web services, so the email buttons
