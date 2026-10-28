@@ -109,8 +109,8 @@ rent (quick picks: +5/10/15%, a third of the gap) → **Download PDF** and copy 
 - **Owners never see data-source names.** The PDF and email show only market ranges and comps. The
   Zillow/RentRange/Rentometer estimates appear in the editor in a grey "internal only" box.
 - `rentvine.py` uses the documented `GET /leases/export` (Basic auth: API key = username, secret =
-  password). Current rent is the rent on the **tenant's lease** (lease rent field or its recurring rent
-  charges via `GET /leases/{id}`). It never uses the unit's market rent (`unit.rent`), which often
+  password). Current rent is the rent on the **tenant's lease** (`rentAmount` on `GET /leases/{id}`, with its
+  recurring rent charges as a fallback and a cross-check). It never uses the unit's market rent (`unit.rent`), which often
   doesn't match the lease. Section 8 leases: the housing authority's portion posts to
   **4110 Government Assistance Rent** and is added to the tenant's rent (override the account with
   `RENTVINE_GOV_RENT_ACCOUNT`). If Rentvine doesn't return lease rent, the field is left blank and

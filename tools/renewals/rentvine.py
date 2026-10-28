@@ -89,7 +89,9 @@ def _city_line(obj):
     return ("%s %s" % (left, zipc)).strip()
 
 
-RENT_KEYS = ("rent", "rentAmount", "monthlyRent", "leaseRent", "currentRent", "recurringRentAmount")
+# Lease-level rent on GET /leases/{id} (confirmed against the live account Oct 2026). These are the
+# rent on the tenant's lease; unit.rent is the unit's market rent and is never used.
+RENT_KEYS = ("rentAmount", "baseRentAmount")
 CHARGE_LISTS = ("recurringCharges", "recurring_charges", "charges")
 # Section 8 leases split rent: the tenant portion posts as Rent, the housing authority's (HAP)
 # portion posts to 4110 Government Assistance Rent. Lease rent = both added together.
@@ -145,9 +147,14 @@ def _field_rent(lease):
     return None
 
 
-def fetch_lease_rent(lease_id):
-    """Read the lease directly for its recurring rent charges (tenant rent + any 4110 HAP rent)."""
-    field = None
+def fetch_lease_detail(lease_id):
+    """Lease rent and month-to-month status from GET /leases/{id}.
+
+    Lease rent = the lease's rentAmount. Its recurring charges are read too, to find the Section 8
+    housing authority portion (4110) and as a fallback when rentAmount is empty. If the rent
+    charges add up to something different from rentAmount, that's passed back so staff can check.
+    """
+    out = {"rent": None, "gov": None, "charges_total": None, "mtm": None, "end": None}
     for params in ({"includes": "recurringCharges"}, None):
         try:
             d = _get("/leases/%s" % int(lease_id), params)
@@ -155,12 +162,23 @@ def fetch_lease_rent(lease_id):
             continue
         if not isinstance(d, dict):
             continue
-        rec = d.get("lease", d)
-        r = _rent_charges(rec) or _rent_charges(d)
-        if r:
-            return r
-        field = field or _field_rent(rec)
-    return field
+        rec = d.get("lease", d) if isinstance(d.get("lease"), dict) else d
+        charges = _rent_charges(d) or _rent_charges(rec)
+        field = _field_rent(rec)
+        if rec.get("isMonthToMonth") is not None:
+            out["mtm"] = rec.get("isMonthToMonth") in (1, "1", True)
+        out["end"] = (rec.get("endDate") or "")[:10] or None
+        if field:
+            out["rent"] = field["total"]
+        elif charges:
+            out["rent"] = charges["total"]
+        if charges:
+            out["gov"] = charges["gov"] or None
+            if field and abs(charges["total"] - field["total"]) >= 1:
+                out["charges_total"] = charges["total"]
+        if out["rent"] or charges:
+            break
+    return out
 
 
 def lease_fields(lease_id):
@@ -172,6 +190,11 @@ def lease_fields(lease_id):
         d = _get("/leases/%s" % int(lease_id), {"includes": "recurringCharges"})
         out["detail"] = {k: sorted(v.keys()) if isinstance(v, dict) else type(v).__name__ for k, v in d.items()} \
             if isinstance(d, dict) else type(d).__name__
+        rc = d.get("recurringCharges") if isinstance(d, dict) else None
+        if isinstance(rc, list) and rc and isinstance(rc[0], dict):
+            first = rc[0].get("recurringCharge", rc[0])
+            out["recurringCharge_fields"] = {k: sorted(v.keys()) if isinstance(v, dict) else type(v).__name__
+                                             for k, v in first.items()}
     except Exception as e:
         out["detail"] = str(e)
     return out
@@ -197,7 +220,6 @@ def _normalize(rec):
         "city_line": _city_line(unit) or _city_line(prop),
         "tenants": tenants,
         "_rent": _rent_charges(lease) or _rent_charges(rec),   # never unit.rent (market rent)
-        "_field_rent": _field_rent(lease),
         "start_date": (lease.get("startDate") or "")[:10],
         "end_date": end,
         "month_to_month": mtm,
@@ -226,17 +248,20 @@ def _all_leases(force=False):
 
 
 def _fill_rent(rows):
-    """Lease rent for each row: recurring charges on the export record, else the lease detail
-    (charges, then a plain rent field). Section 8 HAP rent (4110) is added in and reported."""
+    """Lease rent for each row from the lease itself (never unit market rent).
+    Section 8 housing authority rent (4110) is reported separately for the editor's label."""
     out = []
     for r in rows:
         if not r.get("_rent_checked"):
-            rent = r.get("_rent")
-            if not rent and r["lease_id"]:
-                rent = fetch_lease_rent(r["lease_id"])
-            rent = rent or r.get("_field_rent")
-            r["current_rent"] = rent["total"] if rent else None
-            r["gov_rent"] = rent["gov"] if rent and rent["gov"] else None
+            det = fetch_lease_detail(r["lease_id"]) if r["lease_id"] else {}
+            rent = det.get("rent")
+            if rent is None and r.get("_rent"):
+                rent = r["_rent"]["total"]
+            r["current_rent"] = rent
+            r["gov_rent"] = det.get("gov")
+            r["charges_total"] = det.get("charges_total")
+            if det.get("mtm") is not None:
+                r["month_to_month"] = det["mtm"]
             r["_rent_checked"] = True   # cached rows keep the result until the cache refreshes
         out.append({k: v for k, v in r.items() if not k.startswith("_")})
     return out

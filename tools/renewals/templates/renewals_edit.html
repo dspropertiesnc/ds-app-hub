@@ -255,7 +255,8 @@ function refreshCalc(i){
     crn.style.color=''; 
     if(num(p.current_rent)==null){ crn.textContent = rv ? 'Rentvine didn’t have the lease rent. Type it in from the lease.' : 'Type the rent from the tenant’s lease.'; crn.style.color='#a3261c'; }
     else if(edited) crn.textContent='Entered by hand (Rentvine had '+money(num(rv.rent_from_rentvine))+').';
-    else if(auto) crn.textContent='Lease rent from Rentvine'+(rv.gov_rent?', incl. '+money(rv.gov_rent)+' government assistance (4110)':'')+'.';
+    else if(auto){ crn.textContent='Lease rent from Rentvine'+(rv.gov_rent?', incl. '+money(rv.gov_rent)+' government assistance (4110)':'')+'.'+(rv.charges_total?' Note: the lease’s recurring rent charges add up to '+money(rv.charges_total)+'. Check which is right.':'');
+      if(rv.charges_total) crn.style.color='#7a5b1a'; }
     else crn.textContent='Entered by hand.'; }
   if(!p.narrative_custom){ p.narrative = narrative(p); const t=$('nv'+i); if(t && document.activeElement!==t) t.value=p.narrative; }
   $('chips'+i).innerHTML = `<span class="chip">Current <b>${money(c.cur)}</b></span><span class="chip">Market <b>${c.lo?money(c.lo)+'–'+money(c.hi):'—'}</b></span><span class="chip">Renewal <b>${money(c.ren)}</b></span>`;
@@ -347,7 +348,7 @@ function addLease(r, btn){
   const p=blankProp();
   Object.assign(p,{address:r.address, city_line:r.city_line, beds:r.beds, baths:r.baths, sqft:r.sqft, current_rent:r.current_rent,
     rentvine:{lease_id:r.lease_id, tenants:r.tenants, month_to_month:r.month_to_month, end_date:r.end_date, owner:r.owner,
-      rent_from_rentvine:r.current_rent, gov_rent:r.gov_rent}, section8:!!r.gov_rent});
+      rent_from_rentvine:r.current_rent, gov_rent:r.gov_rent, charges_total:r.charges_total}, section8:!!r.gov_rent});
   if(!S.owner_name && r.owner){ S.owner_name=r.owner; renderTop(); }
   S.properties.push(p); markDirty(); renderProps();
   btn.disabled=true; btn.textContent='Added'; btn.classList.add('ghost');
