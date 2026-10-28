@@ -135,7 +135,7 @@ const num = v => { if(v===''||v==null) return null; const n=parseFloat(String(v)
 const money = v => v==null||isNaN(v)?'—':(v<0?'-':'')+'$'+Math.abs(Math.round(v)).toLocaleString('en-US');
 const r25 = v => Math.round(v/25)*25;
 
-function blankProp(){ return {address:'', city_line:'', beds:null, baths:null, sqft:null, year_built:null, home_type:'Single-family',
+function blankProp(){ return {section8:false, address:'', city_line:'', beds:null, baths:null, sqft:null, year_built:null, home_type:'Single-family',
   current_rent:null, market_low:null, market_high:null, renewal_rent:null, narrative:'', narrative_custom:false,
   rentvine:null, estimates:[], notes:[], files:[], comps:[]}; }
 
@@ -204,6 +204,9 @@ function propHTML(p,i){
       <div class="f"><label for="sf${i}">Square feet</label><input id="sf${i}" type="number" data-i="${i}" data-f="sqft" value="${p.sqft??''}"></div>
       <div class="f"><label for="yb${i}">Year built</label><input id="yb${i}" type="number" data-i="${i}" data-f="year_built" value="${p.year_built??''}"></div>
       <div class="f"><label for="ht${i}">Home type</label><input id="ht${i}" data-i="${i}" data-f="home_type" value="${esc(p.home_type)}" list="types"></div>
+      <div class="f"><label for="s8${i}">Section 8</label>
+        <label style="display:flex;gap:8px;align-items:center;min-height:44px;font-weight:400;font-size:14px"><input id="s8${i}" type="checkbox" data-i="${i}" data-f="section8" ${p.section8?'checked':''} style="width:20px;height:20px"> Housing authority approval needed</label>
+        ${p.rentvine&&p.rentvine.gov_rent?'<div class="note">Ticked because the lease has a 4110 charge.</div>':''}</div>
       <div class="f"><label for="cr${i}">Current rent</label><input id="cr${i}" type="number" data-i="${i}" data-f="current_rent" value="${p.current_rent??''}" placeholder="From the lease">
         <div class="note" id="crn${i}"></div></div>
     </div></div>
@@ -289,7 +292,7 @@ document.addEventListener('change', e=>{
   if(t.dataset.act==='files'){ const i=+t.dataset.i; pending[i]=[...(pending[i]||[]), ...t.files]; t.value='';
     $('fl'+i).textContent=pending[i].map(f=>f.name).join(', ');
     document.querySelector(`[data-act=extract][data-i="${i}"]`).disabled=false; }
-  if(t.type==='checkbox' && t.dataset.f==='show'){ markDirty(); refreshCalc(+t.dataset.i); }
+  if(t.type==='checkbox' && (t.dataset.f==='show'||t.dataset.f==='section8')){ markDirty(); refreshCalc(+t.dataset.i); }
 });
 document.addEventListener('click', async e=>{
   const b=e.target.closest('[data-act]'); if(!b) return;
@@ -344,7 +347,7 @@ function addLease(r, btn){
   const p=blankProp();
   Object.assign(p,{address:r.address, city_line:r.city_line, beds:r.beds, baths:r.baths, sqft:r.sqft, current_rent:r.current_rent,
     rentvine:{lease_id:r.lease_id, tenants:r.tenants, month_to_month:r.month_to_month, end_date:r.end_date, owner:r.owner,
-      rent_from_rentvine:r.current_rent, gov_rent:r.gov_rent}});
+      rent_from_rentvine:r.current_rent, gov_rent:r.gov_rent}, section8:!!r.gov_rent});
   if(!S.owner_name && r.owner){ S.owner_name=r.owner; renderTop(); }
   S.properties.push(p); markDirty(); renderProps();
   btn.disabled=true; btn.textContent='Added'; btn.classList.add('ghost');

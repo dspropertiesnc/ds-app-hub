@@ -38,6 +38,7 @@ def _clean_doc(d):
             "address": (p.get("address") or "").strip(), "city_line": (p.get("city_line") or "").strip(),
             "home_type": (p.get("home_type") or "").strip(), "narrative": (p.get("narrative") or "").strip(),
             "narrative_custom": bool(p.get("narrative_custom")),
+            "section8": bool(p.get("section8")),
             **{k: n(p.get(k)) for k in ("beds", "baths", "sqft", "year_built", "current_rent",
                                         "market_low", "market_high", "renewal_rent")},
             "rentvine": p.get("rentvine") if isinstance(p.get("rentvine"), dict) else None,

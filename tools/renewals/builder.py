@@ -86,6 +86,15 @@ def calc(p):
     return out
 
 
+def is_section8(p):
+    rv = p.get("rentvine") or {}
+    return bool(p.get("section8") or num(rv.get("gov_rent")))
+
+
+S8_NOTE = ("Section 8 tenancy: the new rent needs the housing authority's approval before it takes effect, "
+           "and their share may not change until they approve it.")
+
+
 def featured_comps(p, n=4):
     comps = [c for c in (p.get("comps") or []) if c.get("show") or c.get("featured")]
     return comps[:n]
@@ -419,7 +428,9 @@ def _property_page(cv, doc, p, i, n):
             d = num(cp.get("distance_mi"))
             rows.append([cp.get("address", ""), bb, fmt_int(cp.get("sqft")),
                          ("%.2f mi" % d) if d is not None else "—", money(cp.get("rent"))])
-        _table(cv, y - 4, cols, ["ADDRESS", "BED / BATH", "SQ FT", "DISTANCE", "RENT"], rows, row_h=30)
+        y = _table(cv, y - 4, cols, ["ADDRESS", "BED / BATH", "SQ FT", "DISTANCE", "RENT"], rows, row_h=30)
+    if is_section8(p):
+        _para(cv, S8_NOTE, M, max(y - 18, 110), CW, size=9.5, color=MUTED, leading=14, italic=True)
     _footer(cv, doc)
 
 
@@ -482,6 +493,9 @@ def email_draft(doc):
             s += ", still %s to %s below market." % (money(c["below_lo"]), money(c["below_hi"]))
         else:
             s += "."
+        if is_section8(p):
+            s += (" Because this is a Section 8 tenancy, the new rent needs the housing authority's approval "
+                  "before it takes effect, and their share may not change until they approve it.")
         lines += [s, ""]
     diff = ren_t - cur_t
     if n > 1:
@@ -492,8 +506,9 @@ def email_draft(doc):
                      "A 12-month term also gives you more stability, since on month-to-month the tenant could leave on short notice.")
     lines += ["",
               "Let us know if you're comfortable with %s or want to adjust %s. Once we have your approval, "
-              "we'll send the renewal %s to the %s. The full comparable rent analysis is attached for your reference."
+              "we'll send the renewal %s to the %s%s. The full comparable rent analysis is attached for your reference."
               % ("these numbers" if n > 1 else "this number", "any of them" if n > 1 else "it",
-                 "offers" if n > 1 else "offer", "tenants" if n > 1 else "tenant"),
+                 "offers" if n > 1 else "offer", "tenants" if n > 1 else "tenant",
+                 " and submit the Section 8 increase to the housing authority" if any(is_section8(p) for p in props) else ""),
               "", "Best,", doc.get("prepared_by") or "Doss & Spaulding Properties"]
     return {"subject": subj, "body": "\n".join(lines)}
