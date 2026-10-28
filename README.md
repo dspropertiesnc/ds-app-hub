@@ -96,3 +96,29 @@ hint → note + photos on anything flagged → review screen → punchlist.
 Render blocks outbound SMTP (ports 25 / 465 / 587) on **free** web services, so the email buttons
 will hang ("Sending..." forever) if the service is on the Free instance. `render.yaml` pins
 `plan: starter` for this reason — do not change it back to `free` while email is in use.
+
+## Rent Renewal Proposals (/renewals/)
+Builds the owner-facing renewal recommendation (branded PDF + email draft) for month-to-month or
+expiring leases, and keeps every proposal in a history list so the team can reopen and edit it.
+
+Flow: owner name → **Owner's month-to-month leases** (or search Rentvine by address/tenant) → for each
+property upload the comp reports (Rentometer, RentRange, Zillow Rent Zestimate PDFs) → **Read reports**
+fills the property facts, every comp, a suggested market range and the 4 best comps → set the renewal
+rent (quick picks: +5/10/15%, a third of the gap) → **Download PDF** and copy the email.
+
+- **Owners never see data-source names.** The PDF and email show only market ranges and comps. The
+  Zillow/RentRange/Rentometer estimates appear in the editor in a grey "internal only" box.
+- `rentvine.py` uses the documented `GET /leases/export` (Basic auth: API key = username, secret =
+  password). Current rent is `unit.rent`, which the editor labels "from Rentvine" so staff confirm it
+  against the lease. Leases are cached for 10 minutes (`RENTVINE_CACHE_SECONDS`).
+- `extract.py` sends the PDFs to Claude (`RENEWALS_MODEL`, default `claude-sonnet-4-6`): comps are
+  merged across reports, outliers flagged, range rounded to $25. Everything stays editable.
+- `builder.py` draws the PDF (summary page + one page per property, same design as the Munish
+  handout) and writes the email draft. The dark-box text on each property page writes itself from the
+  ticked comps and numbers until someone edits it by hand.
+- `store.py` saves proposals in SQLite at `RENEWALS_DB`. render.yaml mounts a 1 GB disk at
+  `/var/data` for it; without `RENEWALS_DB` the history lives in /tmp and is wiped on each deploy.
+
+Env vars: `RENTVINE_ACCOUNT` (subdomain, e.g. dossspauldingpropertiesllc), `RENTVINE_API_KEY`,
+`RENTVINE_API_SECRET` (create a key with a read-only role under Settings → Users, Roles & API),
+`RENEWALS_DB`, optional `RENEWALS_MODEL`, optional `RENEWALS_CONTACT_LINE` (PDF footer).
