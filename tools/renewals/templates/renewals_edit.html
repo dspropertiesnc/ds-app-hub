@@ -204,8 +204,8 @@ function propHTML(p,i){
       <div class="f"><label for="sf${i}">Square feet</label><input id="sf${i}" type="number" data-i="${i}" data-f="sqft" value="${p.sqft??''}"></div>
       <div class="f"><label for="yb${i}">Year built</label><input id="yb${i}" type="number" data-i="${i}" data-f="year_built" value="${p.year_built??''}"></div>
       <div class="f"><label for="ht${i}">Home type</label><input id="ht${i}" data-i="${i}" data-f="home_type" value="${esc(p.home_type)}" list="types"></div>
-      <div class="f"><label for="cr${i}">Current rent</label><input id="cr${i}" type="number" data-i="${i}" data-f="current_rent" value="${p.current_rent??''}">
-        ${p.rentvine?(p.current_rent==null?'<div class="note" style="color:#a3261c">Rentvine didn’t return the lease rent. Enter it from the lease.</div>':'<div class="note">Lease rent from Rentvine.</div>'):''}</div>
+      <div class="f"><label for="cr${i}">Current rent</label><input id="cr${i}" type="number" data-i="${i}" data-f="current_rent" value="${p.current_rent??''}" placeholder="From the lease">
+        <div class="note" id="crn${i}"></div></div>
     </div></div>
 
     <div><div class="sub">Comp reports</div>
@@ -247,6 +247,13 @@ function renderProps(){
 
 function refreshCalc(i){
   const p=S.properties[i]; if(!p) return; const c=calc(p);
+  const crn=$('crn'+i);
+  if(crn){ const rv=p.rentvine, auto=rv&&rv.rent_from_rentvine!=null, edited=auto&&num(p.current_rent)!==num(rv.rent_from_rentvine);
+    crn.style.color=''; 
+    if(num(p.current_rent)==null){ crn.textContent = rv ? 'Rentvine didn’t have the lease rent. Type it in from the lease.' : 'Type the rent from the tenant’s lease.'; crn.style.color='#a3261c'; }
+    else if(edited) crn.textContent='Entered by hand (Rentvine had '+money(num(rv.rent_from_rentvine))+').';
+    else if(auto) crn.textContent='Lease rent from Rentvine'+(rv.gov_rent?', incl. '+money(rv.gov_rent)+' government assistance (4110)':'')+'.';
+    else crn.textContent='Entered by hand.'; }
   if(!p.narrative_custom){ p.narrative = narrative(p); const t=$('nv'+i); if(t && document.activeElement!==t) t.value=p.narrative; }
   $('chips'+i).innerHTML = `<span class="chip">Current <b>${money(c.cur)}</b></span><span class="chip">Market <b>${c.lo?money(c.lo)+'–'+money(c.hi):'—'}</b></span><span class="chip">Renewal <b>${money(c.ren)}</b></span>`;
   let st='';
@@ -324,7 +331,7 @@ async function extractFor(i, btn){
 function leaseRow(r){
   const already = S.properties.some(p=>p.rentvine && String(p.rentvine.lease_id)===String(r.lease_id));
   return `<div class="res"><div><b>${esc(r.address)}</b>${r.month_to_month?'<span class="badge">Month-to-month</span>':'<span class="badge lease">Lease ends '+esc(r.end_date)+'</span>'}
-    <div class="meta">${esc(r.city_line)} · ${esc((r.tenants||[]).join(', ')||'No tenant listed')} · Lease rent ${r.current_rent==null?'not found':money(r.current_rent)}${r.owner?' · Owner: '+esc(r.owner):''}</div></div>
+    <div class="meta">${esc(r.city_line)} · ${esc((r.tenants||[]).join(', ')||'No tenant listed')} · Lease rent ${r.current_rent==null?'not found (enter by hand)':money(r.current_rent)+(r.gov_rent?' incl. '+money(r.gov_rent)+' gov. assistance':'')}${r.owner?' · Owner: '+esc(r.owner):''}</div></div>
     <button class="btn sm ${already?'ghost':''}" type="button" data-act="addLease" data-lease="${esc(JSON.stringify(r))}" ${already?'disabled':''}>${already?'Added':'Add'}</button></div>`;
 }
 async function rvFetch(url){
@@ -336,7 +343,8 @@ async function rvFetch(url){
 function addLease(r, btn){
   const p=blankProp();
   Object.assign(p,{address:r.address, city_line:r.city_line, beds:r.beds, baths:r.baths, sqft:r.sqft, current_rent:r.current_rent,
-    rentvine:{lease_id:r.lease_id, tenants:r.tenants, month_to_month:r.month_to_month, end_date:r.end_date, owner:r.owner}});
+    rentvine:{lease_id:r.lease_id, tenants:r.tenants, month_to_month:r.month_to_month, end_date:r.end_date, owner:r.owner,
+      rent_from_rentvine:r.current_rent, gov_rent:r.gov_rent}});
   if(!S.owner_name && r.owner){ S.owner_name=r.owner; renderTop(); }
   S.properties.push(p); markDirty(); renderProps();
   btn.disabled=true; btn.textContent='Added'; btn.classList.add('ghost');
