@@ -109,8 +109,11 @@ rent (quick picks: +5/10/15%, a third of the gap) → **Download PDF** and copy 
 - **Owners never see data-source names.** The PDF and email show only market ranges and comps. The
   Zillow/RentRange/Rentometer estimates appear in the editor in a grey "internal only" box.
 - `rentvine.py` uses the documented `GET /leases/export` (Basic auth: API key = username, secret =
-  password). Current rent is `unit.rent`, which the editor labels "from Rentvine" so staff confirm it
-  against the lease. Leases are cached for 10 minutes (`RENTVINE_CACHE_SECONDS`).
+  password). Current rent is the rent on the **tenant's lease** (lease rent field or its recurring rent
+  charges via `GET /leases/{id}`). It never uses the unit's market rent (`unit.rent`), which often
+  doesn't match the lease. If Rentvine doesn't return lease rent, the field is left blank and flagged
+  for staff to enter. First live run: open `/renewals/api/rentvine/lease/<leaseID>/fields` to see
+  the field names Rentvine returns and confirm the rent mapping. Leases are cached for 10 minutes.
 - `extract.py` sends the PDFs to Claude (`RENEWALS_MODEL`, default `claude-sonnet-4-6`): comps are
   merged across reports, outliers flagged, range rounded to $25. Everything stays editable.
 - `builder.py` draws the PDF (summary page + one page per property, same design as the Munish

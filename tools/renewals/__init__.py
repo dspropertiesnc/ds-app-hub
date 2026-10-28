@@ -97,6 +97,15 @@ def rv_owner():
         return jsonify({"error": str(e)}), 502
 
 
+@bp.route("/api/rentvine/lease/<int:lease_id>/fields")
+def rv_fields(lease_id):
+    """Setup check: which fields Rentvine returns for a lease (names only, no values)."""
+    try:
+        return jsonify(rentvine.lease_fields(lease_id))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
+
+
 # ---------- comps ----------
 @bp.route("/api/extract", methods=["POST"])
 def api_extract():

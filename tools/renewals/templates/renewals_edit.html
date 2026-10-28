@@ -205,7 +205,7 @@ function propHTML(p,i){
       <div class="f"><label for="yb${i}">Year built</label><input id="yb${i}" type="number" data-i="${i}" data-f="year_built" value="${p.year_built??''}"></div>
       <div class="f"><label for="ht${i}">Home type</label><input id="ht${i}" data-i="${i}" data-f="home_type" value="${esc(p.home_type)}" list="types"></div>
       <div class="f"><label for="cr${i}">Current rent</label><input id="cr${i}" type="number" data-i="${i}" data-f="current_rent" value="${p.current_rent??''}">
-        ${p.rentvine?'<div class="note">Filled from Rentvine. Check it matches the lease.</div>':''}</div>
+        ${p.rentvine?(p.current_rent==null?'<div class="note" style="color:#a3261c">Rentvine didn’t return the lease rent. Enter it from the lease.</div>':'<div class="note">Lease rent from Rentvine.</div>'):''}</div>
     </div></div>
 
     <div><div class="sub">Comp reports</div>
@@ -324,7 +324,7 @@ async function extractFor(i, btn){
 function leaseRow(r){
   const already = S.properties.some(p=>p.rentvine && String(p.rentvine.lease_id)===String(r.lease_id));
   return `<div class="res"><div><b>${esc(r.address)}</b>${r.month_to_month?'<span class="badge">Month-to-month</span>':'<span class="badge lease">Lease ends '+esc(r.end_date)+'</span>'}
-    <div class="meta">${esc(r.city_line)} · ${esc((r.tenants||[]).join(', ')||'No tenant listed')} · Rent ${money(r.current_rent)}${r.owner?' · Owner: '+esc(r.owner):''}</div></div>
+    <div class="meta">${esc(r.city_line)} · ${esc((r.tenants||[]).join(', ')||'No tenant listed')} · Lease rent ${r.current_rent==null?'not found':money(r.current_rent)}${r.owner?' · Owner: '+esc(r.owner):''}</div></div>
     <button class="btn sm ${already?'ghost':''}" type="button" data-act="addLease" data-lease="${esc(JSON.stringify(r))}" ${already?'disabled':''}>${already?'Added':'Add'}</button></div>`;
 }
 async function rvFetch(url){

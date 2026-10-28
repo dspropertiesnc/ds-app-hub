@@ -4,9 +4,14 @@ Auth (per docs.rentvine.com): HTTP Basic, API access key = username, secret = pa
 Base URL: https://{RENTVINE_ACCOUNT}.rentvine.com/api/manager
 
 We use the documented lease export (GET /leases/export), which returns each lease with
-its property, unit, portfolio and tenants in one record. Current rent comes from
-`unit.rent`, the rent amount Rentvine keeps on the unit. The editor shows it as
-"from Rentvine" and the team can correct it before saving.
+its property, unit, portfolio and tenants in one record.
+
+Current rent = the rent on the TENANT'S LEASE, never the unit's "market rent" (`unit.rent`),
+which often doesn't match the lease. We look for the lease-level rent on the export record,
+then on the lease itself (GET /leases/{leaseID}), including its recurring rent charges.
+If neither has it, current rent is left blank and the editor asks staff to enter it from
+the lease. `/renewals/api/rentvine/lease/<id>/fields` lists the field names Rentvine returns,
+to confirm the mapping on the first live run.
 """
 import os, time, base64, json, datetime, threading
 import urllib.request, urllib.parse, urllib.error
@@ -84,6 +89,75 @@ def _city_line(obj):
     return ("%s %s" % (left, zipc)).strip()
 
 
+RENT_KEYS = ("rent", "rentAmount", "monthlyRent", "leaseRent", "currentRent", "recurringRentAmount")
+CHARGE_LISTS = ("recurringCharges", "recurring_charges", "charges")
+
+
+def _rent_charges(obj):
+    """Sum active monthly rent lines from a recurring-charges list, if the record has one."""
+    if not isinstance(obj, dict):
+        return None
+    for k in CHARGE_LISTS:
+        lst = obj.get(k)
+        if isinstance(lst, list) and lst:
+            total, found = 0.0, False
+            for c in lst:
+                c = c.get("recurringCharge", c) if isinstance(c, dict) else {}
+                acct = c.get("chargeAccount") if isinstance(c.get("chargeAccount"), dict) else {}
+                name = " ".join(str(x) for x in (c.get("description"), c.get("accountName"), acct.get("name")) if x).lower()
+                flag = c.get("isRent", acct.get("isRent"))
+                if flag is not None:    # Rentvine's own rent flag wins when it's there
+                    is_rent = flag in (1, "1", True)
+                else:                   # otherwise go by name, skipping pet rent and fees
+                    is_rent = "rent" in name and not any(w in name for w in ("pet", "fee", "storage", "parking"))
+                ended = c.get("endDate") and str(c["endDate"])[:10] < datetime.date.today().isoformat()
+                amt = _num(c.get("amount"))
+                if is_rent and not ended and amt:
+                    total += amt; found = True
+            if found:
+                return total
+    return None
+
+
+def lease_rent(lease):
+    """Rent from the lease record itself (fields first, then its recurring rent charges)."""
+    if not isinstance(lease, dict):
+        return None
+    for k in RENT_KEYS:
+        v = _num(lease.get(k))
+        if v:
+            return v
+    return _rent_charges(lease)
+
+
+def fetch_lease_rent(lease_id):
+    """Fallback when the export record has no lease-level rent: read the lease directly."""
+    for params in ({"includes": "recurringCharges"}, None):
+        try:
+            d = _get("/leases/%s" % int(lease_id), params)
+        except Exception:
+            continue
+        rec = d.get("lease", d) if isinstance(d, dict) else {}
+        v = lease_rent(rec) or (lease_rent(d) if isinstance(d, dict) else None)
+        if v:
+            return v
+    return None
+
+
+def lease_fields(lease_id):
+    """Field names (no values) on the lease export record and the lease detail, for setup checks."""
+    out = {}
+    for r in _records(_get("/leases/export", {"leaseIDs[]": [int(lease_id)]})):
+        out["export"] = {k: sorted(v.keys()) if isinstance(v, dict) else type(v).__name__ for k, v in r.items()}
+    try:
+        d = _get("/leases/%s" % int(lease_id), {"includes": "recurringCharges"})
+        out["detail"] = {k: sorted(v.keys()) if isinstance(v, dict) else type(v).__name__ for k, v in d.items()} \
+            if isinstance(d, dict) else type(d).__name__
+    except Exception as e:
+        out["detail"] = str(e)
+    return out
+
+
 def _normalize(rec):
     lease = rec.get("lease") or {}
     prop = rec.get("property") or {}
@@ -103,7 +177,7 @@ def _normalize(rec):
         "address": addr,
         "city_line": _city_line(unit) or _city_line(prop),
         "tenants": tenants,
-        "current_rent": _num(unit.get("rent")),
+        "current_rent": lease_rent(lease) or _rent_charges(rec),   # never unit.rent (market rent)
         "start_date": (lease.get("startDate") or "")[:10],
         "end_date": end,
         "month_to_month": mtm,
@@ -131,6 +205,14 @@ def _all_leases(force=False):
         return rows
 
 
+def _fill_rent(rows):
+    for r in rows:
+        if r["current_rent"] is None and r["lease_id"] and not r.get("_rent_checked"):
+            r["current_rent"] = fetch_lease_rent(r["lease_id"])
+            r["_rent_checked"] = True   # cached rows keep the result until the cache refreshes
+    return [{k: v for k, v in r.items() if not k.startswith("_")} for r in rows]
+
+
 def search(q, limit=12):
     q = (q or "").lower().strip()
     if len(q) < 2:
@@ -142,7 +224,7 @@ def search(q, limit=12):
         if all(t in hay for t in terms):
             out.append(r)
     out.sort(key=lambda r: (not r["month_to_month"], r["address"]))
-    return out[:limit]
+    return _fill_rent(out[:limit])
 
 
 def by_owner(owner):
@@ -150,4 +232,4 @@ def by_owner(owner):
     owner = (owner or "").lower().strip()
     rows = [r for r in _all_leases() if owner and owner in r["owner"].lower()]
     rows.sort(key=lambda r: (not r["month_to_month"], r["address"]))
-    return rows
+    return _fill_rent(rows[:40])
