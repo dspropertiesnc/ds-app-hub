@@ -35,7 +35,17 @@
   .pb{padding:16px;display:flex;flex-direction:column;gap:18px}
   .sub{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-dark);font-weight:700;margin:0 0 8px}
   .upload{display:flex;gap:10px;flex-wrap:wrap;align-items:center;border:1.5px dashed var(--accent);background:var(--sub);border-radius:12px;padding:12px}
-  .upload .fl{flex:1 1 240px;font-size:13px;color:#5c4522}
+  .upload{flex-direction:column;align-items:stretch}
+  .upload .acts{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .upload .hintx{flex:1 1 240px;font-size:13px;color:#5c4522}
+  .flist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .flist li{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:4px 4px 4px 12px;font-size:13.5px}
+  .flist li .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .flist li .sz{color:var(--gray);font-size:12px;white-space:nowrap}
+  .flist li .x{border:0;background:none;color:#a3261c;cursor:pointer;font-size:20px;line-height:1;min-width:40px;min-height:40px;border-radius:8px}
+  .flist li .x:hover{background:#f9e7e5}
+  .flist li .x:disabled{opacity:.35;cursor:default}
+  .flist.done li{background:transparent;padding:6px 12px}
   .internal{background:#f4f6f8;border:1px solid #dde3e8;border-radius:10px;padding:10px 12px;font-size:13px;color:#3a4650}
   .internal b{color:#1e2a33}.internal ul{margin:6px 0 0;padding-left:18px}
   .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
@@ -52,6 +62,18 @@
   .ctab tr.out td{opacity:.55}
   .ctab .x{border:0;background:none;color:#a3261c;cursor:pointer;font-size:18px;min-width:32px;min-height:32px}
   .scroll{overflow-x:auto}
+  .picked{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .picked li{display:flex;gap:12px;align-items:baseline;padding:10px 12px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .picked li:first-child{border-top:0}
+  .picked li:nth-child(even){background:#fcfaf6}
+  .picked .ad{font-weight:600;flex:1 1 200px}
+  .picked .dt{color:var(--gray);font-size:13px}
+  .picked .rt{font-weight:800;min-width:64px;text-align:right}
+  .compedit{margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff}
+  details.more{border:1px solid var(--line);border-radius:10px;padding:0 12px;background:#fff}
+  details.more>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;font-size:13.5px;color:var(--accent-dark)}
+  details.more[open]{padding-bottom:12px}
+  .preview{background:#1f1f1f;color:#e8e8e8;border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.55}
   .muted{color:var(--gray);font-size:12.5px}
   .warn{background:#fbf3e2;border:1px solid #e6cfa0;color:#7a5b1a;padding:10px 12px;border-radius:10px;font-size:13px}
   .err{background:#f9e7e5;border:1px solid #efc7c2;color:#8a2f25;padding:10px 12px;border-radius:10px;font-size:13px}
@@ -185,11 +207,58 @@ function compRows(p,i){
   </tr>`).join('');
 }
 
+const openComps = {};   // property index -> comp editor open
+const TYPE_GROUP = t => { t=(t||'').toLowerCase(); if(/condo|apartment|townho|duplex|multi/.test(t)) return 'attached'; if(/house|single/.test(t)) return 'house'; return ''; };
+function compScore(p,c){
+  // lower is better: distance first, then size, bedrooms, baths, age and home type
+  const d=num(c.distance_mi), sf=num(c.sqft), psf=num(p.sqft), bd=num(c.beds), pbd=num(p.beds), ba=num(c.baths), pba=num(p.baths),
+        yb=num(c.year_built), pyb=num(p.year_built);
+  let s = d!=null ? d*20 : 12;
+  s += (sf&&psf) ? Math.abs(sf-psf)/psf*30 : 5;
+  s += (bd!=null&&pbd!=null) ? Math.abs(bd-pbd)*25 : 4;
+  s += (ba!=null&&pba!=null) ? Math.abs(ba-pba)*8 : 2;
+  s += (yb&&pyb) ? Math.min(Math.abs(yb-pyb),60)/10*3 : 0;
+  const ct=TYPE_GROUP(c.type), pt=TYPE_GROUP(p.home_type); if(ct&&pt&&ct!==pt) s+=8;
+  if(c.featured) s-=10;     // the report reader's own pick counts for something
+  return s;
+}
+function autoPick(p){
+  const ok=c=>!c.outlier && num(c.rent) && (c.address||'').trim();
+  const ranked=p.comps.map(c=>({c,s:ok(c)?compScore(p,c):1e9})).sort((a,b)=>a.s-b.s);
+  ranked.forEach((r,k)=>{ r.c.show = k<4 && r.s<1e9; });
+  p.comps=ranked.map(r=>r.c);
+}
+function pickedHTML(p,i){
+  const cs=p.comps.filter(c=>c.show).slice(0,4);
+  if(!cs.length) return `<div class="muted">${p.comps.length?'No comps picked yet. Use Change comps.':'Comps appear here after the reports are read.'}</div>`;
+  return '<ul class="picked">'+cs.map(c=>{
+    const bits=[(c.beds!=null||c.baths!=null)?`${c.beds??'—'} bd / ${c.baths??'—'} ba`:'', c.sqft?Number(c.sqft).toLocaleString()+' sq ft':'', c.distance_mi!=null?num(c.distance_mi).toFixed(2)+' mi away':''].filter(Boolean).join(' · ');
+    return `<li><span class="ad">${esc(c.address)}</span><span class="dt">${esc(bits)}</span><span class="rt">${money(num(c.rent))}</span></li>`;}).join('')+'</ul>';
+}
+const reading = {};   // property index -> true while its reports are being read
+function kb(n){ return n>=1048576 ? (n/1048576).toFixed(1)+' MB' : Math.max(1,Math.round(n/1024))+' KB'; }
+function fileList(p,i){
+  const files=pending[i]||[];
+  if(files.length) return '<ul class="flist" aria-label="Reports to read">'+files.map((f,k)=>
+    `<li><span class="nm" title="${esc(f.name)}">${esc(f.name)}</span><span class="sz">${kb(f.size)}</span>
+     <button class="x" type="button" data-act="rmFile" data-i="${i}" data-k="${k}" aria-label="Remove ${esc(f.name)}" ${reading[i]?'disabled':''}>&times;</button></li>`).join('')+'</ul>';
+  if(p.files&&p.files.length) return '<div class="muted" style="margin-bottom:4px">Last read:</div><ul class="flist done">'+
+    p.files.map(n=>`<li><span class="nm" title="${esc(n)}">${esc(n)}</span></li>`).join('')+'</ul>';
+  return '';
+}
+function refreshFiles(i, note){
+  const p=S.properties[i], n=(pending[i]||[]).length;
+  $('fl'+i).innerHTML=fileList(p,i);
+  $('fh'+i).textContent = note || (n ? '' : (p.files&&p.files.length ? 'To redo this, upload the reports again.' : 'Upload the Rentometer, RentRange and Zillow PDFs for this property.'));
+  document.querySelector(`label[for="up${i}"]`).textContent = n ? 'Add more' : 'Choose PDFs';
+  const go=document.querySelector(`[data-act=extract][data-i="${i}"]`); if(go && !reading[i]) go.disabled=!n;
+}
+
 function propHTML(p,i){
   const rv = p.rentvine ? `<div class="muted">Rentvine lease #${esc(p.rentvine.lease_id)}${p.rentvine.tenants&&p.rentvine.tenants.length?' · '+esc(p.rentvine.tenants.join(', ')):''}${p.rentvine.month_to_month?' · month-to-month':(p.rentvine.end_date?' · ends '+esc(p.rentvine.end_date):'')}</div>` : '';
-  const est = (p.estimates&&p.estimates.length)||(p.notes&&p.notes.length) ? `<div class="internal"><b>Internal only, never shown to the owner.</b>
+  const est = (p.estimates&&p.estimates.length)||(p.notes&&p.notes.length) ? `<details class="more" style="margin-top:10px"><summary>Report details (internal only)</summary><div class="internal"><b>Never shown to the owner.</b>
      ${p.estimates&&p.estimates.length?'<div style="margin-top:4px">Report estimates: '+p.estimates.map(e=>esc(e.source)+' '+money(num(e.value))+(e.detail?' ('+esc(e.detail)+')':'')).join(' · ')+'</div>':''}
-     ${p.notes&&p.notes.length?'<ul>'+p.notes.map(n=>'<li>'+esc(n)+'</li>').join('')+'</ul>':''}</div>` : '';
+     ${p.notes&&p.notes.length?'<ul>'+p.notes.map(n=>'<li>'+esc(n)+'</li>').join('')+'</ul>':''}</div></details>` : '';
   const files = (pending[i]||[]);
   return `<article class="prop" id="prop${i}">
    <div class="ph"><div class="ttl">${esc(p.address||'New property')}${rv}</div>
@@ -212,10 +281,11 @@ function propHTML(p,i){
     </div></div>
 
     <div><div class="sub">Comp reports</div>
-      <div class="upload"><div class="fl" id="fl${i}">${files.length?files.map(f=>esc(f.name)).join(', '):(p.files&&p.files.length?'Last read: '+p.files.map(esc).join(', '):'Upload the Rentometer, RentRange and Zillow PDFs for this property.')}</div>
-        <label class="btn ghost sm" for="up${i}">Choose PDFs</label>
+      <div class="upload"><div id="fl${i}">${fileList(p,i)}</div>
+        <div class="acts"><span class="hintx" id="fh${i}">${files.length?'':(p.files&&p.files.length?'To redo this, upload the reports again.':'Upload the Rentometer, RentRange and Zillow PDFs for this property.')}</span>
+        <label class="btn ghost sm" for="up${i}">${files.length?'Add more':'Choose PDFs'}</label>
         <input id="up${i}" type="file" accept=".pdf,image/*" multiple data-act="files" data-i="${i}" class="sr">
-        <button class="btn sm" type="button" data-act="extract" data-i="${i}" ${files.length?'':'disabled'}>Read reports</button></div>
+        <button class="btn sm" type="button" data-act="extract" data-i="${i}" ${files.length?'':'disabled'}>Read reports</button></div></div>
       <div id="xmsg${i}" aria-live="polite" style="margin-top:8px"></div>
       ${est}
     </div>
@@ -228,17 +298,27 @@ function propHTML(p,i){
     </div>
     <div class="stats" id="stats${i}"></div></div>
 
-    <div><div class="sub">Comparable rentals <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">· tick up to 4 to show the owner, in order</span></div>
-      <div class="scroll"><table class="ctab"><thead><tr><th>Show</th><th>Address</th><th>Bd</th><th>Ba</th><th>Sq ft</th><th>Miles</th><th>Rent</th><th></th><th></th></tr></thead>
-      <tbody id="comps${i}">${compRows(p,i)}</tbody></table></div>
-      <div class="row" style="margin-top:8px"><button class="btn ghost sm" type="button" data-act="addComp" data-i="${i}">+ Add comp</button>
+    <div><div class="sub">Comps shown to the owner</div>
+      <div id="picked${i}"></div>
+      <div class="row" style="margin-top:8px"><button class="btn ghost sm" type="button" data-act="toggleComps" data-i="${i}" id="tc${i}" aria-expanded="${openComps[i]?'true':'false'}">${openComps[i]?'Done changing comps':'Change comps'}</button>
         <span class="muted" id="cnote${i}"></span></div>
+      <div class="compedit" id="ce${i}" ${openComps[i]?'':'hidden'}>
+        <p class="muted" style="margin:0 0 8px">Tick up to 4 to show the owner. You can also fix a number or add a comp the reports missed.</p>
+        <div class="scroll"><table class="ctab"><thead><tr><th>Show</th><th>Address</th><th>Bd</th><th>Ba</th><th>Sq ft</th><th>Miles</th><th>Rent</th><th></th><th></th></tr></thead>
+        <tbody id="comps${i}">${compRows(p,i)}</tbody></table></div>
+        <div class="row" style="margin-top:8px"><button class="btn ghost sm" type="button" data-act="addComp" data-i="${i}">+ Add comp</button>
+          <button class="btn ghost sm" type="button" data-act="autoPick" data-i="${i}">Pick the best 4 for me</button></div>
+      </div>
     </div>
 
-    <div class="f"><label for="nv${i}">What the owner reads <span class="muted" style="font-weight:400">(dark box on the property page)</span></label>
-      <textarea id="nv${i}" data-i="${i}" data-f="narrative">${esc(p.narrative)}</textarea>
-      <div class="row" style="margin-top:6px"><button class="btn ghost sm" type="button" data-act="renarr" data-i="${i}">Rewrite from the numbers</button>
-        <span class="muted" id="nnote${i}">${p.narrative_custom?'Edited by hand; won’t change with the numbers.':'Updates as you change the numbers.'}</span></div>
+    <div><div class="sub">What the owner reads</div>
+      <div class="preview" id="pv${i}">${esc(p.narrative)}</div>
+      <details class="more" style="margin-top:8px"><summary>Edit this wording</summary>
+        <div class="f"><label for="nv${i}" class="sr">Wording on the owner's page</label>
+        <textarea id="nv${i}" data-i="${i}" data-f="narrative">${esc(p.narrative)}</textarea></div>
+        <div class="row" style="margin-top:6px"><button class="btn ghost sm" type="button" data-act="renarr" data-i="${i}">Rewrite from the numbers</button>
+          <span class="muted" id="nnote${i}">${p.narrative_custom?'Edited by hand; won’t change with the numbers.':'Writes itself from the numbers and comps.'}</span></div>
+      </details>
     </div>
    </div></article>`;
 }
@@ -266,11 +346,15 @@ function refreshCalc(i){
   if(c.inc!=null) st+=`<div class="stat"><span>Added per year</span><b>${money(c.inc*12)}</b></div>`;
   $('stats'+i).innerHTML = st || '<span class="muted">Enter the current rent, market range and renewal rent to see the math.</span>';
   let pk='';
-  if(c.cur){ [5,10,15].forEach(x=>{ pk+=`<button type="button" data-act="pick" data-i="${i}" data-v="${r25(c.cur*(1+x/100))}">+${x}% · ${money(r25(c.cur*(1+x/100)))}</button>`; });
-    if(c.lo && c.lo>c.cur){ const v=r25(c.cur+(c.lo-c.cur)*0.33); pk+=`<button type="button" data-act="pick" data-i="${i}" data-v="${v}">⅓ of the gap · ${money(v)}</button>`; } }
+  if(c.cur){ const seen=new Set(), opts=[5,10,15].map(x=>['+'+x+'%', r25(c.cur*(1+x/100))]);
+    if(c.lo && c.lo>c.cur) opts.push(['⅓ of the gap', r25(c.cur+(c.lo-c.cur)/3)]);
+    opts.forEach(([lab,v])=>{ if(seen.has(v)) return; seen.add(v);
+      pk+=`<button type="button" data-act="pick" data-i="${i}" data-v="${v}">${lab} · ${money(v)}</button>`; }); }
   $('picks'+i).innerHTML = pk;
   const n=p.comps.filter(x=>x.show).length;
-  $('cnote'+i).textContent = n>4 ? `${n} ticked; the PDF shows the first 4.` : (n? `${n} of 4 shown to the owner.` : 'None ticked yet; the property page will have no comps table.');
+  $('picked'+i).innerHTML = pickedHTML(p,i);
+  const pv=$('pv'+i); if(pv) pv.textContent = p.narrative || 'Fill in the rent numbers and this writes itself.';
+  $('cnote'+i).textContent = n>4 ? `${n} ticked; the owner only sees the first 4.` : (p.comps.length ? `Picked from ${p.comps.length} comps by distance, size, bedrooms, baths and age.` : '');
   if(!S.email_custom) scheduleEmail();
 }
 
@@ -284,27 +368,36 @@ document.addEventListener('input', e=>{
   const p=S.properties[+i]; const isNum = t.type==='number';
   const val = t.type==='checkbox' ? t.checked : (isNum ? num(t.value) : t.value);
   if(t.dataset.c!=null){ p.comps[+t.dataset.c][t.dataset.f]=val; }
-  else { p[t.dataset.f]=val; if(t.dataset.f==='narrative'){ p.narrative_custom=true; $('nnote'+i).textContent='Edited by hand; won’t change with the numbers.'; } }
+  else { p[t.dataset.f]=val; if(t.dataset.f==='narrative'){ p.narrative_custom=true; $('pv'+i).textContent=p.narrative; $('nnote'+i).textContent='Edited by hand; won’t change with the numbers.'; } }
   if(t.dataset.f==='address'&&t.dataset.c==null){ const tt=document.querySelector('#prop'+i+' .ttl'); if(tt) tt.firstChild.textContent=t.value||'New property'; }
   markDirty(); refreshCalc(+i);
 });
 document.addEventListener('change', e=>{
   const t=e.target;
-  if(t.dataset.act==='files'){ const i=+t.dataset.i; pending[i]=[...(pending[i]||[]), ...t.files]; t.value='';
-    $('fl'+i).textContent=pending[i].map(f=>f.name).join(', ');
-    document.querySelector(`[data-act=extract][data-i="${i}"]`).disabled=false; }
+  if(t.dataset.act==='files'){ const i=+t.dataset.i; const cur=pending[i]||[]; let skipped=0;
+    for(const f of t.files){ if(cur.some(c=>c.name===f.name && c.size===f.size)) skipped++; else cur.push(f); }
+    pending[i]=cur; t.value='';
+    refreshFiles(i, skipped ? `Skipped ${skipped} duplicate${skipped>1?'s':''} already in the list.` : ''); }
   if(t.type==='checkbox' && (t.dataset.f==='show'||t.dataset.f==='section8')){ markDirty(); refreshCalc(+t.dataset.i); }
 });
 document.addEventListener('click', async e=>{
   const b=e.target.closest('[data-act]'); if(!b) return;
   const i=+b.dataset.i, act=b.dataset.act;
   if(act==='delProp'){ if(!confirm('Remove '+(S.properties[i].address||'this property')+' from the proposal?')) return;
-    S.properties.splice(i,1); delete pending[i]; markDirty(); renderProps(); }
+    S.properties.splice(i,1);
+    for(let k=i;k<S.properties.length;k++){ pending[k]=pending[k+1]; reading[k]=reading[k+1]; openComps[k]=openComps[k+1]; }
+    delete pending[S.properties.length]; delete reading[S.properties.length]; markDirty(); renderProps(); }
+  if(act==='rmFile'){ if(reading[i]) return; (pending[i]||[]).splice(+b.dataset.k,1); refreshFiles(i); return; }
+  if(act==='toggleComps'){ openComps[i]=!openComps[i]; $('ce'+i).hidden=!openComps[i];
+    b.textContent=openComps[i]?'Done changing comps':'Change comps'; b.setAttribute('aria-expanded',openComps[i]?'true':'false');
+    if(!openComps[i]){ const p=S.properties[i]; p.comps.sort((a,c)=>(c.show?1:0)-(a.show?1:0)); $('comps'+i).innerHTML=compRows(p,i); }
+    return; }
+  if(act==='autoPick'){ autoPick(S.properties[i]); $('comps'+i).innerHTML=compRows(S.properties[i],i); markDirty(); refreshCalc(i); return; }
   if(act==='addComp'){ S.properties[i].comps.push({address:'',beds:null,baths:null,sqft:null,distance_mi:null,rent:null,show:false});
     $('comps'+i).innerHTML=compRows(S.properties[i],i); markDirty(); }
   if(act==='delComp'){ S.properties[i].comps.splice(+b.dataset.c,1); $('comps'+i).innerHTML=compRows(S.properties[i],i); markDirty(); refreshCalc(i); }
   if(act==='pick'){ S.properties[i].renewal_rent=+b.dataset.v; $('rr'+i).value=b.dataset.v; markDirty(); refreshCalc(i); }
-  if(act==='renarr'){ const p=S.properties[i]; p.narrative_custom=false; markDirty(); refreshCalc(i); $('nv'+i).value=p.narrative;
+  if(act==='renarr'){ const p=S.properties[i]; p.narrative_custom=false; markDirty(); refreshCalc(i); $('nv'+i).value=p.narrative; $('pv'+i).textContent=p.narrative;
     $('nnote'+i).textContent='Updates as you change the numbers.'; }
   if(act==='extract') extractFor(i, b);
   if(act==='addLease') addLease(JSON.parse(b.dataset.lease), b);
@@ -313,6 +406,7 @@ document.addEventListener('click', async e=>{
 async function extractFor(i, btn){
   const p=S.properties[i], files=pending[i]||[]; if(!files.length) return;
   const fd=new FormData(); files.forEach(f=>fd.append('files',f,f.name)); fd.append('address',[p.address,p.city_line].filter(Boolean).join(', '));
+  reading[i]=true; refreshFiles(i);
   btn.disabled=true; btn.innerHTML='<span class="spin"></span> Reading…'; $('xmsg'+i).innerHTML='<span class="muted">Reading the reports. This takes about 30 to 60 seconds.</span>';
   try{
     const r=await fetch(BASE+'api/extract',{method:'POST',body:fd}); const d=await r.json();
@@ -323,12 +417,12 @@ async function extractFor(i, btn){
     if(!p.address && s.address) p.address=s.address;
     if(!p.city_line && s.city_line) p.city_line=s.city_line;
     if(d.market_low) p.market_low=d.market_low; if(d.market_high) p.market_high=d.market_high;
-    p.comps=(d.comps||[]).map(c=>({...c, show:!!c.featured}));
+    p.comps=(d.comps||[]).map(c=>({...c, show:false})); autoPick(p);
     p.estimates=d.estimates||[]; p.notes=d.notes||[]; p.files=d.files||[];
-    pending[i]=[]; markDirty(); renderProps();
+    pending[i]=[]; reading[i]=false; markDirty(); renderProps();
     $('xmsg'+i).innerHTML=`<span class="muted">Found ${p.comps.length} comps. The suggested market range and the 4 best comps are filled in; check them before sending.</span>`;
     document.getElementById('prop'+i).scrollIntoView({behavior:'smooth',block:'start'});
-  }catch(err){ $('xmsg'+i).innerHTML='<div class="err">'+esc(err.message)+'</div>'; btn.disabled=false; btn.textContent='Read reports'; }
+  }catch(err){ $('xmsg'+i).innerHTML='<div class="err">'+esc(err.message)+'</div>'; reading[i]=false; refreshFiles(i); btn.disabled=false; btn.textContent='Read reports'; }
 }
 
 /* ---------- Rentvine ---------- */
