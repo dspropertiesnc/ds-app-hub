@@ -35,7 +35,17 @@
   .pb{padding:16px;display:flex;flex-direction:column;gap:18px}
   .sub{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-dark);font-weight:700;margin:0 0 8px}
   .upload{display:flex;gap:10px;flex-wrap:wrap;align-items:center;border:1.5px dashed var(--accent);background:var(--sub);border-radius:12px;padding:12px}
-  .upload .fl{flex:1 1 240px;font-size:13px;color:#5c4522}
+  .upload{flex-direction:column;align-items:stretch}
+  .upload .acts{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .upload .hintx{flex:1 1 240px;font-size:13px;color:#5c4522}
+  .flist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .flist li{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:4px 4px 4px 12px;font-size:13.5px}
+  .flist li .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .flist li .sz{color:var(--gray);font-size:12px;white-space:nowrap}
+  .flist li .x{border:0;background:none;color:#a3261c;cursor:pointer;font-size:20px;line-height:1;min-width:40px;min-height:40px;border-radius:8px}
+  .flist li .x:hover{background:#f9e7e5}
+  .flist li .x:disabled{opacity:.35;cursor:default}
+  .flist.done li{background:transparent;padding:6px 12px}
   .internal{background:#f4f6f8;border:1px solid #dde3e8;border-radius:10px;padding:10px 12px;font-size:13px;color:#3a4650}
   .internal b{color:#1e2a33}.internal ul{margin:6px 0 0;padding-left:18px}
   .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
@@ -185,6 +195,25 @@ function compRows(p,i){
   </tr>`).join('');
 }
 
+const reading = {};   // property index -> true while its reports are being read
+function kb(n){ return n>=1048576 ? (n/1048576).toFixed(1)+' MB' : Math.max(1,Math.round(n/1024))+' KB'; }
+function fileList(p,i){
+  const files=pending[i]||[];
+  if(files.length) return '<ul class="flist" aria-label="Reports to read">'+files.map((f,k)=>
+    `<li><span class="nm" title="${esc(f.name)}">${esc(f.name)}</span><span class="sz">${kb(f.size)}</span>
+     <button class="x" type="button" data-act="rmFile" data-i="${i}" data-k="${k}" aria-label="Remove ${esc(f.name)}" ${reading[i]?'disabled':''}>&times;</button></li>`).join('')+'</ul>';
+  if(p.files&&p.files.length) return '<div class="muted" style="margin-bottom:4px">Last read:</div><ul class="flist done">'+
+    p.files.map(n=>`<li><span class="nm" title="${esc(n)}">${esc(n)}</span></li>`).join('')+'</ul>';
+  return '';
+}
+function refreshFiles(i, note){
+  const p=S.properties[i], n=(pending[i]||[]).length;
+  $('fl'+i).innerHTML=fileList(p,i);
+  $('fh'+i).textContent = note || (n ? '' : 'Upload the Rentometer, RentRange and Zillow PDFs for this property.');
+  document.querySelector(`label[for="up${i}"]`).textContent = n ? 'Add more' : 'Choose PDFs';
+  const go=document.querySelector(`[data-act=extract][data-i="${i}"]`); if(go && !reading[i]) go.disabled=!n;
+}
+
 function propHTML(p,i){
   const rv = p.rentvine ? `<div class="muted">Rentvine lease #${esc(p.rentvine.lease_id)}${p.rentvine.tenants&&p.rentvine.tenants.length?' · '+esc(p.rentvine.tenants.join(', ')):''}${p.rentvine.month_to_month?' · month-to-month':(p.rentvine.end_date?' · ends '+esc(p.rentvine.end_date):'')}</div>` : '';
   const est = (p.estimates&&p.estimates.length)||(p.notes&&p.notes.length) ? `<div class="internal"><b>Internal only, never shown to the owner.</b>
@@ -212,10 +241,11 @@ function propHTML(p,i){
     </div></div>
 
     <div><div class="sub">Comp reports</div>
-      <div class="upload"><div class="fl" id="fl${i}">${files.length?files.map(f=>esc(f.name)).join(', '):(p.files&&p.files.length?'Last read: '+p.files.map(esc).join(', '):'Upload the Rentometer, RentRange and Zillow PDFs for this property.')}</div>
-        <label class="btn ghost sm" for="up${i}">Choose PDFs</label>
+      <div class="upload"><div id="fl${i}">${fileList(p,i)}</div>
+        <div class="acts"><span class="hintx" id="fh${i}">${files.length?'':'Upload the Rentometer, RentRange and Zillow PDFs for this property.'}</span>
+        <label class="btn ghost sm" for="up${i}">${files.length?'Add more':'Choose PDFs'}</label>
         <input id="up${i}" type="file" accept=".pdf,image/*" multiple data-act="files" data-i="${i}" class="sr">
-        <button class="btn sm" type="button" data-act="extract" data-i="${i}" ${files.length?'':'disabled'}>Read reports</button></div>
+        <button class="btn sm" type="button" data-act="extract" data-i="${i}" ${files.length?'':'disabled'}>Read reports</button></div></div>
       <div id="xmsg${i}" aria-live="polite" style="margin-top:8px"></div>
       ${est}
     </div>
@@ -290,16 +320,20 @@ document.addEventListener('input', e=>{
 });
 document.addEventListener('change', e=>{
   const t=e.target;
-  if(t.dataset.act==='files'){ const i=+t.dataset.i; pending[i]=[...(pending[i]||[]), ...t.files]; t.value='';
-    $('fl'+i).textContent=pending[i].map(f=>f.name).join(', ');
-    document.querySelector(`[data-act=extract][data-i="${i}"]`).disabled=false; }
+  if(t.dataset.act==='files'){ const i=+t.dataset.i; const cur=pending[i]||[]; let skipped=0;
+    for(const f of t.files){ if(cur.some(c=>c.name===f.name && c.size===f.size)) skipped++; else cur.push(f); }
+    pending[i]=cur; t.value='';
+    refreshFiles(i, skipped ? `Skipped ${skipped} duplicate${skipped>1?'s':''} already in the list.` : ''); }
   if(t.type==='checkbox' && (t.dataset.f==='show'||t.dataset.f==='section8')){ markDirty(); refreshCalc(+t.dataset.i); }
 });
 document.addEventListener('click', async e=>{
   const b=e.target.closest('[data-act]'); if(!b) return;
   const i=+b.dataset.i, act=b.dataset.act;
   if(act==='delProp'){ if(!confirm('Remove '+(S.properties[i].address||'this property')+' from the proposal?')) return;
-    S.properties.splice(i,1); delete pending[i]; markDirty(); renderProps(); }
+    S.properties.splice(i,1);
+    for(let k=i;k<S.properties.length;k++){ pending[k]=pending[k+1]; reading[k]=reading[k+1]; }
+    delete pending[S.properties.length]; delete reading[S.properties.length]; markDirty(); renderProps(); }
+  if(act==='rmFile'){ if(reading[i]) return; (pending[i]||[]).splice(+b.dataset.k,1); refreshFiles(i); return; }
   if(act==='addComp'){ S.properties[i].comps.push({address:'',beds:null,baths:null,sqft:null,distance_mi:null,rent:null,show:false});
     $('comps'+i).innerHTML=compRows(S.properties[i],i); markDirty(); }
   if(act==='delComp'){ S.properties[i].comps.splice(+b.dataset.c,1); $('comps'+i).innerHTML=compRows(S.properties[i],i); markDirty(); refreshCalc(i); }
@@ -313,6 +347,7 @@ document.addEventListener('click', async e=>{
 async function extractFor(i, btn){
   const p=S.properties[i], files=pending[i]||[]; if(!files.length) return;
   const fd=new FormData(); files.forEach(f=>fd.append('files',f,f.name)); fd.append('address',[p.address,p.city_line].filter(Boolean).join(', '));
+  reading[i]=true; refreshFiles(i);
   btn.disabled=true; btn.innerHTML='<span class="spin"></span> Reading…'; $('xmsg'+i).innerHTML='<span class="muted">Reading the reports. This takes about 30 to 60 seconds.</span>';
   try{
     const r=await fetch(BASE+'api/extract',{method:'POST',body:fd}); const d=await r.json();
@@ -325,10 +360,10 @@ async function extractFor(i, btn){
     if(d.market_low) p.market_low=d.market_low; if(d.market_high) p.market_high=d.market_high;
     p.comps=(d.comps||[]).map(c=>({...c, show:!!c.featured}));
     p.estimates=d.estimates||[]; p.notes=d.notes||[]; p.files=d.files||[];
-    pending[i]=[]; markDirty(); renderProps();
+    pending[i]=[]; reading[i]=false; markDirty(); renderProps();
     $('xmsg'+i).innerHTML=`<span class="muted">Found ${p.comps.length} comps. The suggested market range and the 4 best comps are filled in; check them before sending.</span>`;
     document.getElementById('prop'+i).scrollIntoView({behavior:'smooth',block:'start'});
-  }catch(err){ $('xmsg'+i).innerHTML='<div class="err">'+esc(err.message)+'</div>'; btn.disabled=false; btn.textContent='Read reports'; }
+  }catch(err){ $('xmsg'+i).innerHTML='<div class="err">'+esc(err.message)+'</div>'; reading[i]=false; refreshFiles(i); btn.disabled=false; btn.textContent='Read reports'; }
 }
 
 /* ---------- Rentvine ---------- */
