@@ -10,6 +10,12 @@ services:
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 6 --timeout 600 --max-requests 60 --max-requests-jitter 15
     healthCheckPath: /
     autoDeploy: true
+    # Persistent disk for saved renewal proposals (SQLite). Note: a service with a disk
+    # restarts in place on deploy (a few seconds of downtime) instead of zero-downtime swaps.
+    disk:
+      name: ds-tools-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false
@@ -29,3 +35,11 @@ services:
         sync: false          # optional; defaults to SMTP_USER
       - key: LISTING_FROM
         value: listing-input@dspropertiesnc.com   # Listing Input Sheet sends from this alias
+      - key: RENEWALS_DB
+        value: /var/data/renewals.db              # saved renewal proposals (on the disk above)
+      - key: RENTVINE_ACCOUNT
+        value: dossspauldingpropertiesllc         # the subdomain in your Rentvine URL
+      - key: RENTVINE_API_KEY
+        sync: false          # Rentvine > Settings > Users, Roles & API > API key (access key)
+      - key: RENTVINE_API_SECRET
+        sync: false          # that key's secret (shown once when the key is created)

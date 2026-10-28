@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Rent Renewal Proposals — Doss &amp; Spaulding{% endblock %}
+{% block nav %}<a href="/">&larr; All tools</a>{% endblock %}
+{% block style %}
+  h1{color:var(--accent-dark);margin:6px 0 2px;font-size:24px}
+  .lead{color:var(--gray);font-size:14px;margin:0 0 16px}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .bar form{flex:1 1 260px;display:flex;gap:8px}
+  .bar input{flex:1;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:15px;background:#fff}
+  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:10px;border:0;
+       background:var(--accent);color:#fff;font-weight:700;font-size:15px;text-decoration:none;cursor:pointer}
+  .btn.ghost{background:#fff;color:var(--accent-dark);border:1px solid var(--line)}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:14px}
+  th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);padding:10px 12px;border-bottom:2px solid var(--accent)}
+  td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+  td a{color:var(--accent-dark);font-weight:700;text-decoration:none}
+  .props{color:var(--gray);font-size:13px;margin-top:3px}
+  .st{display:inline-block;font-size:12px;padding:3px 9px;border-radius:20px;background:var(--sub);color:var(--accent-dark);font-weight:600}
+  .st.sent{background:#e8eef8;color:#2f4f86}.st.accepted{background:#e6f2e8;color:#2c6b3a}.st.declined{background:#f6e5e3;color:#8a2f25}
+  .empty{background:#fff;border:1px dashed var(--line);border-radius:12px;padding:28px;text-align:center;color:var(--gray)}
+  .warn{background:#fbf3e2;border:1px solid #e6cfa0;color:#7a5b1a;padding:10px 12px;border-radius:10px;font-size:13px;margin-bottom:14px}
+  .scroll{overflow-x:auto}
+  @media (max-width:600px){.hide-sm{display:none}}
+{% endblock %}
+{% block content %}
+  <h1>Rent Renewal Proposals</h1>
+  <p class="lead">Recommend renewal rents to owners with real comps. Every proposal is saved here.</p>
+  {% if not persistent %}<div class="warn">Proposal history isn't on a persistent disk yet, so saved proposals are wiped on each deploy. Set <b>RENEWALS_DB</b> (see README).</div>{% endif %}
+  <div class="bar">
+    <form method="get"><label for="q" style="position:absolute;left:-9999px">Search proposals</label>
+      <input id="q" name="q" value="{{ q }}" placeholder="Search by owner or address"><button class="btn ghost" type="submit">Search</button></form>
+    <a class="btn" href="new">+ New proposal</a>
+  </div>
+  {% if rows %}
+  <div class="scroll"><table>
+    <thead><tr><th>Owner &amp; properties</th><th>Status</th><th class="hide-sm">Updated</th><th class="hide-sm">By</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><a href="p/{{ r.id }}">{{ r.owner or "Untitled proposal" }}</a><div class="props">{{ r.properties }}</div></td>
+        <td><span class="st {{ r.status }}">{{ r.status|capitalize }}</span></td>
+        <td class="hide-sm">{{ r.updated_at[:10] }}</td>
+        <td class="hide-sm">{{ r.created_by }}</td>
+        <td><a href="p/{{ r.id }}/pdf">PDF</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+    <div class="empty">{% if q %}No proposals match “{{ q }}”.{% else %}No proposals yet. Start one with <b>+ New proposal</b>.{% endif %}</div>
+  {% endif %}
+{% endblock %}

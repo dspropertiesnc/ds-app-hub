@@ -1,0 +1,424 @@
+{% extends "base.html" %}
+{% block title %}Renewal Proposal — Doss &amp; Spaulding{% endblock %}
+{% block nav %}<a href="/renewals/">&larr; All proposals</a>{% endblock %}
+{% block style %}
+  main{max-width:1000px;padding-bottom:110px}
+  h1{color:var(--accent-dark);margin:6px 0 2px;font-size:24px}
+  .lead{color:var(--gray);font-size:14px;margin:0 0 14px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+  .card h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-dark);margin:0 0 12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 12px}
+  .f label{display:block;font-size:12.5px;font-weight:600;color:#333;margin-bottom:4px}
+  .f input,.f select,.f textarea,.search input{width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;font-size:15px;background:#fff;font-family:inherit}
+  .f textarea{min-height:92px;line-height:1.45;resize:vertical}
+  .f .note{font-size:11.5px;color:var(--gray);margin-top:3px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 16px;border-radius:10px;border:0;
+       background:var(--accent);color:#fff;font-weight:700;font-size:14.5px;text-decoration:none;cursor:pointer;font-family:inherit}
+  .btn:disabled{opacity:.55;cursor:default}
+  .btn.ghost{background:#fff;color:var(--accent-dark);border:1px solid var(--line)}
+  .btn.sm{min-height:36px;padding:0 12px;font-size:13px}
+  .btn.danger{background:#fff;color:#a3261c;border:1px solid #efd2ce}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .search{display:flex;gap:8px;flex-wrap:wrap}
+  .search input{flex:1 1 260px}
+  .results{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+  .res{display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:9px 12px;flex-wrap:wrap}
+  .res b{font-size:14.5px}.res .meta{font-size:12.5px;color:var(--gray)}
+  .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--sub);color:var(--accent-dark);margin-left:6px;vertical-align:1px}
+  .badge.lease{background:#eef1f4;color:#4a5560}
+  .prop{border:1px solid var(--line);border-radius:14px;background:#fff;margin-bottom:16px;overflow:hidden}
+  .prop>.ph{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);background:#fcfaf6;flex-wrap:wrap}
+  .ph .ttl{font-weight:800;font-size:17px;flex:1 1 220px}
+  .ph .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{font-size:12.5px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:4px 10px}
+  .chip b{color:var(--accent-dark)}
+  .pb{padding:16px;display:flex;flex-direction:column;gap:18px}
+  .sub{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-dark);font-weight:700;margin:0 0 8px}
+  .upload{display:flex;gap:10px;flex-wrap:wrap;align-items:center;border:1.5px dashed var(--accent);background:var(--sub);border-radius:12px;padding:12px}
+  .upload .fl{flex:1 1 240px;font-size:13px;color:#5c4522}
+  .internal{background:#f4f6f8;border:1px solid #dde3e8;border-radius:10px;padding:10px 12px;font-size:13px;color:#3a4650}
+  .internal b{color:#1e2a33}.internal ul{margin:6px 0 0;padding-left:18px}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .stat{background:#fcfaf6;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px}
+  .stat b{display:block;font-size:17px}
+  .stat.good b{color:#2c6b3a}.stat.bad b{color:#a3261c}
+  .picks{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .picks button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:6px 11px;font-size:12.5px;cursor:pointer;color:var(--accent-dark);font-family:inherit}
+  .ctab{width:100%;border-collapse:collapse;font-size:13.5px}
+  .ctab th{text-align:left;font-size:11px;color:var(--gray);letter-spacing:.05em;text-transform:uppercase;padding:6px;border-bottom:2px solid var(--accent)}
+  .ctab td{padding:4px;border-bottom:1px solid var(--line)}
+  .ctab input[type=text],.ctab input[type=number]{width:100%;padding:7px;border:1px solid transparent;border-radius:6px;font-size:13.5px;background:transparent;font-family:inherit}
+  .ctab input:focus{border-color:var(--line);background:#fff;outline:2px solid var(--sub)}
+  .ctab tr.out td{opacity:.55}
+  .ctab .x{border:0;background:none;color:#a3261c;cursor:pointer;font-size:18px;min-width:32px;min-height:32px}
+  .scroll{overflow-x:auto}
+  .muted{color:var(--gray);font-size:12.5px}
+  .warn{background:#fbf3e2;border:1px solid #e6cfa0;color:#7a5b1a;padding:10px 12px;border-radius:10px;font-size:13px}
+  .err{background:#f9e7e5;border:1px solid #efc7c2;color:#8a2f25;padding:10px 12px;border-radius:10px;font-size:13px}
+  .dock{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 16px;z-index:5}
+  .dock .in{max-width:1000px;margin:0 auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .dock .msg{flex:1 1 200px;font-size:13px;color:var(--gray)}
+  .spin{display:inline-block;width:15px;height:15px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:s .8s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  .sr{position:absolute;left:-9999px}
+  @media (max-width:600px){.dock .msg{flex:1 1 100%;font-size:12px}.dock .btn{flex:1 1 0}}
+{% endblock %}
+{% block content %}
+  <h1 id="h1">New renewal proposal</h1>
+  <p class="lead">Pick the leases, upload each property's comp reports, set the renewal rents, then download the PDF and copy the email.</p>
+
+  <section class="card" aria-labelledby="ownerH">
+    <h2 id="ownerH">Owner</h2>
+    <div class="grid">
+      <div class="f"><label for="owner_name">Owner name</label><input id="owner_name" data-top="owner_name" placeholder="e.g. Munish"></div>
+      <div class="f"><label for="owner_email">Owner email</label><input id="owner_email" type="email" data-top="owner_email" placeholder="for the email draft"></div>
+      <div class="f"><label for="prepared_by">Prepared by</label><input id="prepared_by" data-top="prepared_by" placeholder="Your name (email sign-off)"></div>
+      <div class="f"><label for="data_date">Market data as of</label><input id="data_date" type="date" data-top="data_date"></div>
+      <div class="f"><label for="status">Status</label>
+        <select id="status" data-top="status"><option value="draft">Draft</option><option value="sent">Sent to owner</option>
+          <option value="accepted">Owner approved</option><option value="declined">Owner declined</option></select></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="leaseH">
+    <h2 id="leaseH">Add properties</h2>
+    {% if rv %}
+    <div class="search">
+      <label class="sr" for="rvq">Search Rentvine</label>
+      <input id="rvq" placeholder="Search Rentvine by address, tenant or owner">
+      <button class="btn ghost" id="rvGo" type="button">Search</button>
+      <button class="btn ghost" id="rvOwner" type="button" title="Uses the owner name above">Owner's month-to-month leases</button>
+    </div>
+    <div class="results" id="rvRes" aria-live="polite"></div>
+    {% else %}
+    <div class="warn">Rentvine isn't connected yet, so current rent won't fill in. Set RENTVINE_ACCOUNT, RENTVINE_API_KEY and RENTVINE_API_SECRET on Render. You can still add properties by hand.</div>
+    {% endif %}
+    <div class="row" style="margin-top:12px"><button class="btn ghost" id="addManual" type="button">+ Add a property by hand</button></div>
+  </section>
+
+  {% if not ai %}<div class="warn" style="margin-bottom:16px">Reading comp reports needs ANTHROPIC_API_KEY on the server. You can still type comps in.</div>{% endif %}
+
+  <div id="props"></div>
+
+  <section class="card" aria-labelledby="emailH">
+    <h2 id="emailH">Owner email</h2>
+    <p class="muted" style="margin:-4px 0 10px">Written from the numbers above. Edit freely; your edits are saved with the proposal. Attach the PDF when you send it.</p>
+    <div class="f"><label for="email_subject">Subject</label><input id="email_subject"></div>
+    <div class="f" style="margin-top:10px"><label for="email_body">Message</label><textarea id="email_body" style="min-height:320px"></textarea></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn ghost sm" id="emailRefresh" type="button">Rewrite from the numbers</button>
+      <button class="btn ghost sm" id="emailCopy" type="button">Copy email</button>
+      <a class="btn ghost sm" id="emailOpen" href="#">Open in email app</a>
+      <span class="muted" id="emailMsg" aria-live="polite"></span>
+    </div>
+  </section>
+
+  {% if pid %}<div class="row"><button class="btn danger sm" id="delBtn" type="button">Delete this proposal</button></div>{% endif %}
+
+  <div class="dock"><div class="in">
+    <span class="msg" id="dockMsg" aria-live="polite">Not saved yet</span>
+    <button class="btn ghost" id="saveBtn" type="button">Save</button>
+    <button class="btn" id="pdfBtn" type="button">Download PDF</button>
+  </div></div>
+
+<script>
+const PID = {{ pid|tojson }};
+const BASE = '/renewals/';
+let S = {id: PID || null, owner_name:'', owner_email:'', prepared_by:'', data_date:new Date().toISOString().slice(0,10),
+         status:'draft', properties:[], email_subject:'', email_body:'', email_custom:false};
+let dirty = false;
+const pending = {}; // property index -> File[]
+
+const $ = id => document.getElementById(id);
+const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = v => { if(v===''||v==null) return null; const n=parseFloat(String(v).replace(/[$,]/g,'')); return isNaN(n)?null:n; };
+const money = v => v==null||isNaN(v)?'—':(v<0?'-':'')+'$'+Math.abs(Math.round(v)).toLocaleString('en-US');
+const r25 = v => Math.round(v/25)*25;
+
+function blankProp(){ return {section8:false, address:'', city_line:'', beds:null, baths:null, sqft:null, year_built:null, home_type:'Single-family',
+  current_rent:null, market_low:null, market_high:null, renewal_rent:null, narrative:'', narrative_custom:false,
+  rentvine:null, estimates:[], notes:[], files:[], comps:[]}; }
+
+function calc(p){
+  const cur=num(p.current_rent), ren=num(p.renewal_rent), lo=num(p.market_low), hi=num(p.market_high);
+  return {cur, ren, lo, hi, inc:(cur&&ren)?ren-cur:null, pct:(cur&&ren)?(ren-cur)/cur*100:null,
+          blo:(ren&&lo)?lo-ren:null, bhi:(ren&&hi)?hi-ren:null};
+}
+function shown(p){ return p.comps.filter(c=>c.show).slice(0,4); }
+
+function narrative(p){
+  const c=calc(p), cs=shown(p); let first='';
+  if(cs.length>=2){
+    const a=cs[0], b=cs[1]; const d=[num(a.distance_mi),num(b.distance_mi)].filter(x=>x!=null);
+    let near=''; if(d.length){ const m=Math.max(...d); near = m<=0.3?' are within a quarter mile and':(m<=0.55?' are within half a mile and':' are nearby and'); }
+    const r=[num(a.rent)||0,num(b.rent)||0].sort((x,y)=>x-y);
+    const rt = r[0]===r[1]?money(r[0]):money(r[0])+' and '+money(r[1]);
+    first = near ? `The closest comps, ${a.address} and ${b.address},${near} rent for ${rt}. `
+                 : `The closest comps, ${a.address} and ${b.address}, rent for ${rt}. `;
+  } else if(cs.length===1){ first=`The closest comp, ${cs[0].address}, rents for ${money(num(cs[0].rent))}. `; }
+  let second='';
+  if(c.ren && c.blo!=null && c.bhi!=null && c.blo>0) second=`At ${money(c.ren)} the tenants still pay ${money(c.blo)} to ${money(c.bhi)} less than comparable homes nearby.`;
+  else if(c.ren) second=`At ${money(c.ren)} the rent is in line with comparable homes nearby.`;
+  return (first+second).trim();
+}
+
+/* ---------- render ---------- */
+function renderTop(){
+  ['owner_name','owner_email','prepared_by','data_date','status'].forEach(k=>{ $(k).value = S[k]||''; });
+  updateH1();
+}
+function updateH1(){
+  $('h1').textContent = S.owner_name ? 'Renewal proposal: '+S.owner_name : (S.id?'Renewal proposal':'New renewal proposal');
+}
+
+function compRows(p,i){
+  return p.comps.map((c,j)=>`<tr class="${c.outlier?'out':''}">
+    <td><input type="checkbox" data-i="${i}" data-c="${j}" data-f="show" ${c.show?'checked':''} aria-label="Show ${esc(c.address)} to owner"></td>
+    <td><input type="text" data-i="${i}" data-c="${j}" data-f="address" value="${esc(c.address)}" aria-label="Address"></td>
+    <td style="width:62px"><input type="number" step="1" data-i="${i}" data-c="${j}" data-f="beds" value="${c.beds??''}" aria-label="Beds"></td>
+    <td style="width:66px"><input type="number" step="0.5" data-i="${i}" data-c="${j}" data-f="baths" value="${c.baths??''}" aria-label="Baths"></td>
+    <td style="width:80px"><input type="number" data-i="${i}" data-c="${j}" data-f="sqft" value="${c.sqft??''}" aria-label="Square feet"></td>
+    <td style="width:76px"><input type="number" step="0.01" data-i="${i}" data-c="${j}" data-f="distance_mi" value="${c.distance_mi??''}" aria-label="Distance in miles"></td>
+    <td style="width:90px"><input type="number" data-i="${i}" data-c="${j}" data-f="rent" value="${c.rent??''}" aria-label="Rent"></td>
+    <td class="muted" style="width:110px">${esc([c.type,c.source].filter(Boolean).join(' · '))}${c.outlier?' · outlier':''}</td>
+    <td style="width:36px"><button class="x" type="button" data-act="delComp" data-i="${i}" data-c="${j}" aria-label="Remove comp">&times;</button></td>
+  </tr>`).join('');
+}
+
+function propHTML(p,i){
+  const rv = p.rentvine ? `<div class="muted">Rentvine lease #${esc(p.rentvine.lease_id)}${p.rentvine.tenants&&p.rentvine.tenants.length?' · '+esc(p.rentvine.tenants.join(', ')):''}${p.rentvine.month_to_month?' · month-to-month':(p.rentvine.end_date?' · ends '+esc(p.rentvine.end_date):'')}</div>` : '';
+  const est = (p.estimates&&p.estimates.length)||(p.notes&&p.notes.length) ? `<div class="internal"><b>Internal only, never shown to the owner.</b>
+     ${p.estimates&&p.estimates.length?'<div style="margin-top:4px">Report estimates: '+p.estimates.map(e=>esc(e.source)+' '+money(num(e.value))+(e.detail?' ('+esc(e.detail)+')':'')).join(' · ')+'</div>':''}
+     ${p.notes&&p.notes.length?'<ul>'+p.notes.map(n=>'<li>'+esc(n)+'</li>').join('')+'</ul>':''}</div>` : '';
+  const files = (pending[i]||[]);
+  return `<article class="prop" id="prop${i}">
+   <div class="ph"><div class="ttl">${esc(p.address||'New property')}${rv}</div>
+     <div class="chips" id="chips${i}"></div>
+     <button class="btn danger sm" type="button" data-act="delProp" data-i="${i}">Remove</button></div>
+   <div class="pb">
+    <div><div class="sub">Property</div><div class="grid">
+      <div class="f" style="grid-column:span 2"><label for="a${i}">Street address</label><input id="a${i}" data-i="${i}" data-f="address" value="${esc(p.address)}"></div>
+      <div class="f" style="grid-column:span 2"><label for="cl${i}">City, state, ZIP</label><input id="cl${i}" data-i="${i}" data-f="city_line" value="${esc(p.city_line)}" placeholder="Greensboro, NC 27405"></div>
+      <div class="f"><label for="bd${i}">Beds</label><input id="bd${i}" type="number" data-i="${i}" data-f="beds" value="${p.beds??''}"></div>
+      <div class="f"><label for="ba${i}">Baths</label><input id="ba${i}" type="number" step="0.5" data-i="${i}" data-f="baths" value="${p.baths??''}"></div>
+      <div class="f"><label for="sf${i}">Square feet</label><input id="sf${i}" type="number" data-i="${i}" data-f="sqft" value="${p.sqft??''}"></div>
+      <div class="f"><label for="yb${i}">Year built</label><input id="yb${i}" type="number" data-i="${i}" data-f="year_built" value="${p.year_built??''}"></div>
+      <div class="f"><label for="ht${i}">Home type</label><input id="ht${i}" data-i="${i}" data-f="home_type" value="${esc(p.home_type)}" list="types"></div>
+      <div class="f"><label for="s8${i}">Section 8</label>
+        <label style="display:flex;gap:8px;align-items:center;min-height:44px;font-weight:400;font-size:14px"><input id="s8${i}" type="checkbox" data-i="${i}" data-f="section8" ${p.section8?'checked':''} style="width:20px;height:20px"> Housing authority approval needed</label>
+        ${p.rentvine&&p.rentvine.gov_rent?'<div class="note">Ticked because the lease has a 4110 charge.</div>':''}</div>
+      <div class="f"><label for="cr${i}">Current rent</label><input id="cr${i}" type="number" data-i="${i}" data-f="current_rent" value="${p.current_rent??''}" placeholder="From the lease">
+        <div class="note" id="crn${i}"></div></div>
+    </div></div>
+
+    <div><div class="sub">Comp reports</div>
+      <div class="upload"><div class="fl" id="fl${i}">${files.length?files.map(f=>esc(f.name)).join(', '):(p.files&&p.files.length?'Last read: '+p.files.map(esc).join(', '):'Upload the Rentometer, RentRange and Zillow PDFs for this property.')}</div>
+        <label class="btn ghost sm" for="up${i}">Choose PDFs</label>
+        <input id="up${i}" type="file" accept=".pdf,image/*" multiple data-act="files" data-i="${i}" class="sr">
+        <button class="btn sm" type="button" data-act="extract" data-i="${i}" ${files.length?'':'disabled'}>Read reports</button></div>
+      <div id="xmsg${i}" aria-live="polite" style="margin-top:8px"></div>
+      ${est}
+    </div>
+
+    <div><div class="sub">Rent</div><div class="grid">
+      <div class="f"><label for="lo${i}">Market range low</label><input id="lo${i}" type="number" step="25" data-i="${i}" data-f="market_low" value="${p.market_low??''}"></div>
+      <div class="f"><label for="hi${i}">Market range high</label><input id="hi${i}" type="number" step="25" data-i="${i}" data-f="market_high" value="${p.market_high??''}"></div>
+      <div class="f"><label for="rr${i}">Recommended renewal rent</label><input id="rr${i}" type="number" step="25" data-i="${i}" data-f="renewal_rent" value="${p.renewal_rent??''}">
+        <div class="picks" id="picks${i}"></div></div>
+    </div>
+    <div class="stats" id="stats${i}"></div></div>
+
+    <div><div class="sub">Comparable rentals <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">· tick up to 4 to show the owner, in order</span></div>
+      <div class="scroll"><table class="ctab"><thead><tr><th>Show</th><th>Address</th><th>Bd</th><th>Ba</th><th>Sq ft</th><th>Miles</th><th>Rent</th><th></th><th></th></tr></thead>
+      <tbody id="comps${i}">${compRows(p,i)}</tbody></table></div>
+      <div class="row" style="margin-top:8px"><button class="btn ghost sm" type="button" data-act="addComp" data-i="${i}">+ Add comp</button>
+        <span class="muted" id="cnote${i}"></span></div>
+    </div>
+
+    <div class="f"><label for="nv${i}">What the owner reads <span class="muted" style="font-weight:400">(dark box on the property page)</span></label>
+      <textarea id="nv${i}" data-i="${i}" data-f="narrative">${esc(p.narrative)}</textarea>
+      <div class="row" style="margin-top:6px"><button class="btn ghost sm" type="button" data-act="renarr" data-i="${i}">Rewrite from the numbers</button>
+        <span class="muted" id="nnote${i}">${p.narrative_custom?'Edited by hand; won’t change with the numbers.':'Updates as you change the numbers.'}</span></div>
+    </div>
+   </div></article>`;
+}
+
+function renderProps(){
+  $('props').innerHTML = S.properties.map(propHTML).join('') + '<datalist id="types"><option>Single-family</option><option>Condo</option><option>Townhouse</option><option>Duplex</option><option>Apartment</option></datalist>';
+  S.properties.forEach((_,i)=>refreshCalc(i));
+}
+
+function refreshCalc(i){
+  const p=S.properties[i]; if(!p) return; const c=calc(p);
+  const crn=$('crn'+i);
+  if(crn){ const rv=p.rentvine, auto=rv&&rv.rent_from_rentvine!=null, edited=auto&&num(p.current_rent)!==num(rv.rent_from_rentvine);
+    crn.style.color=''; 
+    if(num(p.current_rent)==null){ crn.textContent = rv ? 'Rentvine didn’t have the lease rent. Type it in from the lease.' : 'Type the rent from the tenant’s lease.'; crn.style.color='#a3261c'; }
+    else if(edited) crn.textContent='Entered by hand (Rentvine had '+money(num(rv.rent_from_rentvine))+').';
+    else if(auto) crn.textContent='Lease rent from Rentvine'+(rv.gov_rent?', incl. '+money(rv.gov_rent)+' government assistance (4110)':'')+'.';
+    else crn.textContent='Entered by hand.'; }
+  if(!p.narrative_custom){ p.narrative = narrative(p); const t=$('nv'+i); if(t && document.activeElement!==t) t.value=p.narrative; }
+  $('chips'+i).innerHTML = `<span class="chip">Current <b>${money(c.cur)}</b></span><span class="chip">Market <b>${c.lo?money(c.lo)+'–'+money(c.hi):'—'}</b></span><span class="chip">Renewal <b>${money(c.ren)}</b></span>`;
+  let st='';
+  if(c.inc!=null) st+=`<div class="stat"><span>Increase</span><b>${money(c.inc)} (${Math.round(c.pct)}%)</b></div>`;
+  if(c.blo!=null) st+=`<div class="stat ${c.blo>0?'good':'bad'}"><span>${c.blo>0?'Still below market by':'Above market low by'}</span><b>${c.blo>0?money(c.blo)+' – '+money(c.bhi):money(-c.blo)}</b></div>`;
+  if(c.inc!=null) st+=`<div class="stat"><span>Added per year</span><b>${money(c.inc*12)}</b></div>`;
+  $('stats'+i).innerHTML = st || '<span class="muted">Enter the current rent, market range and renewal rent to see the math.</span>';
+  let pk='';
+  if(c.cur){ [5,10,15].forEach(x=>{ pk+=`<button type="button" data-act="pick" data-i="${i}" data-v="${r25(c.cur*(1+x/100))}">+${x}% · ${money(r25(c.cur*(1+x/100)))}</button>`; });
+    if(c.lo && c.lo>c.cur){ const v=r25(c.cur+(c.lo-c.cur)*0.33); pk+=`<button type="button" data-act="pick" data-i="${i}" data-v="${v}">⅓ of the gap · ${money(v)}</button>`; } }
+  $('picks'+i).innerHTML = pk;
+  const n=p.comps.filter(x=>x.show).length;
+  $('cnote'+i).textContent = n>4 ? `${n} ticked; the PDF shows the first 4.` : (n? `${n} of 4 shown to the owner.` : 'None ticked yet; the property page will have no comps table.');
+  if(!S.email_custom) scheduleEmail();
+}
+
+/* ---------- events ---------- */
+function markDirty(){ dirty=true; $('dockMsg').textContent='Unsaved changes'; }
+document.addEventListener('input', e=>{
+  const t=e.target;
+  if(t.dataset.top){ S[t.dataset.top]=t.value; markDirty(); if(t.dataset.top==='owner_name'){ updateH1(); } if(!S.email_custom) scheduleEmail(); return; }
+  if(t.id==='email_subject'||t.id==='email_body'){ S[t.id]=t.value; S.email_custom=true; markDirty(); return; }
+  const i=t.dataset.i; if(i==null||!t.dataset.f) return;
+  const p=S.properties[+i]; const isNum = t.type==='number';
+  const val = t.type==='checkbox' ? t.checked : (isNum ? num(t.value) : t.value);
+  if(t.dataset.c!=null){ p.comps[+t.dataset.c][t.dataset.f]=val; }
+  else { p[t.dataset.f]=val; if(t.dataset.f==='narrative'){ p.narrative_custom=true; $('nnote'+i).textContent='Edited by hand; won’t change with the numbers.'; } }
+  if(t.dataset.f==='address'&&t.dataset.c==null){ const tt=document.querySelector('#prop'+i+' .ttl'); if(tt) tt.firstChild.textContent=t.value||'New property'; }
+  markDirty(); refreshCalc(+i);
+});
+document.addEventListener('change', e=>{
+  const t=e.target;
+  if(t.dataset.act==='files'){ const i=+t.dataset.i; pending[i]=[...(pending[i]||[]), ...t.files]; t.value='';
+    $('fl'+i).textContent=pending[i].map(f=>f.name).join(', ');
+    document.querySelector(`[data-act=extract][data-i="${i}"]`).disabled=false; }
+  if(t.type==='checkbox' && (t.dataset.f==='show'||t.dataset.f==='section8')){ markDirty(); refreshCalc(+t.dataset.i); }
+});
+document.addEventListener('click', async e=>{
+  const b=e.target.closest('[data-act]'); if(!b) return;
+  const i=+b.dataset.i, act=b.dataset.act;
+  if(act==='delProp'){ if(!confirm('Remove '+(S.properties[i].address||'this property')+' from the proposal?')) return;
+    S.properties.splice(i,1); delete pending[i]; markDirty(); renderProps(); }
+  if(act==='addComp'){ S.properties[i].comps.push({address:'',beds:null,baths:null,sqft:null,distance_mi:null,rent:null,show:false});
+    $('comps'+i).innerHTML=compRows(S.properties[i],i); markDirty(); }
+  if(act==='delComp'){ S.properties[i].comps.splice(+b.dataset.c,1); $('comps'+i).innerHTML=compRows(S.properties[i],i); markDirty(); refreshCalc(i); }
+  if(act==='pick'){ S.properties[i].renewal_rent=+b.dataset.v; $('rr'+i).value=b.dataset.v; markDirty(); refreshCalc(i); }
+  if(act==='renarr'){ const p=S.properties[i]; p.narrative_custom=false; markDirty(); refreshCalc(i); $('nv'+i).value=p.narrative;
+    $('nnote'+i).textContent='Updates as you change the numbers.'; }
+  if(act==='extract') extractFor(i, b);
+  if(act==='addLease') addLease(JSON.parse(b.dataset.lease), b);
+});
+
+async function extractFor(i, btn){
+  const p=S.properties[i], files=pending[i]||[]; if(!files.length) return;
+  const fd=new FormData(); files.forEach(f=>fd.append('files',f,f.name)); fd.append('address',[p.address,p.city_line].filter(Boolean).join(', '));
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Reading…'; $('xmsg'+i).innerHTML='<span class="muted">Reading the reports. This takes about 30 to 60 seconds.</span>';
+  try{
+    const r=await fetch(BASE+'api/extract',{method:'POST',body:fd}); const d=await r.json();
+    if(!r.ok) throw new Error(d.error||'Could not read the reports');
+    const s=d.subject||{};
+    ['beds','baths','sqft','year_built'].forEach(k=>{ if(p[k]==null && s[k]) p[k]=s[k]; });
+    if(s.home_type && (!p.home_type || p.home_type==='Single-family')) p.home_type=s.home_type;
+    if(!p.address && s.address) p.address=s.address;
+    if(!p.city_line && s.city_line) p.city_line=s.city_line;
+    if(d.market_low) p.market_low=d.market_low; if(d.market_high) p.market_high=d.market_high;
+    p.comps=(d.comps||[]).map(c=>({...c, show:!!c.featured}));
+    p.estimates=d.estimates||[]; p.notes=d.notes||[]; p.files=d.files||[];
+    pending[i]=[]; markDirty(); renderProps();
+    $('xmsg'+i).innerHTML=`<span class="muted">Found ${p.comps.length} comps. The suggested market range and the 4 best comps are filled in; check them before sending.</span>`;
+    document.getElementById('prop'+i).scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(err){ $('xmsg'+i).innerHTML='<div class="err">'+esc(err.message)+'</div>'; btn.disabled=false; btn.textContent='Read reports'; }
+}
+
+/* ---------- Rentvine ---------- */
+function leaseRow(r){
+  const already = S.properties.some(p=>p.rentvine && String(p.rentvine.lease_id)===String(r.lease_id));
+  return `<div class="res"><div><b>${esc(r.address)}</b>${r.month_to_month?'<span class="badge">Month-to-month</span>':'<span class="badge lease">Lease ends '+esc(r.end_date)+'</span>'}
+    <div class="meta">${esc(r.city_line)} · ${esc((r.tenants||[]).join(', ')||'No tenant listed')} · Lease rent ${r.current_rent==null?'not found (enter by hand)':money(r.current_rent)+(r.gov_rent?' incl. '+money(r.gov_rent)+' gov. assistance':'')}${r.owner?' · Owner: '+esc(r.owner):''}</div></div>
+    <button class="btn sm ${already?'ghost':''}" type="button" data-act="addLease" data-lease="${esc(JSON.stringify(r))}" ${already?'disabled':''}>${already?'Added':'Add'}</button></div>`;
+}
+async function rvFetch(url){
+  const box=$('rvRes'); box.innerHTML='<span class="muted"><span class="spin"></span> Searching Rentvine…</span>';
+  try{ const r=await fetch(url); const d=await r.json(); if(!r.ok) throw new Error(d.error||'Rentvine search failed');
+    box.innerHTML = d.results.length ? d.results.map(leaseRow).join('') : '<span class="muted">No open leases match.</span>';
+  }catch(err){ box.innerHTML='<div class="err">'+esc(err.message)+'</div>'; }
+}
+function addLease(r, btn){
+  const p=blankProp();
+  Object.assign(p,{address:r.address, city_line:r.city_line, beds:r.beds, baths:r.baths, sqft:r.sqft, current_rent:r.current_rent,
+    rentvine:{lease_id:r.lease_id, tenants:r.tenants, month_to_month:r.month_to_month, end_date:r.end_date, owner:r.owner,
+      rent_from_rentvine:r.current_rent, gov_rent:r.gov_rent}, section8:!!r.gov_rent});
+  if(!S.owner_name && r.owner){ S.owner_name=r.owner; renderTop(); }
+  S.properties.push(p); markDirty(); renderProps();
+  btn.disabled=true; btn.textContent='Added'; btn.classList.add('ghost');
+}
+if($('rvGo')){
+  $('rvGo').onclick=()=>{ const q=$('rvq').value.trim(); if(q.length<2) return; rvFetch(BASE+'api/rentvine/search?q='+encodeURIComponent(q)); };
+  $('rvq').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); $('rvGo').click(); } });
+  $('rvOwner').onclick=()=>{ const q=(S.owner_name||$('rvq').value).trim();
+    if(!q){ $('rvRes').innerHTML='<span class="muted">Type the owner name above first.</span>'; return; }
+    rvFetch(BASE+'api/rentvine/owner?q='+encodeURIComponent(q)); };
+}
+$('addManual').onclick=()=>{ S.properties.push(blankProp()); markDirty(); renderProps();
+  const i=S.properties.length-1; $('a'+i).focus(); };
+
+/* ---------- email ---------- */
+let emailTimer=null;
+function scheduleEmail(){ clearTimeout(emailTimer); emailTimer=setTimeout(refreshEmail,500); }
+async function refreshEmail(force){
+  if(S.email_custom && !force) return;
+  if(!S.properties.length){ return; }
+  try{ const r=await fetch(BASE+'api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(S)});
+    const d=await r.json(); if(!r.ok) return;
+    S.email_subject=d.subject; S.email_body=d.body; if(force) S.email_custom=false;
+    $('email_subject').value=d.subject; $('email_body').value=d.body; updateMailto();
+  }catch(e){}
+}
+function updateMailto(){
+  $('emailOpen').href='mailto:'+encodeURIComponent(S.owner_email||'')+'?subject='+encodeURIComponent($('email_subject').value)+'&body='+encodeURIComponent($('email_body').value);
+}
+$('email_subject').addEventListener('input',updateMailto); $('email_body').addEventListener('input',updateMailto);
+$('emailRefresh').onclick=()=>{ if(S.email_custom && !confirm('Replace your edited email with a fresh draft from the numbers?')) return; refreshEmail(true).then(markDirty); };
+$('emailCopy').onclick=async()=>{ try{ await navigator.clipboard.writeText('Subject: '+$('email_subject').value+'\n\n'+$('email_body').value); $('emailMsg').textContent='Copied.'; }
+  catch(e){ $('email_body').select(); $('emailMsg').textContent='Press Ctrl+C / Cmd+C to copy.'; } };
+$('emailOpen').addEventListener('click',()=>{ updateMailto(); $('emailMsg').textContent='Attach the downloaded PDF before you send.'; });
+
+/* ---------- save / pdf / delete ---------- */
+async function save(){
+  const btn=$('saveBtn'); btn.disabled=true; $('dockMsg').textContent='Saving…';
+  try{ const r=await fetch(BASE+'api/proposals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(S)});
+    const d=await r.json(); if(!r.ok) throw new Error(d.error||'Save failed');
+    const isNew=!S.id; S.id=d.id; dirty=false; $('dockMsg').textContent='Saved '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+    if(isNew) history.replaceState(null,'',BASE+'p/'+d.id);
+    return true;
+  }catch(err){ $('dockMsg').innerHTML='<span style="color:#a3261c">'+esc(err.message)+'</span>'; return false; }
+  finally{ btn.disabled=false; }
+}
+$('saveBtn').onclick=save;
+$('pdfBtn').onclick=async()=>{
+  const missing=S.properties.filter(p=>!p.address||!num(p.renewal_rent)||!num(p.market_low)||!num(p.market_high));
+  if(!S.properties.length){ $('dockMsg').textContent='Add a property first.'; return; }
+  if(missing.length && !confirm(missing.length+' propert'+(missing.length>1?'ies are':'y is')+' missing an address, market range or renewal rent. Build the PDF anyway?')) return;
+  const btn=$('pdfBtn'); btn.disabled=true; btn.innerHTML='<span class="spin"></span> Building…';
+  try{ await save();
+    const r=await fetch(BASE+'api/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(S)});
+    if(!r.ok){ const d=await r.json().catch(()=>({})); throw new Error(d.error||'Could not build the PDF'); }
+    const blob=await r.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='Renewal Analysis - '+(S.owner_name||'Owner')+'.pdf'; document.body.appendChild(a); a.click(); a.remove();
+  }catch(err){ $('dockMsg').innerHTML='<span style="color:#a3261c">'+esc(err.message)+'</span>'; }
+  finally{ btn.disabled=false; btn.textContent='Download PDF'; }
+};
+if($('delBtn')) $('delBtn').onclick=async()=>{ if(!confirm('Delete this proposal for good?')) return;
+  await fetch(BASE+'api/proposals/'+S.id,{method:'DELETE'}); dirty=false; location.href=BASE; };
+window.addEventListener('beforeunload',e=>{ if(dirty){ e.preventDefault(); e.returnValue=''; } });
+
+/* ---------- load ---------- */
+(async()=>{
+  if(PID){ const r=await fetch(BASE+'api/proposals/'+PID); if(r.ok){ const d=await r.json(); S=Object.assign(S,d);
+      S.properties=(S.properties||[]).map(p=>Object.assign(blankProp(),p)); } }
+  renderTop(); renderProps();
+  $('email_subject').value=S.email_subject||''; $('email_body').value=S.email_body||''; updateMailto();
+  if(PID){ dirty=false; $('dockMsg').textContent='Saved '+(S.updated_at||'').replace('T',' ').slice(0,16); }
+})();
+</script>
+{% endblock %}
