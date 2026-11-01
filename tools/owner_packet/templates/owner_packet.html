@@ -1,0 +1,1235 @@
+{% extends "base.html" %}
+{% block title %}Owner Packet Builder — Doss &amp; Spaulding{% endblock %}
+{% block nav %}<a href="/owner-packet/">&larr; All packets</a>{% endblock %}
+{% block style %}{% raw %}
+/* Layout: one working column with a step bar on top; packet pages are fixed 8.5x11 "paper" previews scaled to fit. */
+:root{
+  --bg:#F6F3EE; --surface:#FFFFFF; --ink:#1C1A17; --muted:#6E665B; --line:#E4DBCD;
+  --gold:#94702F; --gold-soft:#F1E8D8; --warn-bg:#FBF1DC; --warn:#7E520E; --ok:#2F6B4A; --err:#A23B2A;
+  --font:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  /* paper (always light, matches the printed handouts) */
+  --p-ink:#1E1E1E; --p-muted:#686660; --p-gold:#A87F3D; --p-goldtext:#93702F; --p-cream:#F9F6F0; --p-cream2:#F1EADF;
+  --p-line:#E7DECF; --p-dark:#1F1F1F; --p-goldlight:#DDC28F; --p-paper:#FFFFFF;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.5}
+main{max-width:1000px}
+.wrap{max-width:960px;margin:0 auto}
+h1,h2,h3{text-wrap:balance;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* top bar */
+.top{display:flex;align-items:center;gap:12px;padding-block:20px 16px;flex-wrap:wrap}
+.top h1{font-size:18px;font-weight:700;letter-spacing:-.01em}
+.top .sp{flex:1}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.steps span{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:6px 10px;border-radius:999px;color:var(--muted);border:1px solid var(--line)}
+.steps span.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.steps span.done{color:var(--gold);border-color:var(--gold)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:grid;gap:16px}
+.stack{display:grid;gap:16px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.row>*{min-width:0}
+label.f{display:grid;gap:4px;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.02em;flex:1 1 160px}
+label.f.sm{flex:0 1 110px}
+input[type=text],input[type=number],input[type=date],select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;font-size:14px;font-weight:500;color:var(--ink)}
+textarea{min-height:92px;resize:vertical;line-height:1.5}
+input[type=number]{font-variant-numeric:tabular-nums}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.hint{font-size:13px;color:var(--muted)}
+h2.sec{font-size:20px;font-weight:700;letter-spacing:-.01em}
+h3.sub{font-size:15px;font-weight:700}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:8px;padding:10px 16px;font-weight:600;font-size:14px;border:1px solid var(--line);background:var(--surface);cursor:pointer}
+a.btn{text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--gold)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.primary:hover{opacity:.9}
+.btn.gold{background:var(--gold);color:#fff;border-color:var(--gold)}
+.btn.ghost{background:none;border-color:transparent;color:var(--gold);padding:6px 8px}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.sm{padding:6px 10px;font-size:13px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+
+.prop{border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:12px;background:var(--surface)}
+.prop-h{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.drop{border:1.5px dashed var(--line);border-radius:10px;padding:18px;text-align:center;cursor:pointer;color:var(--muted);font-size:13px}
+.drop.over{border-color:var(--gold);background:var(--gold-soft)}
+.drop strong{color:var(--ink)}
+.files{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;background:var(--gold-soft);border-radius:999px;padding:4px 6px 4px 10px;max-width:100%}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip button{border:0;background:none;cursor:pointer;color:var(--muted);font-size:14px;line-height:1;padding:0 4px}
+.status{font-size:13px;font-weight:600}
+.status.ok{color:var(--ok)} .status.err{color:var(--err)} .status.busy{color:var(--gold)}
+
+.flags{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:10px 12px;font-size:13px;display:grid;gap:4px}
+.flags b{font-weight:700}
+.flags ul{margin:0;padding-left:18px}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table.ed{border-collapse:collapse;width:100%;min-width:860px;font-size:13px}
+table.ed th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:8px;border-bottom:1px solid var(--line);background:var(--bg)}
+table.ed td{padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.ed tr:last-child td{border-bottom:0}
+table.ed input{padding:6px 7px;font-size:13px;border-color:transparent;background:transparent}
+table.ed input:hover,table.ed input:focus{border-color:var(--line);background:var(--bg)}
+table.ed tr.off td{opacity:.5}
+table.ed .src{font-size:11px;color:var(--muted);white-space:nowrap}
+.pickcount{font-size:12px;font-weight:600;color:var(--muted)}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(20,18,16,.5);display:flex;align-items:flex-start;justify-content:center;padding:max(24px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));overflow:auto;z-index:50}
+.modal .panel{max-width:620px;width:100%}
+
+.note{font-size:13px;padding:10px 12px;border-radius:8px;background:var(--gold-soft)}
+.err-note{background:var(--warn-bg);color:var(--err)}
+
+/* preview */
+.preview{display:grid;gap:20px;justify-items:center}
+.pg-wrap{width:min(816px,100%);aspect-ratio:816/1056;position:relative;overflow:hidden;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.12),0 8px 24px rgba(0,0,0,.08)}
+.pg-wrap .pg{position:absolute;left:0;top:0;transform-origin:0 0}
+#export-host{position:absolute;left:-12000px;top:0;width:816px}
+
+/* ===== Packet paper: fixed 8.5x11 at 96dpi, always light ===== */
+.pg{width:816px;height:1056px;background:var(--p-paper);color:var(--p-ink);font-family:var(--font);padding:38px 56px 24px;display:flex;flex-direction:column;font-size:12.5px;line-height:1.5;letter-spacing:0}
+.pg *{box-sizing:border-box}
+.pg h1,.pg h2,.pg h3,.pg h4,.pg p{margin:0}
+.ph{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:2px solid var(--p-gold)}
+.ph img{height:38px;width:auto;display:block}
+.ph-r{font-size:12px;color:var(--p-muted)}
+.pb{flex:1;padding-top:20px;display:flex;flex-direction:column;min-height:0}
+.pf{display:flex;justify-content:space-between;border-top:1px solid var(--p-line);padding-top:10px;margin-top:10px;font-size:10.5px;color:var(--p-muted)}
+.eye{font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--p-goldtext)}
+.h1{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1.08;margin-top:4px!important}
+.lead{font-size:14px;color:var(--p-muted);margin-top:6px!important}
+.h2{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--p-goldtext);margin-bottom:8px!important}
+.dark{background:var(--p-dark);color:#fff;border-radius:10px}
+.dark .lab{font-size:10.5px;letter-spacing:.14em;color:var(--p-goldlight);font-weight:700}
+.num{font-variant-numeric:tabular-nums}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.card{background:var(--p-cream);border:1px solid var(--p-line);border-radius:8px}
+.card.tc{border-top:3px solid var(--p-gold);padding:12px 16px}
+.card.tc h4{font-size:14px;font-weight:700;line-height:1.35}
+.card.tc p{font-size:12px;color:var(--p-muted);line-height:1.5;margin-top:3px!important}
+.sec{margin-top:16px}
+.disc{margin-top:auto!important;padding-top:10px;font-size:11px;color:var(--p-muted)}
+.city{font-size:15px;color:var(--p-muted);margin-top:2px}
+
+/* cover */
+.pg.cover{padding:0}
+.cv-top{padding:44px 56px 0}
+.cv-top img{height:82px;width:auto;display:block}
+.cv-main{flex:1;padding:0 56px;display:flex;flex-direction:column;justify-content:center}
+.cv-rule{width:64px;height:4px;background:var(--p-gold);border-radius:2px;margin:14px 0 18px}
+.cv-title{font-size:46px;font-weight:800;letter-spacing:-.03em;line-height:1.06}
+.cv-for{border-top:1px solid var(--p-line);border-bottom:1px solid var(--p-line);margin-top:26px;padding:14px 0}
+.cv-for .l{font-size:13px;color:var(--p-muted)}
+.cv-for .who{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.25}
+.cv-for .ad{display:grid;gap:2px;margin-top:4px;font-size:13px;color:var(--p-muted)}
+.cv-for .ad.two{grid-template-columns:1fr 1fr;column-gap:24px}
+.cv-for .ad b{color:var(--p-ink);font-weight:600}
+.cv-teaser{display:grid;grid-template-columns:1.3fr 1fr;padding:24px 28px;margin-top:24px;gap:0}
+.cv-teaser .big{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-top:6px;white-space:nowrap}
+.cv-teaser .sub{font-size:12px;color:#d6d6d6;margin-top:8px;max-width:330px;line-height:1.5}
+.cv-teaser .rt{border-left:1px solid #4a4a4a;padding-left:28px;margin-left:20px;display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;align-content:center}
+.cv-teaser .rt b{display:block;font-size:20px;font-weight:700;color:var(--p-goldlight);line-height:1.2}
+.cv-teaser .rt span{font-size:11.5px;color:#cfcfcf}
+.cv-toc{display:grid;margin-top:26px;border-top:2px solid var(--p-gold)}
+.cv-toc div{padding:10px 10px 0 0}
+.cv-toc b{display:block;font-size:10.5px;letter-spacing:.14em;color:var(--p-goldtext)}
+.cv-toc span{font-size:12px;font-weight:600;line-height:1.35;display:block}
+.cv-foot{background:var(--p-dark);color:#fff;padding:22px 56px;display:flex;justify-content:space-between;gap:20px}
+.cv-foot b{display:block;font-size:10.5px;letter-spacing:.14em;color:var(--p-goldlight);margin-bottom:2px}
+.cv-foot span{font-size:12.5px}
+
+/* rental analysis */
+.facts{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--p-line);border-radius:8px;margin-top:14px}
+.facts div{padding:9px 14px;border-left:1px solid var(--p-line)}
+.facts div:first-child{border-left:0}
+.facts b{display:block;font-size:18px;font-weight:700;line-height:1.3}
+.facts span{font-size:11px;color:var(--p-muted)}
+.rec{display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:center;padding:22px 28px;margin-top:14px}
+.rec .big{font-size:36px;font-weight:800;letter-spacing:-.025em;white-space:nowrap;line-height:1.15;margin-top:4px}
+.rec p{font-size:12.5px;line-height:1.6;color:#e6e6e6;border-left:1px solid #555;padding-left:22px}
+.ests{display:grid;gap:12px}
+.est{background:var(--p-cream);border:1px solid var(--p-line);border-radius:8px;padding:10px 16px}
+.est .s{font-size:11.5px;font-weight:600;color:var(--p-goldtext)}
+.est b{display:block;font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.25}
+.est span{font-size:11px;color:var(--p-muted)}
+.scale{position:relative;height:92px;margin:4px 10px 0}
+.scale .track{position:absolute;left:0;right:0;top:34px;height:5px;border-radius:3px;background:#EDE5D8}
+.scale .band{position:absolute;top:29px;height:15px;border-radius:8px;background:#E2CFA6}
+.scale .end{position:absolute;top:6px;font-size:12.5px;font-weight:700;color:var(--p-goldtext);white-space:nowrap}
+.scale .end.lo{transform:translateX(-100%);padding-right:3px}
+.scale .end.hi{padding-left:3px}
+.scale .dot{position:absolute;top:29px;width:15px;height:15px;margin-left:-7.5px;border-radius:50%;background:#fff;border:2px solid var(--p-ink)}
+.scale .dot::after{content:"";position:absolute;inset:2.5px;border-radius:50%;background:var(--p-ink)}
+.scale .lbl{position:absolute;transform:translateX(-50%);font-size:10.5px;color:var(--p-muted);white-space:nowrap}
+.scale .lbl b{color:var(--p-ink);font-size:11px}
+.scale .lbl.r0{top:50px}
+.scale .lbl.r1{top:68px}
+.legend{display:flex;justify-content:center;align-items:center;gap:6px;font-size:10.5px;color:var(--p-muted)}
+.legend i{width:20px;height:8px;border-radius:4px;background:#E2CFA6;display:inline-block}
+table.pt{width:100%;border-collapse:collapse;font-size:12.5px}
+table.pt th{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p-muted);font-weight:600;text-align:left;padding:7px 10px;border-bottom:2px solid var(--p-gold)}
+table.pt td{padding:9px 10px;border-bottom:1px solid var(--p-line)}
+table.pt tr:nth-child(even) td{background:var(--p-cream)}
+table.pt .r{text-align:right}
+table.pt .strong{font-weight:700}
+table.pt .mi{font-size:11px;color:var(--p-muted);margin-left:4px}
+table.pt .stt{font-size:11.5px;color:var(--p-muted);white-space:nowrap}
+table.pt tfoot td{background:var(--p-cream2)!important;font-weight:700;border-bottom:0}
+.sum2{display:grid;grid-template-columns:1fr 1fr;padding:22px 28px;margin-top:18px}
+.sum2>div+div{border-left:1px solid #555;padding-left:28px}
+.sum2 .big{font-size:30px;font-weight:800;letter-spacing:-.02em;margin-top:4px;white-space:nowrap}
+.why3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px}
+.why3 div{border-top:3px solid var(--p-gold);padding-top:10px}
+.why3 h4{font-size:13px;margin-bottom:4px}
+.why3 p{font-size:12px;color:var(--p-muted)}
+
+/* who we are */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);padding:16px 10px;margin-top:14px}
+.stats div{text-align:center;padding:0 8px;border-left:1px solid #4a4a4a}
+.stats div:first-child{border-left:0}
+.stats b{display:block;font-size:30px;font-weight:700;color:var(--p-goldlight);letter-spacing:-.02em;line-height:1.15}
+.stats span{font-size:11.5px;color:#d8d8d8;line-height:1.35;display:block}
+.founders{margin-top:12px}
+.fd{display:grid;grid-template-columns:92px 1fr;gap:14px;align-items:start;border:1px solid var(--p-line);border-radius:10px;padding:14px 16px;background:#fff}
+.fd img{width:92px;height:92px;border-radius:50%;display:block}
+.fd h4{font-size:16px;font-weight:700;line-height:1.3}
+.fd .role{font-size:12px;font-weight:600;color:var(--p-goldtext)}
+.fd p{font-size:12px;color:var(--p-muted);margin-top:4px!important;line-height:1.5}
+.who4{margin-top:12px;gap:10px}
+.quotes{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.quotes div{border-left:3px solid var(--p-gold);padding:0 0 0 14px}
+.quotes p{font-style:italic;font-size:12px;line-height:1.5}
+.quotes b{display:block;margin-top:6px;font-size:11.5px;color:var(--p-goldtext)}
+.quotes small{display:block;font-size:11px;color:var(--p-muted)}
+.band{background:var(--p-cream2);border-radius:6px;padding:9px;text-align:center;font-size:12px;color:var(--p-muted);margin-top:auto}
+.band b{color:var(--p-ink)}
+
+/* process */
+.phase{display:grid;grid-template-columns:170px 1fr;gap:16px;padding:12px 0;border-bottom:1px solid var(--p-line)}
+.phase:last-of-type{border-bottom:0}
+.phase .pl b{display:block;font-size:10.5px;letter-spacing:.14em;color:var(--p-goldtext);font-weight:700}
+.phase .pl span{display:block;font-size:17px;font-weight:700;line-height:1.25;margin-top:2px}
+.phase .pl em{display:inline-block;font-style:normal;font-size:11px;font-weight:600;background:var(--p-cream2);border-radius:999px;padding:3px 10px;margin-top:8px;line-height:1.35}
+.steplist{display:grid;gap:9px;position:relative}
+.stp{display:grid;grid-template-columns:28px 1fr;gap:14px;position:relative}
+.stp .n{width:28px;height:28px;border-radius:50%;background:var(--p-gold);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:12.5px}
+.stp h4{font-size:13.5px;font-weight:700;line-height:1.4}
+.stp p{font-size:12px;color:var(--p-muted)}
+.yourpart{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center;padding:18px 24px;margin-top:auto}
+.yourpart b{font-size:10.5px;letter-spacing:.16em;color:var(--p-goldlight)}
+.yourpart span{font-size:14px}
+
+/* what we handle */
+.svc{margin-top:16px;gap:12px}
+.svc .card{padding:12px 16px}
+.svc h4{font-size:14px;font-weight:700;margin-bottom:6px}
+.svc ul{margin:0;padding:0;list-style:none;display:grid;gap:3px}
+.svc li{position:relative;padding-left:14px;font-size:12px;color:#4d4b47;line-height:1.45}
+.svc li::before{content:"";position:absolute;left:0;top:6px;width:5px;height:5px;border-radius:50%;background:var(--p-ink)}
+
+/* pricing */
+.fy{display:grid;grid-template-columns:1.55fr 1fr;padding:15px 24px;margin-top:10px}
+.fy2{display:flex;gap:28px;margin-top:6px}
+.fy2 span{display:block;font-size:11.5px;color:#cfcfcf}
+.fy2 b{display:block;font-size:22px;font-weight:700;color:var(--p-goldlight);line-height:1.2}
+.fy p{font-size:11.5px;color:#d0d0d0;margin-top:8px!important}
+.fy .keep{border-left:1px solid #4a4a4a;padding-left:22px;margin-left:16px;text-align:right;display:flex;flex-direction:column;justify-content:center}
+.fy .keep span{font-size:12px;color:#cfcfcf}
+.fy .keep>b{font-size:38px;font-weight:800;color:var(--p-goldlight);letter-spacing:-.02em;line-height:1.1}
+.fy .keep span b{color:#fff}
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.tier{display:flex;align-items:center;gap:10px;border:1px solid var(--p-line);background:var(--p-cream);border-radius:8px;padding:10px 16px}
+.tier>b{font-size:24px;font-weight:700;letter-spacing:-.02em}
+.tier span{font-size:12px;line-height:1.3}
+.tier em{display:block;font-style:normal;font-weight:700;color:var(--p-goldlight);font-size:11.5px}
+.tier.you{background:var(--p-dark);color:#fff;border-color:var(--p-dark)}
+.tier.you>b{color:var(--p-goldlight)}
+.ex2{margin-top:10px;align-items:start}
+.exc{border:1px solid var(--p-line);border-radius:10px;overflow:hidden}
+.exc .exh{background:var(--p-cream2);padding:8px 16px}
+.exc .exh b{display:block;font-size:13.5px}
+.exc .exh small{font-size:11px;color:var(--p-muted)}
+.exc .r{display:flex;justify-content:space-between;align-items:center;padding:6px 16px;border-top:1px solid var(--p-line);font-size:12.5px}
+.exc .r small{font-size:11px;color:var(--p-muted)}
+.exc .r .neg{color:#A0412D;font-weight:600}
+.exc .net{background:var(--p-dark);color:#fff;font-weight:700;font-size:14px}
+.exc .net .num{color:var(--p-goldlight);font-size:18px}
+.stackc{display:grid;gap:10px}
+.hl{background:var(--p-cream);border:1px solid var(--p-gold);border-left:5px solid var(--p-gold);border-radius:8px;padding:10px 14px;font-size:12px;line-height:1.5}
+.hl>b:first-child{display:block;font-size:13.5px}
+.notes2{margin-top:10px}
+.note{background:var(--p-cream);border-radius:8px;padding:9px 14px;font-size:11.5px;line-height:1.5}
+.fees{border-top:1px solid var(--p-line)}
+.fees .r{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:5px 0;border-bottom:1px solid var(--p-line);font-size:12.5px}
+.fees .r span{color:var(--p-muted)}
+.fees .r span b{color:var(--p-ink)}
+
+/* guarantees & faq */
+.gt{margin-top:14px}
+.gtc{display:grid;grid-template-columns:28px 1fr;gap:12px;border:1px solid var(--p-line);border-radius:10px;padding:14px 16px;background:#fff}
+.ck{width:26px;height:26px;border-radius:50%;background:var(--p-gold);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.gtc h4{font-size:14.5px;font-weight:700}
+.gtc p{font-size:12.5px;color:var(--p-muted);margin-top:2px!important}
+.faq{border-top:1px solid var(--p-line)}
+.faq div{padding:9px 0;border-bottom:1px solid var(--p-line)}
+.faq h4{font-size:14px;font-weight:700}
+.faq p{font-size:12.5px;color:var(--p-muted);margin-top:2px!important}
+
+/* next steps */
+.s3{padding:18px 18px;border:0}
+.s3 .n{width:36px;height:36px;border-radius:50%;background:var(--p-gold);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px}
+.s3 h4{font-size:16px;font-weight:700;margin:12px 0 6px}
+.s3 p{font-size:12.5px;color:var(--p-muted);line-height:1.55}
+.offer{border:2px dashed var(--p-gold);border-radius:10px;padding:14px 22px;margin-top:16px}
+.offer b{display:block;font-size:16px;font-weight:700;margin-top:4px;line-height:1.4}
+.contact{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center;padding:22px 28px;margin-top:16px}
+.contact .nm{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-top:8px}
+.contact .rl{font-size:12.5px;color:#cfcfcf}
+.contact .ln{font-size:14px;margin-top:10px;line-height:1.6}
+.qr{text-align:center}
+.qr div{background:#fff;border-radius:10px;padding:10px;width:156px;margin:0 auto}
+.qr img{width:136px;height:136px;display:block}
+.qr span{display:block;font-size:12px;font-weight:600;color:var(--p-goldlight);margin-top:8px}
+.addr{margin-top:16px;font-size:12.5px;line-height:1.6}
+.addr b{display:block}
+.eho{display:flex;gap:14px;align-items:center;margin-top:auto;padding-top:12px}
+.eho img{width:46px;height:auto;flex:none}
+.eho p{font-size:11.5px;color:var(--p-muted);line-height:1.5}
+.eho p b{color:var(--p-ink)}
+.skiprow{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);cursor:pointer;font-size:14px}
+.skiprow input{margin-top:3px;width:16px;height:16px;accent-color:var(--gold);flex:none}
+.skiprow>span{display:grid;gap:2px}
+table.ed select{padding:6px 4px;font-size:13px;border-color:transparent;background:transparent;width:100%}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:560px){ .panel{padding:16px} h2.sec{font-size:18px} }
+
+.top .savest{font-size:12px;color:var(--muted)}
+.rvbox{border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:10px;background:var(--bg)}
+.rvlist{display:grid;gap:6px}
+.rvo{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;text-align:left;width:100%}
+.rvo:hover{border-color:var(--gold)}
+.rvo small{color:var(--muted)}
+.rvh{display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);font-size:13.5px}
+.rvh:last-child{border-bottom:0}
+.rvh input{width:16px;height:16px;accent-color:var(--gold)}
+.rvh small{display:block;color:var(--muted);font-size:12px}
+.rvtag{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--gold-soft);white-space:nowrap}
+.rvtag.vac{background:#e9f1ea;color:var(--ok)}
+#print-host{display:none}
+@media print{
+  @page{size:letter;margin:0}
+  html,body{background:#fff!important;margin:0!important;padding:0!important}
+  body>*:not(#print-host){display:none!important}
+  #print-host{display:block}
+  #print-host .pg{break-after:page;page-break-after:always;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #print-host .pg:last-child{break-after:auto;page-break-after:auto}
+}
+{% endraw %}{% endblock %}
+{% block content %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<div class="wrap">
+  <div class="top">
+    <h1>Owner Packet Builder</h1>
+    <span id="save-state" class="savest" role="status"></span>
+    <div class="sp"></div>
+    <a class="btn sm" href="/owner-packet/new">Start a new packet</a>
+    <button class="btn sm" id="btn-settings" type="button">Pricing &amp; settings</button>
+  </div>
+  <div class="steps" id="steps"></div>
+  <div id="view"></div>
+</div>
+<div id="modal-root"></div>
+<div id="export-host" aria-hidden="true"></div>
+<script id="op-config" type="application/json">{{ config|tojson }}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>{% raw %}
+const CFG = JSON.parse(document.getElementById("op-config").textContent);
+const BASE = "/owner-packet";
+const ASSET = BASE + "/assets/";
+const LOGO_FULL_SVG = ASSET + "logo-full.svg", LOGO_HDR_SVG = ASSET + "logo-header.svg";
+const HEAD_JOHN = ASSET + "john.jpg", HEAD_ALINA = ASSET + "alina.jpg";
+const QR_IMG = ASSET + "qr-review-call.png", EHO_IMG = ASSET + "equal-housing.png";
+async function api(path, opts = {}){
+  const r = await fetch(BASE + path, opts);
+  let j = {}; try{ j = await r.json(); }catch(e){}
+  if(r.status === 401) throw new Error("Your session expired. Sign in again in another tab, then retry.");
+  if(!r.ok) throw new Error(j.error || `Request failed (${r.status}).`);
+  return j;
+}
+const jsonPost = body => ({ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v => { if (v === "" || v == null) return null; const n = Number(String(v).replace(/[$,%\s]/g,"")); return isFinite(n) ? n : null; };
+const money = n => n == null || isNaN(n) ? "—" : "$" + Math.round(n).toLocaleString("en-US");
+const range = (a,b) => `${money(a)} – ${money(b)}`;
+const words = ["zero","one","two","three","four","five","six","seven","eight"];
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const fmtNum = n => n == null ? "—" : Number(n).toLocaleString("en-US");
+const r25 = n => Math.round(n/25)*25;
+const plusDaysISO = n => { const d = new Date(Date.now() + n*864e5); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); };
+const uid = () => Math.random().toString(36).slice(2,9);
+const todayISO = () => { const d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); };
+const longDate = iso => { if(!iso) return ""; const [y,m,d]=iso.split("-").map(Number); return new Date(y,m-1,d).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}); };
+function listJoin(a){ if(a.length<2) return a.join(""); if(a.length===2) return a.join(" and "); return a.slice(0,-1).join(", ")+", and "+a[a.length-1]; }
+
+/* ---------- settings ---------- */
+const DEFAULT_SETTINGS = {
+  t1: 10, t2min: 4, t2: 9, t3min: 10, t3: 8,
+  placementPct: 50, onboarding: 250, reserve: 500, renewal: 150, utility: 75,
+  approval: 500, projPct: 10, projMax: 1500,
+  statProps: "100+", statVac: "150+", googleRating: "5.0", statReviews: "25", statYears: "12+"
+};
+let SETTINGS = {...DEFAULT_SETTINGS};
+let settingsShared = false;
+
+/* ---------- state ---------- */
+const newProp = () => ({ id: uid(), hint: "", status: "idle", err: "", data: null });
+let FILES = {}; // propId -> File[] (not persisted)
+let S = {
+  step: 1, owner: "", date: todayISO(), numProps: 1, vacant: true, skipAnalysis: false, contact: "Alina", offer: false, offerDate: plusDaysISO(3),
+  exampleIdx: 0, exampleRent: null,
+  sumDemand: "", sumComps: "Every range is backed by homes renting nearby, many within a mile of the property.", sumPriced: "We aim for the rent that attracts quality tenants fast. Every vacant month costs more than a small rent difference.",
+  props: [newProp()]
+};
+let PID = CFG.pid || "";
+let srvT = null, saving = false, dirty = false;
+function setSaveState(t){ const el = document.getElementById("save-state"); if(el) el.textContent = t; }
+function hasContent(){ return !!(S.owner.trim() || S.props.some(p => p.data || (p.hint||"").trim())); }
+function save(){ if(!hasContent()) return; dirty = true; setSaveState("Unsaved changes"); clearTimeout(srvT); srvT = setTimeout(serverSave, 1200); }
+async function serverSave(){
+  if(saving){ clearTimeout(srvT); srvT = setTimeout(serverSave, 800); return; }
+  saving = true; dirty = false; setSaveState("Saving…");
+  try{
+    const r = await api("/api/packets", jsonPost({ id: PID || undefined, state: S }));
+    if(!PID){ PID = r.id; history.replaceState(null, "", BASE + "/p/" + PID); }
+    setSaveState(dirty ? "Unsaved changes" : "Saved");
+  }catch(e){ setSaveState("Not saved: " + e.message); }
+  saving = false;
+}
+addEventListener("beforeunload", e => { if(dirty){ e.preventDefault(); e.returnValue = ""; } });
+function load(){ const j = CFG.state; if(j && j.props){ S = {...S, ...j}; S.props.forEach(p=>{ if(p.status==="reading") p.status = p.data ? "done" : "idle"; }); setSaveState("Saved"); } }
+let saveT; const saveSoon = () => { clearTimeout(saveT); saveT = setTimeout(save, 400); };
+
+function setPath(path, val){
+  const ks = path.split("."); let o = S;
+  for(let i=0;i<ks.length-1;i++) o = o[ks[i]];
+  o[ks[ks.length-1]] = val;
+}
+
+/* ---------- capabilities ---------- */
+let CAP = { sample: CFG.ai ? true : null, db: true, downloads: true };
+api("/api/settings").then(j => { SETTINGS = {...DEFAULT_SETTINGS, ...j}; settingsShared = true; if(S.step===3) renderPreview(); else if(S.step===2) renderReview(); }).catch(() => {});
+
+function normalize(j, hint){
+  const s = j.subject || {};
+  const comps = (Array.isArray(j.comps) ? j.comps : []).map(c => ({
+    address: c.address || "", beds: num(c.beds), baths: num(c.baths), sqft: num(c.sqft),
+    dist: num(c.distanceMi), rent: num(c.rent), status: /lease|rent|closed/i.test(c.status||"") ? "leased" : /ask|list|active/i.test(c.status||"") ? "asking" : "", date: c.date || "", source: Array.isArray(c.sources) ? c.sources.join(", ") : (c.sources || ""), checked: !!c.pick
+  }));
+  if(!comps.some(c=>c.checked)) comps.slice(0,4).forEach(c=>c.checked=true);
+  const lo = num(j.recommendedLow), hi = num(j.recommendedHigh);
+  return {
+    street: s.street || hint || "", cityLine: s.cityStateZip || "",
+    beds: num(s.beds), baths: num(s.baths), sqft: num(s.sqft), year: num(s.yearBuilt), type: s.homeType || "Single-family",
+    recLow: lo, recHigh: hi,
+    estimates: (Array.isArray(j.estimates) ? j.estimates : []).map(e => ({ source: e.source || "", value: num(e.value), note: e.note || "" })),
+    comps, blurb: j.blurb || "", vacancy: num(j.vacancyRate),
+    flags: Array.isArray(j.flags) ? j.flags.filter(Boolean).map(String) : []
+  };
+}
+const blankData = hint => ({ street: hint||"", cityLine:"", beds:null, baths:null, sqft:null, year:null, type:"Single-family", recLow:null, recHigh:null,
+  estimates:[{source:"Zillow",value:null,note:"Rent Zestimate"},{source:"RentRange",value:null,note:""},{source:"Rentometer",value:null,note:""}],
+  comps:[{address:"",beds:null,baths:null,sqft:null,dist:null,rent:null,status:"",date:"",source:"",checked:true}], blurb:"", vacancy:null, flags:[] });
+
+function fromRv(p){
+  if(!p.rv || !p.data) return;
+  ["beds","baths","sqft"].forEach(k => { if(p.data[k] == null && p.rv[k] != null) p.data[k] = p.rv[k]; });
+  if(!p.data.cityLine && p.rv.city_line) p.data.cityLine = p.rv.city_line;
+  if(p.data.rent == null && p.rv.rent != null) p.data.rent = p.rv.rent;
+}
+async function analyzeProp(p){
+  const files = FILES[p.id] || [];
+  p.status = "reading"; p.err = ""; render();
+  try{
+    const fd = new FormData();
+    files.forEach(f => fd.append("files", f, f.name));
+    fd.append("hint", p.hint || "");
+    const j = await api("/api/analyze", { method: "POST", body: fd });
+    p.data = normalize(j, p.hint); fromRv(p); p.status = "done";
+  }catch(e){
+    p.status = "error";
+    p.err = (e && e.message) || "Something went wrong reading the reports. Try again, or enter this property by hand.";
+  }
+  save(); render();
+}
+
+/* ---------- views ---------- */
+function renderSteps(){
+  const names = [S.skipAnalysis ? "Owner & properties" : "Owner & reports","Review","Preview & download"];
+  $("#steps").innerHTML = names.map((n,i)=>`<span class="${S.step===i+1?"on":S.step>i+1?"done":""}">${i+1}. ${n}</span>`).join("");
+}
+function render(){
+  renderSteps();
+  if(S.step===1) renderSetup(); else if(S.step===2) renderReview(); else renderPreview();
+}
+
+function renderSetup(){
+  const busy = S.props.some(p=>p.status==="reading");
+  $("#view").innerHTML = `
+  <div class="stack">
+    <section class="panel">
+      <div><div class="eyebrow">Step 1</div><h2 class="sec">Who is this packet for?</h2></div>
+      <div class="row">
+        <label class="f">Owner name<input type="text" id="owner" data-k="owner" value="${esc(S.owner)}" placeholder="Aaron Rhoten" autocomplete="off"></label>
+        <label class="f sm">Properties they own<input type="number" id="numProps" min="1" data-k="numProps" data-num value="${esc(S.numProps)}"></label>
+        <label class="f sm" style="flex-basis:150px">${S.skipAnalysis ? "Packet date" : "Market data date"}<input type="date" id="date" data-k="date" value="${esc(S.date)}"></label>
+      </div>
+      <p class="hint" style="margin:0">"Properties they own" sets their management fee tier on the pricing page. It can be more than the homes you analyze here.</p>
+      <label class="skiprow"><input type="checkbox" id="skip" ${S.skipAnalysis?"checked":""}><span><b>Skip the rental analysis</b><span class="hint">For homes that already have tenants. The packet covers our services and pricing, personalized with the owner's name and addresses.</span></span></label>
+      ${CFG.rv ? `<div class="rvbox" id="rvbox"></div>` : ""}
+    </section>
+    ${S.skipAnalysis ? skipSetupHTML() : `    <section class="panel">
+      <div class="actions"><div><div class="eyebrow">Rent reports</div><h2 class="sec">Upload the comps for each property</h2></div>
+      <button class="btn sm" id="btn-example" type="button">Load an example</button></div>
+      <p class="hint" style="margin:0">Drop in the Zillow, RentRange, Rentometer, or Rentfinder PDFs. Claude reads them, pulls the numbers, and drafts the page. You'll check everything on the next screen.</p>
+      ${S.props.map((p,i)=>propSetup(p,i)).join("")}
+      <div><button class="btn sm" id="btn-addprop" type="button">+ Add another property</button></div>
+    </section>
+    <div class="actions">
+      <span class="hint">${S.props.every(p=>p.data) ? "All properties are ready to review." : ""}</span>
+      <div class="row">
+        ${S.props.some(p=>p.data) ? `<button class="btn" id="btn-toreview" type="button">Go to review</button>` : ""}
+        <button class="btn primary" id="btn-read" type="button" ${busy?"disabled":""}>${busy ? "Reading reports…" : "Read reports"}</button>
+      </div>
+    </div>`}
+  </div>`;
+  wireInputs();
+  $("#skip").onchange = e => toggleSkip(e.target.checked);
+  if(CFG.rv) rvDraw();
+  $("#btn-addprop").onclick = () => { S.props.push(S.skipAnalysis ? skipProp() : newProp()); if(S.numProps < S.props.length) S.numProps = S.props.length; save(); render(); };
+  if($("#btn-example")) $("#btn-example").onclick = loadExample;
+  if($("#btn-toreview")) $("#btn-toreview").onclick = () => goReview();
+  if($("#btn-next")) $("#btn-next").onclick = () => {
+    if(S.props.some(p => !(p.data && (p.data.street||"").trim()))){ toast("Add a street address for every property, or remove the empty one."); return; }
+    goReview();
+  };
+  if($("#btn-read")) $("#btn-read").onclick = async () => {
+    const todo = S.props.filter(p => (FILES[p.id]||[]).length && p.status !== "done");
+    const missing = S.props.filter(p => !(FILES[p.id]||[]).length && !p.data);
+    if(!todo.length){
+      if(missing.length){ toast("Add the report PDFs for each property, or choose “Enter by hand.”"); return; }
+      goReview(); return;
+    }
+    if(!CAP.sample){ toast("Reading reports needs the Anthropic API key on the server. Use “Enter by hand” instead."); return; }
+    for(const p of todo) await analyzeProp(p);
+    if(S.props.every(p=>p.data)) goReview();
+  };
+  S.props.forEach((p,i)=>{
+    const dz = document.getElementById("dz-"+p.id), fi = document.getElementById("fi-"+p.id);
+    if(dz){
+      dz.onclick = () => fi.click();
+      dz.onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); fi.click(); } };
+      dz.ondragover = e => { e.preventDefault(); dz.classList.add("over"); };
+      dz.ondragleave = () => dz.classList.remove("over");
+      dz.ondrop = e => { e.preventDefault(); dz.classList.remove("over"); addFiles(p, e.dataTransfer.files); };
+      fi.onchange = () => { addFiles(p, fi.files); fi.value=""; };
+    }
+    document.querySelectorAll(`[data-rmfile="${p.id}"]`).forEach(b => b.onclick = () => { FILES[p.id].splice(+b.dataset.i,1); if(p.status==="done"){} render(); });
+    const rm = document.getElementById("rm-"+p.id); if(rm) rm.onclick = () => { S.props.splice(i,1); delete FILES[p.id]; if(!S.props.length) S.props.push(newProp()); save(); render(); };
+    const man = document.getElementById("man-"+p.id); if(man) man.onclick = () => { p.data = blankData(p.rv ? p.rv.address : p.hint); fromRv(p); p.status="done"; save(); render(); };
+    const re = document.getElementById("re-"+p.id); if(re) re.onclick = () => analyzeProp(p);
+  });
+}
+/* ---------- Rentvine owner lookup ---------- */
+const RV = { q: "", busy: false, err: "", owners: null, sel: null, homes: null, pick: [] };
+function rvDraw(){
+  const box = document.getElementById("rvbox"); if(!box) return;
+  let body = "";
+  if(RV.err) body = `<div class="status err">${esc(RV.err)}</div>`;
+  else if(RV.busy) body = `<div class="status busy">Looking in Rentvine…</div>`;
+  else if(RV.homes){
+    const n = RV.pick.filter(Boolean).length;
+    body = `<div class="actions"><b>${esc(RV.sel.owner)}</b><button class="btn ghost sm" id="rv-back" type="button">Back to results</button></div>
+      ${RV.homes.length ? `<div class="tbl-wrap">${RV.homes.map((h,k) => `<label class="rvh"><input type="checkbox" data-rvk="${k}" ${RV.pick[k] ? "checked" : ""}>
+        <span>${esc(h.address)}<small>${esc(h.city_line)}${h.beds ? ` · ${h.beds} bed / ${h.baths ?? "?"} bath` : ""}${h.sqft ? ` · ${fmtNum(h.sqft)} sq ft` : ""}</small></span>
+        <span class="rvtag ${h.occupied ? "" : "vac"}">${h.occupied ? (h.rent ? "Tenant · " + money(h.rent) : "Has tenant") : "Vacant"}</span></label>`).join("")}</div>
+        <div class="actions"><span class="hint">Homes that have never had a lease in Rentvine won't show here. Add those by hand.</span>
+        <button class="btn primary sm" id="rv-add" type="button" ${n ? "" : "disabled"}>Add ${n} home${n===1 ? "" : "s"} to this packet</button></div>`
+      : `<div class="hint">No homes found for this owner.</div>`}`;
+  } else if(RV.owners){
+    body = RV.owners.length ? `<div class="rvlist">${RV.owners.map((o,k) => `<button class="rvo" type="button" data-rvo="${k}"><span><b>${esc(o.owner || "Unnamed owner")}</b></span><small>${o.count} home${o.count===1 ? "" : "s"}</small></button>`).join("")}</div>`
+      : `<div class="hint">No owners match “${esc(RV.q)}”.</div>`;
+  }
+  box.innerHTML = `<form class="row" id="rv-form" style="gap:8px"><label class="f">Find the owner in Rentvine<input type="text" id="rv-q" value="${esc(RV.q)}" placeholder="Owner name, LLC, or an address" autocomplete="off"></label><button class="btn sm" type="submit">Search</button></form>${body}`;
+  $("#rv-form").onsubmit = e => { e.preventDefault(); rvSearch($("#rv-q").value); };
+  box.querySelectorAll("[data-rvo]").forEach(b => b.onclick = () => rvOpen(RV.owners[+b.dataset.rvo]));
+  box.querySelectorAll("[data-rvk]").forEach(c => c.onchange = () => { RV.pick[+c.dataset.rvk] = c.checked; rvDraw(); });
+  if($("#rv-back")) $("#rv-back").onclick = () => { RV.homes = null; RV.sel = null; rvDraw(); };
+  if($("#rv-add")) $("#rv-add").onclick = rvApply;
+}
+async function rvSearch(q){
+  RV.q = (q || "").trim(); RV.err = ""; RV.homes = null; RV.sel = null;
+  if(RV.q.length < 2){ RV.err = "Type at least 2 letters."; rvDraw(); return; }
+  RV.busy = true; rvDraw();
+  try{ RV.owners = (await api("/api/rentvine/owners?q=" + encodeURIComponent(RV.q))).results; }
+  catch(e){ RV.err = e.message; }
+  RV.busy = false; rvDraw();
+}
+async function rvOpen(o){
+  RV.sel = o; RV.busy = true; RV.err = ""; rvDraw();
+  try{
+    const qs = o.portfolio_id ? "portfolio_id=" + encodeURIComponent(o.portfolio_id) : "owner=" + encodeURIComponent(o.owner);
+    RV.homes = (await api("/api/rentvine/homes?" + qs)).results; RV.pick = RV.homes.map(() => true);
+  }catch(e){ RV.err = e.message; }
+  RV.busy = false; rvDraw();
+}
+function rvApply(){
+  const hs = RV.homes.filter((h,k) => RV.pick[k]);
+  if(!hs.length) return;
+  if(!S.owner.trim()) S.owner = RV.sel.owner;
+  S.numProps = Math.max(S.numProps || 1, RV.homes.length);
+  const allOcc = hs.every(h => h.occupied);
+  const skipNow = S.skipAnalysis || allOcc;
+  S.props = S.props.filter(p => p.data || (p.hint||"").trim() || (FILES[p.id]||[]).length);
+  hs.forEach(h => {
+    const p = newProp(); p.hint = [h.address, h.city_line].filter(Boolean).join(", "); p.rv = h;
+    if(skipNow){ p.data = blankData(h.address); fromRv(p); p.status = "done"; p.fromSkip = true; }
+    S.props.push(p);
+  });
+  if(!S.props.length) S.props.push(newProp());
+  if(allOcc && !S.skipAnalysis){ S.skipAnalysis = true; S.vacant = false; toast("All of these homes have tenants, so the rental analysis is skipped. Uncheck the box to add one."); }
+  else toast(`Added ${hs.length} home${hs.length===1 ? "" : "s"} from Rentvine.`);
+  RV.homes = null; RV.owners = null; RV.sel = null; RV.q = "";
+  save(); render();
+}
+function skipProp(){ const p = newProp(); p.data = blankData(""); p.status = "done"; p.fromSkip = true; return p; }
+function toggleSkip(on){
+  S.skipAnalysis = on; S.vacant = !on;
+  S.props.forEach(p => {
+    if(on && !p.data){ p.data = blankData(p.hint); p.status = "done"; p.fromSkip = true; }
+    if(!on && p.fromSkip && p.data && p.data.recLow == null){ p.hint = p.data.street || p.hint; p.data = null; p.status = "idle"; delete p.fromSkip; }
+  });
+  save(); render();
+}
+function skipSetupHTML(){
+  S.props.forEach(p => { if(!p.data){ p.data = blankData(p.hint); p.status = "done"; p.fromSkip = true; } });
+  return `<section class="panel">
+      <div><div class="eyebrow">Properties</div><h2 class="sec">Which homes will we manage?</h2></div>
+      <p class="hint" style="margin:0">The addresses go on the cover. Current rent is optional and only feeds the pricing example.</p>
+      ${S.props.map((p,i)=>`<div class="prop">
+        <div class="prop-h"><h3 class="sub">Property ${i+1}</h3>${S.props.length>1 ? `<button class="btn ghost sm" id="rm-${p.id}" type="button">Remove</button>` : ""}</div>
+        <div class="row">
+          <label class="f">Street address<input type="text" id="k-street-${p.id}" data-k="props.${i}.data.street" value="${esc(p.data.street)}" placeholder="21 Crestbrook Ct"></label>
+          <label class="f">City, state, ZIP<input type="text" id="k-city-${p.id}" data-k="props.${i}.data.cityLine" value="${esc(p.data.cityLine)}" placeholder="Greensboro, NC 27410"></label>
+          <label class="f sm" style="flex-basis:130px">Current rent<input type="number" id="k-rent-${p.id}" data-k="props.${i}.data.rent" data-num value="${p.data.rent ?? ""}" placeholder="1650"></label>
+        </div></div>`).join("")}
+      <div><button class="btn sm" id="btn-addprop" type="button">+ Add another property</button></div>
+    </section>
+    <div class="actions"><span></span><button class="btn primary" id="btn-next" type="button">Continue</button></div>`;
+}
+function propSetup(p,i){
+  const files = FILES[p.id] || [];
+  const st = p.status==="reading" ? `<span class="status busy">Reading ${files.length} report${files.length===1?"":"s"}…</span>`
+    : p.status==="done" ? `<span class="status ok">Ready${p.data && p.data.street ? ": "+esc(p.data.street) : ""}</span>`
+    : p.status==="error" ? `<span class="status err">${esc(p.err)}</span>` : "";
+  return `<div class="prop">
+    <div class="prop-h"><h3 class="sub">Property ${i+1}</h3>
+      <div class="row" style="gap:4px">
+        ${p.status!=="reading" && !p.data ? `<button class="btn ghost sm" id="man-${p.id}" type="button">Enter by hand</button>` : ""}
+        ${p.status==="error" && files.length ? `<button class="btn ghost sm" id="re-${p.id}" type="button">Try again</button>` : ""}
+        ${p.data && files.length ? `<button class="btn ghost sm" id="re-${p.id}" type="button">Read again</button>` : ""}
+        ${S.props.length>1 ? `<button class="btn ghost sm" id="rm-${p.id}" type="button">Remove</button>` : ""}
+      </div></div>
+    <label class="f">Property address (optional, helps Claude find the right home)<input type="text" id="hint-${p.id}" data-k="props.${i}.hint" value="${esc(p.hint)}" placeholder="21 Crestbrook Ct, Greensboro"></label>
+    ${p.rv ? `<span class="hint">From Rentvine: ${p.rv.occupied ? "has a tenant" + (p.rv.rent ? " paying " + money(p.rv.rent) : "") : "vacant"}${p.rv.beds ? ` · ${p.rv.beds} bed / ${p.rv.baths ?? "?"} bath` : ""}</span>` : ""}
+    <div class="drop" id="dz-${p.id}" role="button" tabindex="0"><strong>Drop PDFs here</strong> or tap to choose files</div>
+    <input type="file" id="fi-${p.id}" accept="application/pdf,.pdf" multiple hidden>
+    ${files.length ? `<div class="files">${files.map((f,k)=>`<span class="chip"><span>${esc(f.name)}</span><button type="button" data-rmfile="${p.id}" data-i="${k}" aria-label="Remove ${esc(f.name)}">×</button></span>`).join("")}</div>` : ""}
+    ${p.data && !files.length ? `<span class="hint">Reports were read earlier. Add files only if you want to read them again.</span>` : ""}
+    ${st}
+  </div>`;
+}
+function addFiles(p, list){
+  const arr = FILES[p.id] || (FILES[p.id] = []);
+  for(const f of list){ if(/\.pdf$/i.test(f.name) || f.type==="application/pdf") arr.push(f); }
+  if(p.status==="done") p.status = "idle";
+  render();
+}
+function goReview(){
+  if(!S.props.every(p=>p.data)){ toast("Every property needs its reports read (or “Enter by hand”) before review."); return; }
+  if(!S.sumDemand){ const v = S.props.map(p=>p.data.vacancy).filter(x=>x!=null); S.sumDemand = v.length ? `Estimated vacancy rates in these areas run about ${Math.round(v.reduce((a,b)=>a+b,0)/v.length)}%, so well-priced, well-kept homes tend to lease quickly.` : "Well-priced, well-kept homes in these areas tend to lease quickly."; }
+  S.step = 2; save(); render(); window.scrollTo(0,0);
+}
+
+/* ---------- review ---------- */
+function renderReview(){
+  const multi = S.props.length > 1;
+  const ex = S.props[S.exampleIdx] || S.props[0];
+  const exDefault = exampleRentDefault();
+  $("#view").innerHTML = `<div class="stack">
+    <section class="panel">
+      <div><div class="eyebrow">Step 2</div><h2 class="sec">Check the numbers</h2></div>
+      <p class="hint" style="margin:0">${S.skipAnalysis ? "The rental analysis is skipped, so this packet covers our services and pricing. Set up the pricing example below." : "Everything here is editable. Uncheck any comp you don't want the owner to see. Yellow notes are just for you and never print."}</p>
+      <div class="row">
+        <label class="f">Owner name<input type="text" id="r-owner" data-k="owner" value="${esc(S.owner)}"></label>
+        <label class="f sm">Properties they own<input type="number" id="r-numProps" min="1" data-k="numProps" data-num value="${esc(S.numProps)}"></label>
+        <label class="f sm" style="flex-basis:150px">${S.skipAnalysis ? "Packet date" : "Market data date"}<input type="date" id="r-date" data-k="date" value="${esc(S.date)}"></label>
+      </div>
+    </section>
+    ${S.skipAnalysis ? "" : S.props.map((p,i)=>propReview(p,i,multi)).join("")}
+    ${multi && !S.skipAnalysis ? `<section class="panel"><div><div class="eyebrow">Portfolio summary page</div><h3 class="sub">The three notes under the property table</h3></div>
+      <label class="f">Strong demand<textarea id="s-demand" data-k="sumDemand">${esc(S.sumDemand)}</textarea></label>
+      <label class="f">Real comps<textarea id="s-comps" data-k="sumComps">${esc(S.sumComps)}</textarea></label>
+      <label class="f">Priced to lease<textarea id="s-priced" data-k="sumPriced">${esc(S.sumPriced)}</textarea></label></section>` : ""}
+    <section class="panel">
+      <div><div class="eyebrow">Pricing page</div><h3 class="sub">Personalized fee example</h3></div>
+      <div class="row">
+        ${multi ? `<label class="f">Example property<select id="p-exidx">${S.props.map((p,i)=>`<option value="${i}" ${i===S.exampleIdx?"selected":""}>${esc(p.data.street||"Property "+(i+1))}</option>`).join("")}</select></label>` : ""}
+        <label class="f sm" style="flex-basis:160px">Example rent<input type="number" id="p-exrent" data-k="exampleRent" data-num value="${S.exampleRent ?? ""}" placeholder="${exDefault ?? ""}"></label>
+        <label class="f sm" style="flex-basis:170px;align-self:center;flex-direction:row;display:flex;gap:8px;align-items:center;color:var(--ink);font-size:14px"><input type="checkbox" id="p-vacant" ${S.vacant?"checked":""}> Home is vacant</label>
+      </div>
+      <p class="hint" style="margin:0">${S.skipAnalysis ? `Leave the rent blank to use ${exDefault ? "their current rent ("+money(exDefault)+")" : "a $2,000 placeholder"}.` : `Leave the rent blank to use the middle of the recommended range (${exDefault ? money(exDefault) : "set a range first"}).`} The placement fee only shows when the home is vacant. Their rate is ${tierPct()}% based on ${S.numProps} propert${S.numProps==1?"y":"ies"}.</p>
+    </section>
+    <section class="panel">
+      <div><div class="eyebrow">Next steps page</div><h3 class="sub">Contact and offer</h3></div>
+      <div class="row">
+        <label class="f" style="flex-basis:200px">Contact person<select id="n-contact"><option value="Alina" ${S.contact!=="John"?"selected":""}>Alina Spaulding</option><option value="John" ${S.contact==="John"?"selected":""}>John Doss</option></select></label>
+        <label class="f sm" style="flex-basis:230px;align-self:center;flex-direction:row;display:flex;gap:8px;align-items:center;color:var(--ink);font-size:14px"><input type="checkbox" id="n-offer" ${S.offer?"checked":""}> Include limited-time offer</label>
+        <label class="f sm" style="flex-basis:160px">Offer deadline<input type="date" id="n-offerdate" data-k="offerDate" value="${esc(S.offerDate||"")}"></label>
+      </div>
+      <p class="hint" style="margin:0">The offer waives the ${money(SETTINGS.onboarding)} onboarding fee if they sign by the deadline.</p>
+    </section>
+    <div class="actions"><button class="btn" id="btn-back1" type="button">Back</button><button class="btn primary" id="btn-preview" type="button">Preview packet</button></div>
+  </div>`;
+  wireInputs();
+  $("#btn-back1").onclick = () => { S.step=1; save(); render(); };
+  $("#btn-preview").onclick = () => {
+    const bad = S.skipAnalysis ? null : S.props.find(p => p.data.recLow==null || p.data.recHigh==null);
+    if(!S.owner.trim()){ toast("Add the owner's name first."); $("#r-owner").focus(); return; }
+    if(bad){ toast(`Set a recommended rent range for ${bad.data.street || "every property"}.`); return; }
+    S.step=3; save(); render(); window.scrollTo(0,0);
+  };
+  const exs = $("#p-exidx"); if(exs) exs.onchange = () => { S.exampleIdx = +exs.value; S.exampleRent = null; save(); renderReview(); };
+  $("#p-vacant").onchange = e => { S.vacant = e.target.checked; save(); };
+  $("#n-contact").onchange = e => { S.contact = e.target.value; save(); };
+  $("#n-offer").onchange = e => { S.offer = e.target.checked; save(); };
+  if(!S.skipAnalysis) S.props.forEach((p,i)=>wireProp(p,i));
+}
+function propReview(p,i,multi){
+  const d = p.data;
+  const picks = d.comps.filter(c=>c.checked).length;
+  return `<section class="panel" id="pr-${p.id}">
+    <div><div class="eyebrow">${multi ? `Property ${i+1} of ${S.props.length}` : "Rental analysis"}</div>
+      <h2 class="sec">${esc(d.street || "Untitled property")}</h2></div>
+    ${d.flags.length ? `<div class="flags"><b>Double-check</b><ul>${d.flags.map((f,k)=>`<li>${esc(f)}</li>`).join("")}</ul></div>` : ""}
+    <div class="row">
+      <label class="f">Street address<input type="text" id="d-street-${p.id}" data-k="props.${i}.data.street" value="${esc(d.street)}"></label>
+      <label class="f">City, state, ZIP<input type="text" id="d-city-${p.id}" data-k="props.${i}.data.cityLine" value="${esc(d.cityLine)}"></label>
+    </div>
+    <div class="row">
+      <label class="f sm">Beds<input type="number" id="d-beds-${p.id}" data-k="props.${i}.data.beds" data-num value="${d.beds ?? ""}"></label>
+      <label class="f sm">Baths<input type="number" step="0.5" id="d-baths-${p.id}" data-k="props.${i}.data.baths" data-num value="${d.baths ?? ""}"></label>
+      <label class="f sm">Sq ft<input type="number" id="d-sqft-${p.id}" data-k="props.${i}.data.sqft" data-num value="${d.sqft ?? ""}"></label>
+      <label class="f sm">Year built<input type="number" id="d-year-${p.id}" data-k="props.${i}.data.year" data-num value="${d.year ?? ""}"></label>
+      <label class="f sm" style="flex-basis:150px">Home type<input type="text" id="d-type-${p.id}" data-k="props.${i}.data.type" value="${esc(d.type)}"></label>
+    </div>
+    <div class="row">
+      <label class="f sm" style="flex-basis:150px">Recommended low<input type="number" step="25" id="d-lo-${p.id}" data-k="props.${i}.data.recLow" data-num value="${d.recLow ?? ""}"></label>
+      <label class="f sm" style="flex-basis:150px">Recommended high<input type="number" step="25" id="d-hi-${p.id}" data-k="props.${i}.data.recHigh" data-num value="${d.recHigh ?? ""}"></label>
+    </div>
+    <div class="stack" style="gap:8px">
+      <div class="actions"><h3 class="sub">Source estimates</h3><button class="btn ghost sm" data-addest="${i}" type="button">+ Add source</button></div>
+      <div class="tbl-wrap"><table class="ed" style="min-width:480px"><thead><tr><th>Source</th><th>Estimate</th><th>Note under the number</th><th></th></tr></thead><tbody>
+      ${d.estimates.map((e,k)=>`<tr>
+        <td><input type="text" id="e-s-${p.id}-${k}" data-k="props.${i}.data.estimates.${k}.source" value="${esc(e.source)}"></td>
+        <td style="width:120px"><input type="number" id="e-v-${p.id}-${k}" data-k="props.${i}.data.estimates.${k}.value" data-num value="${e.value ?? ""}"></td>
+        <td><input type="text" id="e-n-${p.id}-${k}" data-k="props.${i}.data.estimates.${k}.note" value="${esc(e.note)}"></td>
+        <td style="width:40px"><button class="btn ghost sm" data-rmest="${i}.${k}" type="button" aria-label="Remove source">×</button></td></tr>`).join("")}
+      </tbody></table></div>
+    </div>
+    <div class="stack" style="gap:8px">
+      <div class="actions"><h3 class="sub">Comparable rentals <span class="pickcount">${picks} shown in the packet${picks>6?" (6 max fit on the page)":""}</span></h3><button class="btn ghost sm" data-addcomp="${i}" type="button">+ Add comp</button></div>
+      <div class="tbl-wrap"><table class="ed"><thead><tr><th>Show</th><th>Address</th><th>Beds</th><th>Baths</th><th>Sq ft</th><th>Miles</th><th>Rent</th><th>Leased / asking</th><th>When</th><th>From</th></tr></thead><tbody>
+      ${d.comps.map((c,k)=>`<tr class="${c.checked?"":"off"}">
+        <td style="width:44px;text-align:center"><input type="checkbox" id="c-ck-${p.id}-${k}" data-ck="${i}.${k}" ${c.checked?"checked":""} aria-label="Show this comp"></td>
+        <td style="min-width:180px"><input type="text" id="c-a-${p.id}-${k}" data-k="props.${i}.data.comps.${k}.address" value="${esc(c.address)}"></td>
+        <td style="width:62px"><input type="number" id="c-b-${p.id}-${k}" data-k="props.${i}.data.comps.${k}.beds" data-num value="${c.beds ?? ""}"></td>
+        <td style="width:66px"><input type="number" step="0.5" id="c-ba-${p.id}-${k}" data-k="props.${i}.data.comps.${k}.baths" data-num value="${c.baths ?? ""}"></td>
+        <td style="width:84px"><input type="number" id="c-sq-${p.id}-${k}" data-k="props.${i}.data.comps.${k}.sqft" data-num value="${c.sqft ?? ""}"></td>
+        <td style="width:72px"><input type="number" step="0.01" id="c-d-${p.id}-${k}" data-k="props.${i}.data.comps.${k}.dist" data-num value="${c.dist ?? ""}"></td>
+        <td style="width:90px"><input type="number" id="c-r-${p.id}-${k}" data-k="props.${i}.data.comps.${k}.rent" data-num value="${c.rent ?? ""}"></td>
+        <td style="width:104px"><select id="c-st-${p.id}-${k}" data-k="props.${i}.data.comps.${k}.status" aria-label="Leased or asking"><option value="" ${!c.status?"selected":""}>—</option><option value="leased" ${c.status==="leased"?"selected":""}>Leased</option><option value="asking" ${c.status==="asking"?"selected":""}>Asking</option></select></td>
+        <td style="width:100px"><input type="text" id="c-dt-${p.id}-${k}" data-k="props.${i}.data.comps.${k}.date" value="${esc(c.date||"")}" placeholder="Sep 2026" aria-label="Month leased or listed"></td>
+        <td class="src">${esc(c.source)}</td></tr>`).join("")}
+      </tbody></table></div>
+    </div>
+    <div class="stack" style="gap:8px">
+      <div class="actions"><h3 class="sub">Explanation for the owner</h3>${CAP.sample ? `<button class="btn ghost sm" data-redraft="${i}" type="button">Rewrite from current comps</button>` : ""}</div>
+      <textarea id="d-blurb-${p.id}" data-k="props.${i}.data.blurb" style="min-height:100px">${esc(d.blurb)}</textarea>
+      <span class="hint" id="bl-st-${p.id}">This goes in the dark box next to the recommended rent. About 2 to 3 sentences fits best.</span>
+    </div>
+  </section>`;
+}
+function wireProp(p,i){
+  const sec = document.getElementById("pr-"+p.id);
+  sec.querySelectorAll("[data-ck]").forEach(cb => cb.onchange = () => { const [a,k] = cb.dataset.ck.split(".").map(Number); S.props[a].data.comps[k].checked = cb.checked; save(); rerenderProp(a); });
+  sec.querySelectorAll("[data-addcomp]").forEach(b => b.onclick = () => { p.data.comps.push({address:"",beds:null,baths:null,sqft:null,dist:null,rent:null,status:"",date:"",source:"Added",checked:true}); save(); rerenderProp(i); });
+  sec.querySelectorAll("[data-addest]").forEach(b => b.onclick = () => { p.data.estimates.push({source:"",value:null,note:""}); save(); rerenderProp(i); });
+  sec.querySelectorAll("[data-rmest]").forEach(b => b.onclick = () => { const k = +b.dataset.rmest.split(".")[1]; p.data.estimates.splice(k,1); save(); rerenderProp(i); });
+  sec.querySelectorAll("[data-redraft]").forEach(b => b.onclick = () => redraft(p,i,b));
+}
+function rerenderProp(i){
+  const p = S.props[i]; const old = document.getElementById("pr-"+p.id);
+  const tmp = document.createElement("div"); tmp.innerHTML = propReview(p,i,S.props.length>1);
+  old.replaceWith(tmp.firstElementChild); wireInputs(document.getElementById("pr-"+p.id)); wireProp(p,i);
+}
+async function redraft(p,i,btn){
+  const d = p.data; const st = document.getElementById("bl-st-"+p.id);
+  const comps = d.comps.filter(c=>c.checked).map(c=>`${c.address}: ${c.beds??"?"} bed / ${c.baths??"?"} bath, ${c.sqft??"?"} sq ft, ${c.dist??"?"} mi away, $${c.rent??"?"}`).join("\n");
+  const ests = d.estimates.map(e=>`${e.source}: $${e.value} (${e.note})`).join("\n");
+  btn.disabled = true; st.textContent = "Rewriting…";
+  try{
+    const { text } = await api("/api/redraft", jsonPost(d));
+    d.blurb = text.trim().replace(/^"|"$/g,""); document.getElementById("d-blurb-"+p.id).value = d.blurb; save();
+    st.textContent = "Rewritten. Edit it however you like.";
+  }catch(e){ st.textContent = e && e.code==="rate_limited" ? "Too many requests right now. Try again in a minute." : "Couldn't rewrite it this time. You can edit the text directly."; }
+  btn.disabled = false;
+}
+
+function wireInputs(root=document){
+  root.querySelectorAll("[data-k]").forEach(el => {
+    el.oninput = () => {
+      const v = el.hasAttribute("data-num") ? num(el.value) : el.value;
+      setPath(el.dataset.k, v);
+      if(el.dataset.k==="numProps" && (!v || v<1)) S.numProps = v;
+      saveSoon();
+      if(/\.data\.street$/.test(el.dataset.k)){ const h = el.closest(".panel")?.querySelector("h2.sec"); if(h) h.textContent = el.value || "Untitled property"; }
+    };
+  });
+}
+
+/* ---------- pricing math ---------- */
+function tierPct(){ const n = S.numProps || 1; return n >= SETTINGS.t3min ? SETTINGS.t3 : n >= SETTINGS.t2min ? SETTINGS.t2 : SETTINGS.t1; }
+function exampleRentDefault(){ const p = S.props[S.exampleIdx] || S.props[0]; if(!p || !p.data) return null; if(S.skipAnalysis) return p.data.rent ?? null; if(p.data.recLow==null || p.data.recHigh==null) return null; return r25((p.data.recLow+p.data.recHigh)/2); }
+
+/* ---------- packet pages ---------- */
+const FOOT_L = "336-494-1710 · info@dspropertiesnc.com · dspropertiesnc.com";
+const CONTACTS = {
+  Alina: { name: "Alina Spaulding", role: "Co-founder, Doss &amp; Spaulding Properties" },
+  John: { name: "John Doss", role: "Co-founder &amp; Broker-in-charge, Doss &amp; Spaulding Properties" }
+};
+const mmdd = iso => { if(!iso) return ""; const [y,m,d] = iso.split("-"); return `${m}/${d}/${y}`; };
+const longDay = iso => { if(!iso) return ""; const [y,m,d] = iso.split("-").map(Number); return new Date(y,m-1,d).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}); };
+const pctTxt = v => `${Math.round(v)}%`;
+const disclaimer = () => `Estimate based on market data as of ${esc(mmdd(S.date))}. Not an appraisal or guarantee of rent.`;
+function sections(){ return (S.skipAnalysis ? [] : ["Rental analysis"]).concat(["Who we are","Our process","What we handle","Pricing","Guarantees & FAQ","Next steps"]); }
+function secLabel(name){ return `0${sections().indexOf(name)+1} · ${name}`; }
+function analysisPageCount(){ return S.skipAnalysis ? 0 : S.props.length + (S.props.length > 1 ? 1 : 0); }
+const pageHTML = (sec, body, n) => `<section class="pg"><div class="ph"><img src="${LOGO_HDR_SVG}" alt="Doss &amp; Spaulding Properties"><div class="ph-r">${esc(secLabel(sec))}</div></div><div class="pb">${body}</div><div class="pf"><span>${FOOT_L}</span><span>${n}</span></div></section>`;
+
+function buildPages(){
+  const multi = S.props.length > 1;
+  const bodies = [];
+  if(!S.skipAnalysis){
+    if(multi) bodies.push(["Rental analysis", summaryBody()]);
+    S.props.forEach((p,i) => bodies.push(["Rental analysis", propBody(p,i,multi)]));
+  }
+  bodies.push(["Who we are", whoBody()], ["Our process", processBody()], ["What we handle", handleBody()],
+    ["Pricing", pricingBody()], ["Guarantees & FAQ", faqBody()], ["Next steps", nextBody()]);
+  return coverPage() + bodies.map(([s,b],k) => pageHTML(s, b, k+2)).join("");
+}
+
+function coverPage(){
+  const ps = S.props.map(p => p.data); const multi = ps.length > 1;
+  const secs = sections();
+  const addr = ps.map(d => `<div><b>${esc(d.street)}</b>${d.cityLine ? ` · ${esc(d.cityLine)}` : ""}</div>`).join("");
+  const pricingPage = 1 + analysisPageCount() + 4;
+  let teaser;
+  if(S.skipAnalysis){
+    teaser = `<div><div class="lab">TENANT ALREADY IN PLACE?</div><div class="big">No placement fee</div>
+      <div class="sub">We take over the existing lease and management starts in month 1. Full pricing on page ${pricingPage}.</div></div>
+      <div class="rt"><div><b class="num">${tierPct()}%</b><span>Your management rate</span></div><div><b class="num">$0</b><span>Placement fee</span></div>
+      <div><b class="num">${ps.length}</b><span>${ps.length > 1 ? "Homes" : "Home"} in this proposal</span></div><div><b>24 hr</b><span>Response guarantee</span></div></div>`;
+  } else if(multi){
+    const lo = ps.reduce((a,d) => a + (d.recLow||0), 0), hi = ps.reduce((a,d) => a + (d.recHigh||0), 0);
+    const beds = ps.reduce((a,d) => a + (d.beds||0), 0);
+    teaser = `<div><div class="lab">ESTIMATED MONTHLY RENT · ${ps.length} HOMES</div><div class="big num">${range(lo,hi)}</div>
+      <div class="sub">Based on ${allSources().length} rent estimate sources and nearby comparable rentals. Full analysis starts on page 2.</div></div>
+      <div class="rt"><div><b class="num">${money(lo*12)}</b><span>Yearly, low end</span></div><div><b class="num">${money(hi*12)}</b><span>Yearly, high end</span></div>
+      <div><b class="num">${ps.length}</b><span>Homes</span></div><div><b class="num">${beds || "—"}</b><span>Bedrooms total</span></div></div>`;
+  } else {
+    const d = ps[0]; const nE = d.estimates.filter(e => e.value != null).length;
+    teaser = `<div><div class="lab">RECOMMENDED MONTHLY RENT</div><div class="big num">${range(d.recLow,d.recHigh)}</div>
+      <div class="sub">Based on ${nE ? `${nE} rent estimate${nE>1?"s":""} and ` : ""}nearby comparable rentals. Full analysis on page 2.</div></div>
+      <div class="rt"><div><b class="num">${d.beds ?? "—"}</b><span>Bedrooms</span></div><div><b class="num">${d.baths ?? "—"}</b><span>Bathrooms</span></div>
+      <div><b class="num">${fmtNum(d.sqft)}</b><span>Square feet</span></div><div><b class="num">${d.year ?? "—"}</b><span>Year built</span></div></div>`;
+  }
+  const homes = multi ? "homes" : "home";
+  return `<section class="pg cover">
+    <div class="cv-top"><img src="${LOGO_FULL_SVG}" alt="Doss &amp; Spaulding Properties: Real Estate, Property Management, Rentals"></div>
+    <div class="cv-main">
+      <div class="eye">${S.skipAnalysis ? "Property management proposal" : "Rental analysis &amp; management proposal"}</div>
+      <div class="cv-rule"></div>
+      <h1 class="cv-title">${S.skipAnalysis ? `How we'd manage your ${homes}` : `What your ${homes} can rent for, and how we'd manage ${multi ? "them" : "it"}`}</h1>
+      <div class="cv-for"><div class="l">Prepared for</div><div class="who">${esc(S.owner.trim())}</div><div class="ad ${ps.length > 4 ? "two" : ""}">${addr}</div></div>
+      <div class="dark cv-teaser">${teaser}</div>
+      <div class="cv-toc" style="grid-template-columns:repeat(${secs.length},1fr)">${secs.map((s,k) => `<div><b>0${k+1}</b><span>${esc(s)}</span></div>`).join("")}</div>
+    </div>
+    <div class="cv-foot"><div><b>PREPARED</b><span>${esc(longDate(S.date))}</span></div><div><b>CONTACT</b><span>336-494-1710 · info@dspropertiesnc.com</span></div><div><b>OFFICE</b><span>2601 Oakcrest Ave, Suite F, Greensboro</span></div></div>
+  </section>`;
+}
+
+function allSources(){ const set = []; S.props.forEach(p => p.data.estimates.forEach(e => { const s = (e.source||"").trim(); if(s && e.value != null && !set.includes(s)) set.push(s); })); return set; }
+function summaryBody(){
+  const ps = S.props.map(p => p.data);
+  const lo = ps.reduce((a,d) => a + (d.recLow||0), 0), hi = ps.reduce((a,d) => a + (d.recHigh||0), 0);
+  const src = allSources();
+  const city = d => (d.cityLine||"").split(",")[0];
+  return `<div class="eye">Portfolio summary</div>
+  <h2 class="h1">Your ${words[ps.length]||ps.length} properties at a glance</h2>
+  <p class="lead">We researched current rental data for each of your homes using ${src.length ? `${words[src.length]||src.length} independent source${src.length>1?"s":""}: ${esc(listJoin(src))}` : "independent rent reports"}, then compared them against nearby homes that are actually renting.</p>
+  <div class="dark sum2"><div><div class="lab">ESTIMATED MONTHLY RENT</div><div class="big num">${range(lo,hi)}</div></div><div><div class="lab">ESTIMATED YEARLY RENT</div><div class="big num">${range(lo*12,hi*12)}</div></div></div>
+  <table class="pt" style="margin-top:18px"><thead><tr><th>Property</th><th>Bed / Bath</th><th>Sq ft</th><th class="r">Recommended rent</th></tr></thead><tbody>
+  ${ps.map(d => `<tr><td><b style="font-size:13.5px">${esc(d.street)}</b><div style="font-size:11px;color:var(--p-muted)">${esc(city(d))}</div></td><td class="num">${d.beds??"—"} / ${d.baths??"—"}</td><td class="num">${fmtNum(d.sqft)}</td><td class="r strong num">${range(d.recLow,d.recHigh)}</td></tr>`).join("")}
+  </tbody><tfoot><tr><td colspan="3">Total</td><td class="r num">${range(lo,hi)}</td></tr></tfoot></table>
+  <div class="why3">
+    <div><h4>Strong demand</h4><p>${esc(S.sumDemand)}</p></div>
+    <div><h4>Real comps</h4><p>${esc(S.sumComps)}</p></div>
+    <div><h4>Priced to lease</h4><p>${esc(S.sumPriced)}</p></div>
+  </div>
+  <p class="disc">${disclaimer()}</p>`;
+}
+const NOTE_DEFAULTS = { Zillow: "Rent Zestimate", RentRange: "RentRange estimate", Rentometer: "Average of nearby rentals", Rentfinder: "Monthly estimate" };
+function cleanNote(e){ return /confidence/i.test(e.note||"") ? (NOTE_DEFAULTS[(e.source||"").trim()] || "Rent estimate") : (e.note||""); }
+function scaleHTML(d, ests){
+  const vals = ests.map(e => e.value).concat([d.recLow, d.recHigh]);
+  let mn = Math.min(...vals), mx = Math.max(...vals); let span = Math.max(mx-mn, 200);
+  mn -= span*0.2; mx += span*0.2; span = mx-mn;
+  const pos = v => (v-mn)/span*100;
+  let last = -99, row = 1;
+  const lbls = ests.slice().sort((a,b) => a.value-b.value).map(e => {
+    const x = pos(e.value); row = (x - last < 18 && row === 0) ? 1 : 0; last = x;
+    return `<div class="dot" style="left:${x.toFixed(2)}%"></div><div class="lbl r${row}" style="left:${x.toFixed(2)}%">${esc(e.source)} <b class="num">${money(e.value)}</b></div>`;
+  }).join("");
+  const a = pos(d.recLow), b = pos(d.recHigh);
+  return `<div class="scale"><div class="track"></div><div class="band" style="left:${a.toFixed(2)}%;width:${(b-a).toFixed(2)}%"></div>
+    <div class="end lo num" style="left:${a.toFixed(2)}%">${money(d.recLow)}</div><div class="end hi num" style="left:${b.toFixed(2)}%">${money(d.recHigh)}</div>${lbls}</div>
+    <div class="legend"><i></i>Our recommended range</div>`;
+}
+function compStatus(c){
+  const s = c.status ? cap(c.status) : "";
+  return s && c.date ? `${s} · ${esc(c.date)}` : s || esc(c.date || "") || "—";
+}
+function propBody(p,i,multi){
+  const d = p.data;
+  const ests = d.estimates.filter(e => e.value != null && (e.source||"").trim()).map(e => ({...e, note: cleanNote(e)}));
+  const comps = d.comps.filter(c => c.checked).slice(0,6).sort((a,b) => (a.dist??99)-(b.dist??99));
+  const cols = Math.min(Math.max(ests.length,1),4);
+  const nW = words[ests.length] || ests.length;
+  return `<div class="eye">${multi ? `Property ${i+1} of ${S.props.length}` : "Rental analysis"}</div>
+  <h2 class="h1">${esc(d.street)}</h2><div class="city">${esc(d.cityLine)}</div>
+  <div class="facts num"><div><b>${d.beds??"—"}</b><span>Bedrooms</span></div><div><b>${d.baths??"—"}</b><span>Bathrooms</span></div><div><b>${fmtNum(d.sqft)}</b><span>Square feet</span></div><div><b>${d.year??"—"}</b><span>Year built</span></div><div><b style="white-space:nowrap">${esc(d.type)}</b><span>Home type</span></div></div>
+  <div class="dark rec"><div><div class="lab">RECOMMENDED MONTHLY RENT</div><div class="big num">${range(d.recLow,d.recHigh)}</div></div>${d.blurb ? `<p>${esc(d.blurb)}</p>` : "<div></div>"}</div>
+  ${ests.length ? `<div class="sec"><h3 class="h2">${ests.length===1 ? "Independent estimate" : cap(nW)+" independent estimates"}</h3>
+    <div class="ests" style="grid-template-columns:repeat(${cols},1fr)">${ests.map(e => `<div class="est"><div class="s">${esc(e.source)}</div><b class="num">${money(e.value)}</b><span>${esc(e.note)}</span></div>`).join("")}</div>
+    ${scaleHTML(d, ests)}</div>` : ""}
+  ${comps.length ? `<div class="sec"><h3 class="h2">Closest comparable rentals</h3>
+    <table class="pt"><thead><tr><th>Address</th><th>Bed / Bath</th><th>Sq ft</th><th>Leased or asking</th><th class="r">Rent</th></tr></thead><tbody>
+    ${comps.map(c => `<tr><td>${esc(c.address)}${c.dist!=null ? `<span class="mi">${Number(c.dist).toFixed(2).replace(/0$/,"")} mi</span>` : ""}</td><td class="num">${c.beds??"—"} / ${c.baths??"—"}</td><td class="num">${fmtNum(c.sqft)}</td><td class="stt">${compStatus(c)}</td><td class="r strong num">${money(c.rent)}</td></tr>`).join("")}
+    </tbody></table></div>` : ""}
+  <p class="disc">${disclaimer()}</p>`;
+}
+
+function whoBody(){
+  const st = SETTINGS, ap = money(st.approval);
+  const card = (h,t) => `<div class="card tc"><h4>${h}</h4><p>${t}</p></div>`;
+  const q = (t,n,m) => `<div><p>“${t}”</p><b>${n}</b><small>${m}</small></div>`;
+  return `<div class="eye">Who we are</div><h2 class="h1">Managed like it's our own. Because we own rentals too.</h2>
+  <div class="dark stats"><div><b>${esc(st.statProps)}</b><span>Properties under<br>management</span></div><div><b>${esc(st.statVac)}</b><span>Vacancies filled</span></div><div><b>${esc(st.googleRating)}</b><span>Google rating,<br>${esc(st.statReviews)} reviews</span></div><div><b>${esc(st.statYears)}</b><span>Years of combined<br>experience</span></div></div>
+  <div class="g2 founders">
+    <div class="fd"><img src="${HEAD_JOHN}" alt="John Doss"><div><h4>John Doss</h4><div class="role">Co-founder</div><p>Broker-in-charge and active real estate investor. Vice President of the Greensboro Landlord Association and a NARPM member.</p></div></div>
+    <div class="fd"><img src="${HEAD_ALINA}" alt="Alina Spaulding"><div><h4>Alina Spaulding</h4><div class="role">Co-founder</div><p>An impact-driven leader in the community. After 22 years in nonprofit leadership, she brings that same heart for service to every client she works with.</p></div></div>
+  </div>
+  <div class="g2 who4">
+    ${card("Locally owned, investor-run","We're Greensboro-based and own rentals ourselves. We manage your home with the same care and attention as we do our own.")}
+    ${card("Real people, real updates",`A local team that knows your home, not a call center. We contact you before any repair over ${ap}.`)}
+    ${card("Truly full service","Marketing, showings, screening, leasing, rent collection, maintenance, accounting, and evictions if they're ever needed.")}
+    ${card("Reporting in real time","Your owner portal shows rent, expenses and monthly statements. Year-end statement and 1099 by January 31.")}
+  </div>
+  <h3 class="h2" style="margin-top:14px">What owners say</h3>
+  <div class="quotes">
+    ${q("They found a well qualified renter quickly and handled every aspect of the process professionally and expeditiously. I appreciated most John's willingness to communicate with me.","Paula Bowlin","Owner, 1 home, Kernersville")}
+    ${q("They communicate promptly and respond appropriately to any and all issues on your rental homes... I highly recommend this company to take reliable care of your investments in real estate.","Ann Hardee","Owner, 5 homes, Greensboro")}
+    ${q("John and Alina are absolutely amazing. They constantly go above and beyond for me and my tenants.","Brian Chadwick","Owner, 1 home, Greensboro")}
+  </div>
+  <div class="band" style="margin-top:auto">Leadership in the <b>Greensboro Landlord Association</b> · Members of <b>NARPM</b></div>`;
+}
+function processBody(){
+  const ap = money(SETTINGS.approval);
+  const step = (n,h,t) => `<div class="stp"><div class="n">${n}</div><div><h4>${h}</h4><p>${t}</p></div></div>`;
+  const phase = (k,name,pill,steps) => `<div class="phase"><div class="pl"><b>PHASE ${k}</b><span>${name}</span><em>${pill}</em></div><div class="steplist">${steps}</div></div>`;
+  return `<div class="eye">Our process</div><h2 class="h1">From signed to rented</h2>
+  <p class="lead">Timing depends on your home's condition, price and type. Here's every step from signing to keys.</p>
+  <div style="margin-top:8px">
+  ${phase(1,"Get ready","Varies with condition",
+    step(1,"Sign on","We walk through your management agreement with you, set up your owner portal, and handle any handoff from a previous manager.")+
+    step(2,"Property walkthrough","We walk your home inside and out, check appliances and systems, and document its condition with photos.")+
+    step(3,"Make-ready",`We coordinate cleaning, minor repairs and vendors. You approve anything over ${ap} before work starts.`))}
+  ${phase(2,"Find the right tenant","Rent-ready homes: typically 30 to 45 days",
+    step(4,"Set the rent","We price with local comps so your home leases quickly at the right number.")+
+    step(5,"Market the home","Professional-quality photos and floor plan. Your home is live on all major rental sites within 1 business day of make-ready completion.")+
+    step(6,"Showings","Pre-screened renters book self-guided tours online, so they can see your home on their schedule. Every renter verifies their ID and gets a one-time code that only works during their tour window.")+
+    step(7,"Screening","Every applicant undergoes background, credit and eviction checks, and we verify income and rental history. The same criteria apply to everyone."))}
+  ${phase(3,"Move in &amp; beyond","Ongoing",
+    step(8,"Lease &amp; move-in","We review the lease with your tenant before signing, collect all move-in funds, and have your tenant complete a detailed move-in condition report.")+
+    step(9,"Ongoing management","We collect rent, coordinate maintenance, conduct routine walkthroughs, and post everything to your owner portal in real time."))}
+  </div>
+  <div class="dark yourpart"><b>YOUR PART</b><span>Sign the agreement, approve any big ticket repairs, and watch the rent come in. We handle everything else.</span></div>`;
+}
+function handleBody(){
+  const ap = money(SETTINGS.approval);
+  const c = (h,items) => `<div class="card"><h4>${h}</h4><ul>${items.map(x => `<li>${x}</li>`).join("")}</ul></div>`;
+  return `<div class="eye">Full-service management</div><h2 class="h1">Owning rentals shouldn't feel like a second job</h2>
+  <p class="lead">Everything below is included in your management fee.</p>
+  <div class="g2 svc">
+  ${c("Marketing &amp; leasing",["Rent priced from available comps","Professional-quality photos and floor plan","Listed on all major rental sites","Self-guided showings with ID verification"])}
+  ${c("Screening &amp; placement",["Background, credit and eviction checks, plus verified income and rental history","Lease prepared and reviewed with your tenant","Deposits and move-in funds collected","Move-in condition documented"])}
+  ${c("Rent &amp; accounting",["Online rent collection and late pay follow-up","Income and expense tracking per property","Monthly statements and electronic payouts","Year-end statement and 1099 by January 31"])}
+  ${c("Maintenance &amp; repairs",["Emergencies dispatched same day","Trusted, insured local vendors","Preventive and routine property upkeep",`Your approval before any repair over ${ap}`])}
+  ${c("Walkthroughs &amp; compliance",["Initial walkthrough with photos","Detailed pre-renewal walkthroughs","Move-out walkthrough and deposit accounting","City, county, HOA and lease compliance"])}
+  ${c("Tenant relations",["Tenant questions and requests answered","Renewals with rental rate analysis","Lease violation notices and follow-through","Move-out coordination"])}
+  ${c("Legal &amp; evictions",["Notices served correctly under NC law","Eviction filing and court appearances, if needed","Current on NC landlord-tenant law","Backed by our Eviction Protection guarantee"])}
+  ${c("Owner communication",["Response to every request within 24 hours","Owner portal with 24/7 access","Updates on the decisions that matter","A local team that knows your home"])}
+  </div>`;
+}
+function pricingBody(){
+  const st = SETTINGS, pct = tierPct();
+  const R = S.exampleRent ?? exampleRentDefault() ?? 2000;
+  const M = R*pct/100, P = R*st.placementPct/100, onb = st.onboarding;
+  const n = S.numProps || 1, vac = S.vacant;
+  const fees1 = vac ? P + onb + 11*M : onb + 12*M;
+  const keep1 = 12*R - fees1;
+  const y2 = (12*R - 12*M - st.renewal) / (12*R) * 100;
+  const occKeep = 12*R - 12*M - onb;
+  const months = Math.round(100/pct);
+  const tiers = [[st.t1,`1 to ${st.t2min-1} properties`],[st.t2,`${st.t2min} to ${st.t3min-1} properties`],[st.t3,`${st.t3min}+ properties`]];
+  const row = (l,s,v,neg) => `<div class="r"><span>${l}${s ? ` <small>${s}</small>` : ""}</span><span class="${neg && v ? "neg" : ""} num">${neg && v ? "−" : ""}${money(v)}</span></div>`;
+  const m1 = vac
+    ? { h: "Month 1 · new tenant placed", s: "No management fee this month",
+        rows: row("Rent collected","",R)+row("Placement fee",`(${st.placementPct}% of first full month)`,P,true)+row("Onboarding fee","(one-time)",onb,true)+row("Management fee","",0,true), net: R-P-onb }
+    : { h: "Month 1 · tenant already in place", s: "No placement fee",
+        rows: row("Rent collected","",R)+row("Placement fee","",0,true)+row("Onboarding fee","(one-time)",onb,true)+row("Management fee",`(${pct}%)`,M,true), net: R-onb-M };
+  const side = vac
+    ? `<div class="hl"><b>Already have a tenant? No placement fee.</b>Management starts in month 1, and you keep about <b class="num">${money(occKeep)}</b> (${pctTxt(occKeep/(12*R)*100)}) in year 1.</div>`
+    : `<div class="hl"><b>No placement fee.</b>Your current tenant stays in place and management starts in month 1. If the home turns over later, we place the next tenant for ${st.placementPct}% of the first full month.</div>`;
+  const fee = (a,b,c) => `<div class="r"><span><b>${a}</b> · ${b}</span><b class="num">${c}</b></div>`;
+  return `<div class="eye">Pricing · Your home at <span class="num">${money(R)}</span>/month</div><h2 class="h1">Simple, transparent pricing</h2>
+  <div class="dark fy"><div><div class="lab">YOUR FIRST YEAR</div>
+    <div class="fy2"><div><span>Rent collected</span><b class="num">${money(12*R)}</b></div><div><span>All our fees</span><b class="num">${money(fees1)}</b></div></div>
+    <p>${vac ? "Includes placement, onboarding and 11 months of management." : "Includes onboarding and 12 months of management. No placement fee."} Year 2 with a renewal: you keep about ${pctTxt(y2)}.</p></div>
+    <div class="keep"><span>You keep</span><b class="num">${money(keep1)}</b><span><b>${pctTxt(keep1/(12*R)*100)}</b> of the rent</span></div></div>
+  <div class="tiers">${tiers.map(([p,l]) => `<div class="tier ${p===pct ? "you" : ""}"><b class="num">${p}%</b><span>${l}${p===pct ? `<em>Your rate · ${n} propert${n==1 ? "y" : "ies"}</em>` : ""}</span></div>`).join("")}</div>
+  <div class="g2 ex2">
+    <div class="exc"><div class="exh"><b>${m1.h}</b><small>${m1.s}</small></div>${m1.rows}<div class="r net"><span>Your net</span><span class="num">${money(m1.net)}</span></div></div>
+    <div class="stackc"><div class="exc"><div class="exh"><b>Month 2 and every month after</b><small>No rent collected, no management fee</small></div>${row("Rent collected","",R)}${row("Management fee",`(${pct}%)`,M,true)}<div class="r net"><span>Your net</span><span class="num">${money(R-M)}</span></div></div>${side}</div>
+  </div>
+  <div class="g2 notes2">
+    <div class="note"><b>${money(st.reserve)} maintenance reserve.</b> It's still your money, held per property for bills that arrive after your payout. If it isn't funded at sign-on, it comes out of your first payout.</div>
+    <div class="note"><b>Why it pays for itself.</b> One vacant month costs you <b class="num">${money(R)}</b>, or about ${months} months of our management fee.</div>
+  </div>
+  <h3 class="h2" style="margin-top:12px">Every other fee, only if it applies</h3>
+  <div class="fees">
+    ${fee("Lease renewal","includes a pre-renewal walkthrough",money(st.renewal))}
+    ${fee("Utility setup","per vacancy, if we set up utilities",money(st.utility))}
+    ${fee("Routine repair markup","no markup on vendor invoices","$0")}
+    ${fee("Project oversight","large unit turns, renovations and jobs where we gather multiple bids",`${st.projPct}%, max ${money(st.projMax)}`)}
+    ${fee("Evictions","included in your management fee","Court fees only")}
+  </div>`;
+}
+function faqBody(){
+  const ap = money(SETTINGS.approval);
+  const g = (h,t) => `<div class="gtc"><span class="ck">✓</span><div><h4>${h}</h4><p>${t}</p></div></div>`;
+  const f = (q,a) => `<div><h4>${q}</h4><p>${a}</p></div>`;
+  return `<div class="eye">Our guarantees</div><h2 class="h1">Less risk for you, in writing</h2>
+  <div class="g2 gt">
+    ${g("Tenant Placement Guarantee","If a tenant we place leaves before their initial lease ends, you don't pay for the next placement. We charge the departing tenant, and if they don't pay, we waive the fee for your next tenant placement.")}
+    ${g("Eviction Protection","If a tenant we place is evicted within their first 12 months, we waive the placement fee for the next tenant placement.")}
+    ${g("No long-term lock-in","After your initial 12-month term, cancel anytime with 30 days' notice and no cancellation fee.")}
+    ${g("24-hour response","Every owner and tenant request gets a response within 24 hours.")}
+  </div>
+  <h3 class="h2" style="margin-top:18px">Questions owners ask us</h3>
+  <div class="faq">
+    ${f("My home already has a tenant. Can you take it over?","Yes. We take over the existing lease, there's no placement fee, and management starts in month 1.")}
+    ${f("Who approves repairs?",`We will contact you for approval before any repair over ${ap}. The only exception is an emergency that has to be handled right away to protect your home or your tenant.`)}
+    ${f("How often do you check on my home?","We aim for a detailed walkthrough with photos twice a year, and we always do one before a lease renewal.")}
+    ${f("When do I get paid?","We send owner distributions on the 15th of every month.")}
+    ${f("Do I need to change my insurance?","Make sure it's a landlord policy, not an owner-occupied homeowner's policy, and add Doss &amp; Spaulding Properties LLC as an additional insured.")}
+    ${f("Can I sell while you're managing it?","Yes. We can list your property for you at a discounted rate, or, if an agent referred you to us, we will honor your prior agent-client relationship.")}
+  </div>`;
+}
+function nextBody(){
+  const c = CONTACTS[S.contact] || CONTACTS.Alina;
+  const s3 = (n,h,t) => `<div class="card s3"><div class="n">${n}</div><h4>${h}</h4><p>${t}</p></div>`;
+  return `<div class="eye">Next steps</div><h2 class="h1">Ready when you are</h2>
+  <p class="lead">Getting started takes about 30 minutes. Here's what happens after you say yes.</p>
+  <div class="g3" style="margin-top:16px">
+    ${s3(1,"Sign your agreement","We send it by e-signature and walk through every section with you first.")}
+    ${s3(2,"We walk the home","Within 2 business days we document its condition and scope any make-ready work.")}
+    ${s3(3,"Your home goes live","Listed within 1 business day of make-ready completion. Already rented? We take over the lease right away.")}
+  </div>
+  ${S.offer && S.offerDate ? `<div class="offer"><div class="eye">Limited-time offer</div><b>Sign by ${esc(longDay(S.offerDate))} and we'll waive your ${money(SETTINGS.onboarding)} onboarding fee.</b></div>` : ""}
+  <div class="dark contact"><div><div class="lab">TALK TO US DIRECTLY</div><div class="nm">${c.name}</div><div class="rl">${c.role}</div><div class="ln">Main: 336-494-1710<br>info@dspropertiesnc.com</div></div>
+    <div class="qr"><div><img src="${QR_IMG}" alt="QR code to schedule a management agreement review call"></div><span>Scan to schedule a review call</span></div></div>
+  <div class="g2 addr"><div><b>Office</b>2601 Oakcrest Ave, Suite F<br>Greensboro, NC 27408</div><div><b>Mailing</b>1852 Banking St #9495<br>Greensboro, NC 27408</div></div>
+  <div class="eho"><img src="${EHO_IMG}" alt="Equal Housing Opportunity logo"><p><b>Equal Housing Opportunity Provider</b> | We are committed to fair housing and do not discriminate on any status protected by applicable federal, state, or local law.</p></div>`;
+}
+
+/* ---------- preview & export ---------- */
+function renderPreview(){
+  if(S.step!==3) return;
+  const html = buildPages();
+  const tmp = document.createElement("div"); tmp.innerHTML = html;
+  const pages = [...tmp.querySelectorAll(".pg")];
+  $("#view").innerHTML = `<div class="stack">
+    <section class="panel"><div class="actions"><div><div class="eyebrow">Step 3</div><h2 class="sec">${pages.length}-page packet for ${esc(S.owner.trim())}</h2></div>
+      <div class="row"><button class="btn" id="btn-back2" type="button">Back to edit</button><button class="btn" id="btn-print" type="button">Print or save as PDF</button><button class="btn primary" id="btn-dl" type="button">Download PDF</button></div></div>
+      <p class="hint" style="margin:0">For the sharpest file with selectable text, use <b>Print or save as PDF</b> and pick “Save as PDF” as the printer. Download PDF is one click but saves each page as an image.</p>
+      <div id="dl-note" class="hint" hidden></div>
+      ${settingsShared ? "" : `<p class="hint" style="margin:0">Pricing uses the default fees. Change them under “Pricing &amp; settings.”</p>`}
+    </section>
+    <div class="preview" id="pv">${pages.map(()=>`<div class="pg-wrap"></div>`).join("")}</div></div>`;
+  const wraps = document.querySelectorAll(".pg-wrap");
+  pages.forEach((p,i)=>wraps[i].appendChild(p));
+  fitPages();
+  $("#btn-back2").onclick = () => { S.step=2; save(); render(); window.scrollTo(0,0); };
+  $("#btn-dl").onclick = exportPdf;
+  $("#btn-print").onclick = printPacket;
+}
+function printPacket(){
+  let host = document.getElementById("print-host");
+  if(!host){ host = document.createElement("div"); host.id = "print-host"; document.body.appendChild(host); }
+  host.innerHTML = buildPages();
+  const imgs = [...host.querySelectorAll("img")];
+  Promise.all(imgs.map(i => i.complete ? 1 : new Promise(r => { i.onload = i.onerror = r; })))
+    .then(() => (document.fonts ? document.fonts.ready : 1)).then(() => window.print());
+}
+addEventListener("afterprint", () => { const h = document.getElementById("print-host"); if(h) h.innerHTML = ""; });
+function fitPages(){ document.querySelectorAll(".pg-wrap").forEach(w => { const s = w.clientWidth/816; w.firstElementChild.style.transform = `scale(${s})`; }); }
+addEventListener("resize", fitPages);
+
+async function exportPdf(){
+  const btn = $("#btn-dl"), note = $("#dl-note");
+  const show = t => { note.hidden = false; note.textContent = t; };
+  if(!window.html2canvas || !window.jspdf){ show("The PDF tools didn't load. Reload the page and try again."); return; }
+  btn.disabled = true; btn.textContent = "Building PDF…"; note.hidden = true;
+  try{
+    try{ await document.fonts.ready; }catch(e){}
+    const host = $("#export-host"); host.innerHTML = buildPages();
+    const pages = host.querySelectorAll(".pg");
+    const pdf = new jspdf.jsPDF({ unit: "pt", format: "letter", compress: true });
+    for(let i=0;i<pages.length;i++){
+      btn.textContent = `Building page ${i+1} of ${pages.length}…`;
+      const c = await html2canvas(pages[i], { scale: 3, backgroundColor: "#ffffff", logging: false, width: 816, height: 1056, windowWidth: 816 });
+      if(i) pdf.addPage();
+      pdf.addImage(c.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 612, 792);
+    }
+    host.innerHTML = "";
+    const blob = pdf.output("blob");
+    const name = `Owner Packet - ${S.owner.trim().replace(/[\\/:*?"<>|]/g,"")}.pdf`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    show("Downloaded. Check your downloads folder.");
+  }catch(e){ show("Something went wrong building the PDF. Try again."); console.error(e); }
+  btn.disabled = false; btn.textContent = "Download PDF";
+}
+
+/* ---------- settings modal ---------- */
+function openSettings(){
+  const st = SETTINGS;
+  const f = (id,label,val,extra="") => `<label class="f sm" style="flex-basis:130px">${label}<input type="${typeof val==="number"?"number":"text"}" id="st-${id}" value="${esc(val)}" ${extra}></label>`;
+  $("#modal-root").innerHTML = `<div class="modal" id="modal"><div class="panel" role="dialog" aria-modal="true" aria-labelledby="st-title">
+    <div class="actions"><h2 class="sec" id="st-title">Pricing &amp; settings</h2><button class="btn ghost" id="st-x" type="button" aria-label="Close">Close</button></div>
+    <p class="hint" style="margin:0">${CAP.db ? "Changes are shared with everyone who uses this app and apply to every packet you create from now on." : "Shared settings aren't available in this view, so changes apply only until you close the page."}</p>
+    <h3 class="sub">Management fee tiers</h3>
+    <div class="row">${f("t1","Tier 1 %",st.t1,'step="0.5"')}${f("t2min","Tier 2 starts at",st.t2min)}${f("t2","Tier 2 %",st.t2,'step="0.5"')}${f("t3min","Tier 3 starts at",st.t3min)}${f("t3","Tier 3 %",st.t3,'step="0.5"')}</div>
+    <h3 class="sub">Fees</h3>
+    <div class="row">${f("placementPct","Placement % of 1st month",st.placementPct)}${f("onboarding","Onboarding $",st.onboarding)}${f("reserve","Reserve $",st.reserve)}${f("renewal","Renewal $",st.renewal)}${f("utility","Utility setup $",st.utility)}${f("approval","Repair approval over $",st.approval)}${f("projPct","Project fee %",st.projPct)}${f("projMax","Project fee max $",st.projMax)}</div>
+    <h3 class="sub">Company stats (Who we are page)</h3>
+    <div class="row">${f("statProps","Properties managed",st.statProps)}${f("statVac","Vacancies filled",st.statVac)}${f("googleRating","Google rating",st.googleRating)}${f("statReviews","Google reviews",st.statReviews)}${f("statYears","Years experience",st.statYears)}</div>
+    <div id="st-msg" class="hint" hidden></div>
+    <div class="actions"><button class="btn ghost" id="st-reset" type="button">Reset to defaults</button><button class="btn primary" id="st-save" type="button">Save settings</button></div>
+  </div></div>`;
+  const close = () => { $("#modal-root").innerHTML = ""; };
+  $("#st-x").onclick = close;
+  $("#modal").onclick = e => { if(e.target.id==="modal") close(); };
+  $("#st-reset").onclick = () => { Object.keys(DEFAULT_SETTINGS).forEach(k => { $("#st-"+k).value = DEFAULT_SETTINGS[k]; }); };
+  $("#st-save").onclick = async () => {
+    const next = {};
+    for(const k of Object.keys(DEFAULT_SETTINGS)){ const v = $("#st-"+k).value; next[k] = typeof DEFAULT_SETTINGS[k]==="number" ? (num(v) ?? DEFAULT_SETTINGS[k]) : v; }
+    SETTINGS = next;
+    const msg = $("#st-msg");
+    if(CAP.db){
+      try{ await api("/api/settings", jsonPost(next)); settingsShared = true; close(); toast("Settings saved for everyone."); }
+      catch(e){ msg.hidden=false; msg.textContent = "Couldn't save the settings: " + e.message; }
+    } else close();
+    if(S.step===3) renderPreview(); else if(S.step===2) renderReview();
+  };
+}
+
+/* ---------- misc ---------- */
+let toastT;
+function toast(t){
+  let el = document.getElementById("toast");
+  if(!el){ el = document.createElement("div"); el.id="toast"; el.setAttribute("role","status");
+    el.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;font-size:13px;z-index:60;max-width:calc(100% - 32px);text-align:center";
+    document.body.appendChild(el); }
+  el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(()=>el.hidden=true, 4200);
+}
+function loadExample(){
+  S.owner = S.owner || "Example Owner";
+  const p = newProp(); p.hint = "8 Mizell Ct, Greensboro"; p.status = "done";
+  p.data = {
+    street:"8 Mizell Ct", cityLine:"Greensboro, NC 27405", beds:3, baths:2, sqft:1008, year:1994, type:"Single-family",
+    recLow:1550, recHigh:1625, vacancy:3.8,
+    estimates:[{source:"Zillow",value:1367,note:"Rent Zestimate"},{source:"RentRange",value:1560,note:"RentRange estimate"},{source:"Rentometer",value:1655,note:"Average of 19 rentals"}],
+    comps:[
+      {address:"2 Atlas Ct",beds:3,baths:2,sqft:1000,dist:0.63,rent:1595,source:"RentRange",checked:true},
+      {address:"6015 White Chapel Way",beds:3,baths:2,sqft:1088,dist:0.6,rent:1595,source:"Zillow, RentRange, Rentometer",checked:true},
+      {address:"1310 Phipps Ave",beds:3,baths:2,sqft:1074,dist:0.7,rent:1450,source:"Rentometer",checked:true},
+      {address:"515 Denny Rd",beds:3,baths:2,sqft:1218,dist:0.34,rent:1595,source:"Rentometer",checked:true},
+      {address:"1317 Cushing St",beds:3,baths:2,sqft:1300,dist:0.37,rent:1605,source:"RentRange",checked:false},
+      {address:"3601 Sherbourne Ln",beds:3,baths:2,sqft:1236,dist:0.47,rent:1595,source:"RentRange, Rentometer",checked:false},
+      {address:"3629 Sherbourne Ln",beds:3,baths:2,sqft:1272,dist:0.48,rent:1610,source:"RentRange, Rentometer",checked:false},
+      {address:"4006 Coltrain Rd",beds:3,baths:2,sqft:1176,dist:0.65,rent:1525,source:"RentRange",checked:false},
+      {address:"3923 Woodberry Lake Dr",beds:3,baths:2,sqft:1092,dist:0.8,rent:1700,source:"RentRange, Rentometer",checked:false},
+      {address:"216 Matt Pl",beds:3,baths:1,sqft:1050,dist:0.14,rent:1295,source:"RentRange",checked:false},
+      {address:"217 Kinnley Ct",beds:3,baths:2,sqft:1192,dist:0.87,rent:1885,source:"RentRange, Rentometer",checked:false}
+    ],
+    blurb:"At 1,008 sq ft, this is one of the smaller homes in the area, so it should rent a little under the neighborhood average of about $1,650. The closest size matches, on Atlas Ct and White Chapel Way, are renting for $1,595.",
+    flags:["Example data from the 8 Mizell Ct reports, not a real owner.","Zillow lists 1,080 sq ft. RentRange and public record say 1,008.","Zillow's comps are mostly 1 to 2 bed apartments, which pulls its estimate low.","3629 Sherbourne Ln is $1,610 on Rentometer and $1,565 on RentRange. 217 Kinnley Ct is $1,885 vs. $1,640."]
+  };
+  p.data.comps.forEach((c,k) => { c.status = k % 3 === 2 ? "asking" : "leased"; c.date = ["Sep 2026","Aug 2026","Oct 2026","Jul 2026"][k % 4]; });
+  S.skipAnalysis = false; S.vacant = true; S.props = [p]; S.numProps = 1; S.exampleIdx = 0; S.exampleRent = null; S.sumDemand = "";
+  goReview();
+}
+$("#btn-settings").onclick = openSettings;
+
+load();
+render();
+{% endraw %}</script>
+{% endblock %}

@@ -127,3 +127,25 @@ rent (quick picks: +5/10/15%, a third of the gap) → **Download PDF** and copy 
 Env vars: `RENTVINE_ACCOUNT` (subdomain, e.g. dossspauldingpropertiesllc), `RENTVINE_API_KEY`,
 `RENTVINE_API_SECRET` (create a key with a read-only role under Settings → Users, Roles & API),
 `RENEWALS_DB`, optional `RENEWALS_MODEL`, optional `RENEWALS_CONTACT_LINE` (PDF footer).
+
+## Owner Packet Builder (/owner-packet/)
+Rental analysis + management proposal packet for prospective owner clients (8 pages: cover, rental
+analysis, who we are, process, what we handle, pricing, guarantees & FAQ, next steps).
+
+- **Find the owner in Rentvine**: search by owner, LLC or address, pick their homes. Homes come from the
+  lease export (`tools/renewals/rentvine.py`): an open lease = has a tenant (current lease rent filled in,
+  never the unit's market rent); only closed leases = vacant. Homes that never had a lease in Rentvine
+  don't show up, so add those by hand. If every home picked has a tenant, the packet switches to
+  "Skip the rental analysis" (services and pricing only, no placement fee).
+- **Rental analysis**: upload each home's Zillow / RentRange / Rentometer / Rentfinder PDFs; Claude
+  (`OWNER_PACKET_MODEL`, default `claude-sonnet-4-6`) drafts the estimates, comps (leased vs asking + month),
+  the recommended range and the owner explanation. Everything is editable on the review screen.
+- **Saved packets**: every packet autosaves to SQLite (`OWNER_PACKETS_DB`, default next to `RENEWALS_DB`
+  on the Render disk) and is listed at `/owner-packet/`.
+- **Pricing & settings** (fee tiers, fees, company stats, Google rating/review count) are shared by everyone
+  and stored in the same database.
+- **PDF**: "Print or save as PDF" uses the browser's print dialog for a sharp PDF with selectable text
+  (choose "Save as PDF"). "Download PDF" is one click but saves each page as an image (~7 MB).
+- Images (SVG logo, headshots, QR code to book the agreement review call, Equal Housing logo) live in
+  `tools/owner_packet/assets/`. Swap a file there to update it.
+
