@@ -37,6 +37,8 @@ services:
         value: listing-input@dspropertiesnc.com   # Listing Input Sheet sends from this alias
       - key: RENEWALS_DB
         value: /var/data/renewals.db              # saved renewal proposals (on the disk above)
+      - key: OWNER_PACKETS_DB
+        value: /var/data/owner_packets.db         # saved owner packets + shared packet pricing (same disk)
       - key: RENTVINE_ACCOUNT
         value: dossspauldingpropertiesllc         # the subdomain in your Rentvine URL
       - key: RENTVINE_API_KEY

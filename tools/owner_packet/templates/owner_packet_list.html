@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Owner Packets — Doss &amp; Spaulding{% endblock %}
+{% block nav %}<a href="/">&larr; All tools</a>{% endblock %}
+{% block style %}
+  h1{color:var(--accent-dark);margin:6px 0 2px;font-size:24px}
+  .lead{color:var(--gray);font-size:14px;margin:0 0 16px}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .bar form{flex:1 1 260px;display:flex;gap:8px}
+  .bar input{flex:1;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:15px;background:#fff;min-width:0}
+  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:10px;border:0;
+       background:var(--accent);color:#fff;font-weight:700;font-size:15px;text-decoration:none;cursor:pointer}
+  .btn.ghost{background:#fff;color:var(--accent-dark);border:1px solid var(--line)}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:14px}
+  th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);padding:10px 12px;border-bottom:2px solid var(--accent)}
+  td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+  td a{color:var(--accent-dark);font-weight:700;text-decoration:none}
+  .props{color:var(--gray);font-size:13px;margin-top:3px}
+  .st{display:inline-block;font-size:12px;padding:3px 9px;border-radius:20px;background:var(--sub);color:var(--accent-dark);font-weight:600;white-space:nowrap}
+  .del{background:none;border:0;color:#8a2f25;font-size:13px;cursor:pointer;padding:4px}
+  .empty{background:#fff;border:1px dashed var(--line);border-radius:12px;padding:28px;text-align:center;color:var(--gray)}
+  .warn{background:#fbf3e2;border:1px solid #e6cfa0;color:#7a5b1a;padding:10px 12px;border-radius:10px;font-size:13px;margin-bottom:14px}
+  .scroll{overflow-x:auto}
+  @media (max-width:600px){.hide-sm{display:none}}
+{% endblock %}
+{% block content %}
+  <h1>Owner Packets</h1>
+  <p class="lead">Rental analysis and management proposals for prospective owners. Every packet saves here automatically.</p>
+  {% if not persistent %}<div class="warn">Packets aren't on a persistent disk yet, so saved packets are wiped on each deploy. Set <b>OWNER_PACKETS_DB</b> (see README).</div>{% endif %}
+  <div class="bar">
+    <form method="get"><label for="q" style="position:absolute;left:-9999px">Search packets</label>
+      <input id="q" name="q" value="{{ q }}" placeholder="Search by owner or address"><button class="btn ghost" type="submit">Search</button></form>
+    <a class="btn" href="new">+ New packet</a>
+  </div>
+  {% if rows %}
+  <div class="scroll"><table>
+    <thead><tr><th>Owner &amp; properties</th><th>Type</th><th class="hide-sm">Updated</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr id="row-{{ r.id }}">
+        <td><a href="p/{{ r.id }}">{{ r.owner or "Untitled packet" }}</a><div class="props">{{ r.properties }}</div></td>
+        <td><span class="st">{{ r.mode }}</span></td>
+        <td class="hide-sm">{{ r.updated_at[:10] }}</td>
+        <td><button class="del" type="button" data-id="{{ r.id }}" data-owner="{{ r.owner or 'this packet' }}">Delete</button></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+    <div class="empty">{% if q %}No packets match “{{ q }}”.{% else %}No packets yet. Start one with <b>+ New packet</b>.{% endif %}</div>
+  {% endif %}
+<script>
+document.querySelectorAll(".del").forEach(b => b.onclick = async () => {
+  if (!confirm("Delete the packet for " + b.dataset.owner + "? This can't be undone.")) return;
+  const r = await fetch("api/packets/" + b.dataset.id, { method: "DELETE" });
+  if (r.ok) document.getElementById("row-" + b.dataset.id).remove();
+  else alert("Couldn't delete it. Try again.");
+});
+</script>
+{% endblock %}

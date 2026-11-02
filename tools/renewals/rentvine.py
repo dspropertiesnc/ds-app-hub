@@ -232,19 +232,25 @@ def _normalize(rec):
     }
 
 
-def _all_leases(force=False):
+def all_rows(force=False):
+    """Every lease on the account, closed ones included (the owner packet uses closed leases to
+    find homes that are vacant right now). Cached together with the open-lease list below."""
     with _lock:
-        if not force and _cache["rows"] is not None and time.time() - _cache["at"] < CACHE_SECONDS:
-            return _cache["rows"]
+        if not force and _cache.get("all") is not None and time.time() - _cache["at"] < CACHE_SECONDS:
+            return _cache["all"]
         rows = []
         for page in range(1, MAX_PAGES + 1):
             batch = _records(_get("/leases/export", {"page": page, "pageSize": PAGE_SIZE}))
             rows.extend(_normalize(r) for r in batch if isinstance(r, dict))
             if len(batch) < PAGE_SIZE:
                 break
-        rows = [r for r in rows if not r["closed"]]
-        _cache.update(at=time.time(), rows=rows)
+        _cache.update(at=time.time(), all=rows, rows=[r for r in rows if not r["closed"]])
         return rows
+
+
+def _all_leases(force=False):
+    all_rows(force)
+    return _cache["rows"]
 
 
 def _fill_rent(rows):
