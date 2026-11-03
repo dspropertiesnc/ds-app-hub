@@ -78,6 +78,22 @@ def analyze(files, hint=""):
     out = _parse_json(raw)
     if not isinstance(out, dict):
         raise RuntimeError("The reports came back in a format the app couldn't use. Try again.")
+    # The first pass sees every comp in the reports, so its blurb can mention homes that never make the
+    # owner's table. Rewrite it from only the comps shown, with exact size differences.
+    try:
+        s = out.get("subject") or {}
+        comps = [c for c in (out.get("comps") or []) if isinstance(c, dict)]
+        shown = [c for c in comps if c.get("pick")] or comps[:4]
+        if shown and out.get("recommendedLow") and out.get("recommendedHigh"):
+            out["blurb"] = redraft({
+                "street": s.get("street"), "beds": s.get("beds"), "baths": s.get("baths"), "sqft": s.get("sqft"),
+                "type": s.get("homeType"), "year": s.get("yearBuilt"),
+                "recLow": out.get("recommendedLow"), "recHigh": out.get("recommendedHigh"),
+                "estimates": out.get("estimates") or [],
+                "comps": [dict(c, checked=True, dist=c.get("distanceMi")) for c in shown[:6]],
+            })
+    except Exception:
+        pass  # keep the first-pass blurb; the review screen flags any comp it mentions that isn't shown
     return out
 
 
@@ -88,16 +104,37 @@ def _money(v):
         return "$?"
 
 
+def _num(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _size_note(subject_sqft, comp_sqft):
+    s, c = _num(subject_sqft), _num(comp_sqft)
+    if not s or not c:
+        return "size unknown"
+    diff = int(round(c - s))
+    if abs(diff) < 50:
+        return "about the same size as this home"
+    return "%s sq ft %s than this home" % (format(abs(diff), ","), "smaller" if diff < 0 else "larger")
+
+
 def redraft(d):
-    """Rewrite the 2-3 sentence owner explanation from the comps currently checked."""
-    comps = "\n".join("%s: %s bed / %s bath, %s sq ft, %s mi away, %s" % (
+    """Rewrite the 2-3 sentence owner explanation from the comps currently checked (the ones the owner sees)."""
+    shown = [c for c in (d.get("comps") or []) if c.get("checked")]
+    comps = "\n".join("%s: %s bed / %s bath, %s sq ft (%s), %s mi away, %s%s" % (
         c.get("address", ""), c.get("beds", "?"), c.get("baths", "?"), c.get("sqft", "?"),
-        c.get("dist", "?"), _money(c.get("rent"))) for c in (d.get("comps") or []) if c.get("checked"))
+        _size_note(d.get("sqft"), c.get("sqft")), c.get("dist", "?"), _money(c.get("rent")),
+        (", " + c["status"]) if c.get("status") else "") for c in shown)
     ests = "\n".join("%s: %s" % (e.get("source", ""), _money(e.get("value"))) for e in (d.get("estimates") or []))
     prompt = ("Write 2 or 3 plain sentences (at most 55 words) to a property owner explaining why we recommend "
               "%s to %s per month for %s, a %s bed / %s bath, %s sq ft %s built %s. Point to specific comps below "
-              "and how this home compares in size, age, or location. Friendly and factual, no hype, no dashes as "
-              "punctuation. Reply with only the sentences.\n%s\nComps:\n%s\nAutomated estimates:\n%s") % (
+              "and how this home compares in size, age, or location. Mention ONLY comps from the list below, by the "
+              "addresses shown; the owner sees exactly these in a table. Use the size note in parentheses for every size "
+              "comparison and never call a smaller comp larger. If every comp is smaller than this home, say so: it supports "
+              "the range. Friendly and factual, no hype, no dashes as punctuation. Reply with only the sentences.\n%s\nComps:\n%s\nAutomated estimates:\n%s") % (
         _money(d.get("recLow")), _money(d.get("recHigh")), d.get("street", "this home"), d.get("beds", "?"),
         d.get("baths", "?"), d.get("sqft", "?"), d.get("type", "home"), d.get("year", "?"), EXAMPLES, comps, ests)
     msg = _client().messages.create(model=MODEL, max_tokens=400, messages=[{"role": "user", "content": prompt}])

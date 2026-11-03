@@ -324,6 +324,8 @@ table.ed select{padding:6px 4px;font-size:13px;border-color:transparent;backgrou
 .rvh small{display:block;color:var(--muted);font-size:12px}
 .rvtag{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--gold-soft);white-space:nowrap}
 .rvtag.vac{background:#e9f1ea;color:var(--ok)}
+/* html2canvas measures tabular digits wrong ("$1 ,950"); the image export uses normal digits */
+#export-host .num,#export-host .num *{font-variant-numeric:normal!important}
 #print-host{display:none}
 @media print{
   @page{size:letter;margin:0}
@@ -389,7 +391,7 @@ function listJoin(a){ if(a.length<2) return a.join(""); if(a.length===2) return 
 const DEFAULT_SETTINGS = {
   t1: 10, t2min: 4, t2: 9, t3min: 10, t3: 8,
   placementPct: 50, onboarding: 250, reserve: 500, renewal: 150, utility: 75,
-  approval: 500, projPct: 10, projMax: 1500,
+  approval: 500, projPct: 10, projMax: 1500, writFee: 50,
   statProps: "100+", statVac: "150+", googleRating: "5.0", statReviews: "25", statYears: "12+"
 };
 let SETTINGS = {...DEFAULT_SETTINGS};
@@ -720,6 +722,9 @@ function renderReview(){
     const bad = S.skipAnalysis ? null : S.props.find(p => p.data.recLow==null || p.data.recHigh==null);
     if(!S.owner.trim()){ toast("Add the owner's name first."); $("#r-owner").focus(); return; }
     if(bad){ toast(`Set a recommended rent range for ${bad.data.street || "every property"}.`); return; }
+    const off = S.skipAnalysis ? null : S.props.find(p => blurbIssues(p.data).length);
+    if(off && !S._blurbWarned){ S._blurbWarned = true; toast(`The explanation for ${off.data.street || "a property"} mentions a comp that isn't in its table. Click Preview again to continue anyway.`); rerenderProp(S.props.indexOf(off)); return; }
+    S._blurbWarned = false;
     S.step=3; save(); render(); window.scrollTo(0,0);
   };
   const exs = $("#p-exidx"); if(exs) exs.onchange = () => { S.exampleIdx = +exs.value; S.exampleRent = null; save(); renderReview(); };
@@ -780,8 +785,23 @@ function propReview(p,i,multi){
       <div class="actions"><h3 class="sub">Explanation for the owner</h3>${CAP.sample ? `<button class="btn ghost sm" data-redraft="${i}" type="button">Rewrite from current comps</button>` : ""}</div>
       <textarea id="d-blurb-${p.id}" data-k="props.${i}.data.blurb" style="min-height:100px">${esc(d.blurb)}</textarea>
       <span class="hint" id="bl-st-${p.id}">This goes in the dark box next to the recommended rent. About 2 to 3 sentences fits best.</span>
+      ${(() => { const iss = blurbIssues(d); return iss.length ? `<div class="flags"><b>Check the explanation</b><ul><li>It mentions ${esc(listJoin(iss))}, which ${iss.length > 1 ? "aren't" : "isn't"} in the comps table. Click “Rewrite from current comps” or edit it.</li></ul></div>` : ""; })()}
     </div>
   </section>`;
+}
+/* ---------- explanation vs comps check ---------- */
+const SUF = {Street:"st",St:"st",Drive:"dr",Dr:"dr",Court:"ct",Ct:"ct",Road:"rd",Rd:"rd",Avenue:"ave",Ave:"ave",Lane:"ln",Ln:"ln",Way:"way",Trail:"trl",Trl:"trl",Place:"pl",Pl:"pl",Boulevard:"blvd",Blvd:"blvd",Circle:"cir",Cir:"cir",Parkway:"pkwy",Pkwy:"pkwy",Terrace:"ter",Ter:"ter",Loop:"loop",Run:"run",Cove:"cv",Cv:"cv",Point:"pt",Pt:"pt"};
+const streetRe = () => new RegExp(`\\b(\\d{1,6}\\s+)?((?:[A-Z][A-Za-z']+\\s+){1,3})(${Object.keys(SUF).join("|")})\\b\\.?`, "g");
+function streetsIn(text){
+  const out = []; let m; const re = streetRe();
+  while((m = re.exec(text || ""))){ out.push({ text: m[0].replace(/\.$/,"").trim(), num: (m[1]||"").trim(), key: m[2].trim().toLowerCase() + " " + SUF[m[3]] }); }
+  return out;
+}
+function blurbIssues(d){
+  if(!d || !d.blurb) return [];
+  const known = d.comps.filter(c => c.checked).map(c => c.address).concat([d.street]).flatMap(streetsIn);
+  const keys = new Set(known.map(s => s.key)), full = new Set(known.map(s => s.num + " " + s.key));
+  return [...new Set(streetsIn(d.blurb).filter(s => !keys.has(s.key) || (s.num && !full.has(s.num + " " + s.key))).map(s => s.text))];
 }
 function wireProp(p,i){
   const sec = document.getElementById("pr-"+p.id);
@@ -804,7 +824,8 @@ async function redraft(p,i,btn){
   try{
     const { text } = await api("/api/redraft", jsonPost(d));
     d.blurb = text.trim().replace(/^"|"$/g,""); document.getElementById("d-blurb-"+p.id).value = d.blurb; save();
-    st.textContent = "Rewritten. Edit it however you like.";
+    rerenderProp(i);
+    document.getElementById("bl-st-"+p.id).textContent = "Rewritten. Edit it however you like.";
   }catch(e){ st.textContent = e && e.code==="rate_limited" ? "Too many requests right now. Try again in a minute." : "Couldn't rewrite it this time. You can edit the text directly."; }
   btn.disabled = false;
 }
@@ -1056,7 +1077,7 @@ function pricingBody(){
     ${fee("Utility setup","per vacancy, if we set up utilities",money(st.utility))}
     ${fee("Routine repair markup","no markup on vendor invoices","$0")}
     ${fee("Project oversight","large unit turns, renovations and jobs where we gather multiple bids",`${st.projPct}%, max ${money(st.projMax)}`)}
-    ${fee("Evictions","included in your management fee","Court fees only")}
+    ${fee("Evictions","filing and court appearances included; writ of possession only if needed",`Court fees + ${money(st.writFee)} writ`)}
   </div>`;
 }
 function faqBody(){
@@ -1168,7 +1189,7 @@ function openSettings(){
     <h3 class="sub">Management fee tiers</h3>
     <div class="row">${f("t1","Tier 1 %",st.t1,'step="0.5"')}${f("t2min","Tier 2 starts at",st.t2min)}${f("t2","Tier 2 %",st.t2,'step="0.5"')}${f("t3min","Tier 3 starts at",st.t3min)}${f("t3","Tier 3 %",st.t3,'step="0.5"')}</div>
     <h3 class="sub">Fees</h3>
-    <div class="row">${f("placementPct","Placement % of 1st month",st.placementPct)}${f("onboarding","Onboarding $",st.onboarding)}${f("reserve","Reserve $",st.reserve)}${f("renewal","Renewal $",st.renewal)}${f("utility","Utility setup $",st.utility)}${f("approval","Repair approval over $",st.approval)}${f("projPct","Project fee %",st.projPct)}${f("projMax","Project fee max $",st.projMax)}</div>
+    <div class="row">${f("placementPct","Placement % of 1st month",st.placementPct)}${f("onboarding","Onboarding $",st.onboarding)}${f("reserve","Reserve $",st.reserve)}${f("renewal","Renewal $",st.renewal)}${f("utility","Utility setup $",st.utility)}${f("approval","Repair approval over $",st.approval)}${f("projPct","Project fee %",st.projPct)}${f("projMax","Project fee max $",st.projMax)}${f("writFee","Writ of possession $",st.writFee)}</div>
     <h3 class="sub">Company stats (Who we are page)</h3>
     <div class="row">${f("statProps","Properties managed",st.statProps)}${f("statVac","Vacancies filled",st.statVac)}${f("googleRating","Google rating",st.googleRating)}${f("statReviews","Google reviews",st.statReviews)}${f("statYears","Years experience",st.statYears)}</div>
     <div id="st-msg" class="hint" hidden></div>
