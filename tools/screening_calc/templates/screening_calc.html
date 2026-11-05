@@ -103,6 +103,8 @@
 
   <div class="band">4 · Rental history and credit</div>
   <div class="card">
+    <label class="f">Average credit score (household)<span class="h">Same average Boom uses. Under 650 caps at Upper Conditional.</span><input type="number" id="creditScore" inputmode="numeric" min="300" max="850" step="1"></label>
+    <div class="chk"><input type="checkbox" id="noCredit"><div>No credit score (thin or no file)<small>Upper Conditional at best.</small></div></div>
     <label class="f">Months of verifiable rental or mortgage history (last 5 years)<span class="h">Landlord reference, ledger, or mortgage history on the credit report. Under 24 caps at Upper Conditional.</span><input type="number" id="historyMonths" inputmode="numeric" min="0" max="60"></label>
     <label class="f">Qualifying eviction filings in last 7 years<span class="h">Nonpayment or breach, matched to the applicant by address, not won by the tenant. Holdover filings don't count. 1 = Lower Conditional max; 2+ = Does not meet.</span><input type="number" id="filings" inputmode="numeric" min="0" step="1" value="0"></label>
     <div class="chk"><input type="checkbox" id="utilityCollection"><div>Unpaid utility collection<small>Upper Conditional at best.</small></div></div>
@@ -179,8 +181,8 @@
 (function(){
   const $ = id => document.getElementById(id);
   const C = window.ScreeningCalc, money = C.money;
-  const CHECKS = ['hasVoucher','utilityCollection','evictionJudgment','landlordBalance','sexOffender','identityFraud','felony','suspectedFraud','dvFiling','international','otherPm','guarantorNC','pre_incomeVerified','pre_allAdults','pre_ncSearch','pre_identity'];
-  const FIELDS = ['property','applicantNames','rent','score','voucher','a_cash','a_sale','a_brokerage','a_retirement','historyMonths','filings','guaranteeType','guarantorIncome'];
+  const CHECKS = ['noCredit','hasVoucher','utilityCollection','evictionJudgment','landlordBalance','sexOffender','identityFraud','felony','suspectedFraud','dvFiling','international','otherPm','guarantorNC','pre_incomeVerified','pre_allAdults','pre_ncSearch','pre_identity'];
+  const FIELDS = ['property','applicantNames','rent','score','voucher','a_cash','a_sale','a_brokerage','a_retirement','historyMonths','creditScore','filings','guaranteeType','guarantorIncome'];
 
   function addIncome(v){
     const d=document.createElement('div'); d.className='inc';
@@ -200,7 +202,7 @@
       hasVoucher:$('hasVoucher').checked, voucher:$('voucher').value,
       incomes:[...document.querySelectorAll('.incv')].map(i=>i.value),
       assets:{cash:$('a_cash').value, sale:$('a_sale').value, brokerage:$('a_brokerage').value, retirement:$('a_retirement').value},
-      historyMonths:$('historyMonths').value, filings:$('filings').value,
+      historyMonths:$('historyMonths').value, creditScore:$('creditScore').value, noCredit:$('noCredit').checked, filings:$('filings').value,
       utilityCollection:$('utilityCollection').checked,
       evictionJudgment:$('evictionJudgment').checked, landlordBalance:$('landlordBalance').checked,
       sexOffender:$('sexOffender').checked, identityFraud:$('identityFraud').checked,

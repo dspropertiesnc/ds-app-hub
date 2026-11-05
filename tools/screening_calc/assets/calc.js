@@ -9,6 +9,7 @@
     assetMonths: 12,            // asset depletion divisor
     assetPct: { cash: 1.0, sale: 1.0, brokerage: 0.7, retirement: 0.6 },
     historyMonthsMin: 24,       // verifiable rental/mortgage months in last 5 yrs
+    creditMin: 650,             // average credit score below this caps at Upper Conditional
     depositMonths: { approve: 1, upper: 1.5, lower: 2 },
     depositCap: 2
   };
@@ -95,6 +96,15 @@
     // caps
     var filings = Math.max(0, Math.floor(num(inp.filings)));
     if (filings === 1) { r.caps.push("1 qualifying eviction filing: Lower Conditional at best"); band = worse(band, "lower"); }
+    var credit = inp.creditScore;
+    var creditKnown = String(credit == null ? "" : credit).trim() !== "";
+    if (inp.noCredit) {
+      r.caps.push("No credit score: Upper Conditional at best"); band = worse(band, "upper");
+    } else if (creditKnown && num(credit) < RULES.creditMin) {
+      r.caps.push("Average credit score under 650: Upper Conditional at best"); band = worse(band, "upper");
+    } else if (!creditKnown) {
+      r.warnings.push("Enter the average credit score (or check No credit score).");
+    }
     if (inp.utilityCollection) { r.caps.push("Unpaid utility collection: Upper Conditional at best"); band = worse(band, "upper"); }
     var hist = inp.historyMonths;
     var histKnown = String(hist == null ? "" : hist).trim() !== "";
@@ -164,7 +174,7 @@
     var who = (inp.applicantNames || "").trim();
     var prop = (inp.property || "").trim();
     L.push("*Screening calc*" + (prop ? " · " + prop : "") + (who ? " (" + who + ")" : ""));
-    L.push("Boom score: " + (r.score || 0) + " → " + BAND_LABEL[r.startBand] + (r.band !== r.startBand ? " → final: " + r.bandLabel : ""));
+    L.push((inp.noCredit ? "Credit: no score · " : (String(inp.creditScore||"").trim() ? "Credit (avg): " + inp.creditScore + " · " : "")) + "Boom score: " + (r.score || 0) + " → " + BAND_LABEL[r.startBand] + (r.band !== r.startBand ? " → final: " + r.bandLabel : ""));
     var i = r.income;
     var base = i.voucher > 0 ? "tenant portion " + money(i.tenantPortion) + " (rent " + money(i.rent) + ", voucher " + money(i.voucher) + ")" : "rent " + money(i.rent);
     L.push("Income: " + money(i.total) + "/mo vs " + money(i.required) + " required (3x " + base + ") = " + i.ratio.toFixed(2) + "x · " + (i.meets ? "MEETS" : "SHORT by " + money(i.shortfall) + "/mo"));

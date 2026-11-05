@@ -161,8 +161,8 @@ storage until "Clear all").
 - Guarantee: required whenever income is still under 3x. Qualified guarantor = NC resident, income at least
   4x the full rent, passes the same screening; or TheGuarantors.
 - Band from the Boom score: over 7.0 Approve, 5.5 to 7.0 Upper Conditional, 4.1 to 5.4 Lower Conditional,
-  4.0 or less Decline. Caps (best band allowed): 1 qualifying filing = Lower; unpaid utility collection or
-  under 24 months of verifiable rental/mortgage history = Upper. Knockouts: eviction judgment, 2+ qualifying
+  4.0 or less Decline. Caps (best band allowed): 1 qualifying filing = Lower; unpaid utility collection,
+  average credit score under 650 (or no score), or under 24 months of verifiable rental/mortgage history = Upper. Knockouts: eviction judgment, 2+ qualifying
   filings, unpaid landlord balance, sex offender registration, PM-confirmed identity fraud.
 - Deposit by final band: Approve 1 month, Upper 1.5, Lower 2 (never over 2).
 - Builds a Slack summary to paste into the application thread.

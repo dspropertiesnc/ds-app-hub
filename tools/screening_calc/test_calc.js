@@ -1,7 +1,7 @@
 const C=require('./assets/calc.js');
 const assert=require('assert');
 const pre={incomeVerified:1,allAdults:1,ncSearch:1,identity:1};
-function run(o){return C.compute(Object.assign({prechecks:pre,historyMonths:60},o));}
+function run(o){return C.compute(Object.assign({prechecks:pre,historyMonths:60,creditScore:700},o));}
 let r=run({rent:2000,incomes:[6000],score:8});
 assert.equal(r.band,'approve');assert.equal(r.flag,'Meets criteria');assert.equal(r.deposit.months,1);assert(!r.guarantee.required);
 r=run({rent:2000,incomes:[3000],assets:{cash:36000},score:8});
@@ -17,5 +17,9 @@ r=run({rent:2000,incomes:[4000],score:6,guaranteeType:'guarantor',guarantorIncom
 r=run({rent:2000,incomes:[4000],score:6,guaranteeType:'guarantor',guarantorIncome:7999,guarantorNC:true}); assert(!r.guarantee.ok);
 assert.equal(C.bandFromScore(7.0),'upper');assert.equal(C.bandFromScore(7.1),'approve');assert.equal(C.bandFromScore(5.5),'upper');assert.equal(C.bandFromScore(5.4),'lower');assert.equal(C.bandFromScore(4.1),'lower');assert.equal(C.bandFromScore(4.0),'decline');
 r=run({rent:2000,incomes:[6000],score:4.5,utilityCollection:true}); assert.equal(r.band,'lower');
+r=run({rent:2000,incomes:[6000],score:8,creditScore:649}); assert.equal(r.band,'upper');
+r=run({rent:2000,incomes:[6000],score:8,creditScore:650}); assert.equal(r.band,'approve');
+r=run({rent:2000,incomes:[6000],score:8,creditScore:'',noCredit:true}); assert.equal(r.band,'upper');
+r=run({rent:2000,incomes:[6000],score:5,creditScore:600}); assert.equal(r.band,'lower');
 console.log(C.summary({property:'123 Main St',applicantNames:'A. Smith'},run({rent:2000,incomes:[3000],assets:{cash:20000,brokerage:10000},score:6.2,filings:1,guaranteeType:'theguarantors'})));
 console.log('ALL TESTS PASS');
