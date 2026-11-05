@@ -8,6 +8,7 @@ from tools.eviction import bp as eviction_bp, META as EVICTION_META
 from tools.listing_input import bp as listing_input_bp, META as LISTING_INPUT_META
 from tools.renewals import bp as renewals_bp, META as RENEWALS_META
 from tools.owner_packet import bp as owner_packet_bp, META as OWNER_PACKET_META
+from tools.screening_calc import bp as screening_calc_bp, META as SCREENING_CALC_META
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24).hex())
@@ -22,12 +23,13 @@ app.register_blueprint(eviction_bp)
 app.register_blueprint(listing_input_bp)
 app.register_blueprint(renewals_bp)
 app.register_blueprint(owner_packet_bp)
+app.register_blueprint(screening_calc_bp)
 
 # ---- Tool registry, grouped by workflow. Add a card here for each new tool. ----
 TOOL_GROUPS = [
     {"group": "Maintenance & Turns", "items": [MAKEREADY_META, PUNCHLIST_META]},
     {"group": "Marketing", "items": [LISTING_INPUT_META, LISTINGS_META]},
-    {"group": "Leasing & Contracts", "items": [RENEWALS_META, CONTRACTS_META, EVICTION_META]},
+    {"group": "Leasing & Contracts", "items": [SCREENING_CALC_META, RENEWALS_META, CONTRACTS_META, EVICTION_META]},
     {"group": "New Business", "items": [OWNER_PACKET_META]},
 ]
 

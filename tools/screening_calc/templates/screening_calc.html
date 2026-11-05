@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Screening Calculator — Doss &amp; Spaulding</title>
+<style>
+  :root{--accent:#a78147;--accent-dark:#8f6c3c;--sub:#efe7d9;--gray:#666;--line:#e6e0d6;--dark:#6b4f22;
+        --ok:#2e7d32;--okbg:#e8f3e9;--bad:#b3261e;--badbg:#fbe9e7;--warn:#7a5b1a;--warnbg:#fbf3e2;}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#f7f5f1;color:#1a1a1a}
+  .topbar{background:#fff;border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:12px}
+  .topbar img{height:30px}
+  .topbar a{color:var(--accent-dark);text-decoration:none;font-size:13px;font-weight:600}
+  .topbar .sp{flex:1}
+  header.h{background:var(--accent);color:#fff;padding:16px}
+  header.h h1{font-size:18px;margin:0}
+  header.h p{margin:4px 0 0;font-size:12px;opacity:.9}
+  main{max-width:1100px;margin:0 auto;padding:16px}
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:18px;align-items:start}
+  @media (max-width:860px){.layout{grid-template-columns:1fr}}
+  .band{background:var(--accent);color:#fff;font-weight:700;font-size:12.5px;padding:7px 12px;border-radius:10px 10px 0 0;text-transform:uppercase;letter-spacing:.03em}
+  .card{background:#fff;border:1px solid var(--line);border-top:0;border-radius:0 0 12px 12px;padding:12px 14px;margin-bottom:14px}
+  .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  label.f{display:block;font-size:12.5px;font-weight:600;color:#333;margin-bottom:8px}
+  label.f span.h{display:block;font-weight:400;color:var(--gray);font-size:11.5px;margin-top:2px}
+  input[type=text],input[type=number],select{width:100%;margin-top:4px;padding:9px 10px;border:1px solid #d9d2c5;border-radius:8px;font-size:15px;background:#fff}
+  input:focus,select:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+  .chk{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;padding:6px 0;border-bottom:1px solid #f1ece3}
+  .chk:last-child{border-bottom:0}
+  .chk input{margin-top:3px;width:17px;height:17px;accent-color:var(--accent)}
+  .chk small{display:block;color:var(--gray);font-size:11.5px}
+  .inc{display:flex;gap:8px;align-items:end;margin-bottom:6px}
+  .inc input{margin-top:0}
+  .inc .rm{background:none;border:0;color:var(--bad);font-size:20px;cursor:pointer;padding:6px}
+  .btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;font-size:14px;cursor:pointer}
+  .btn.ghost{background:#fff;color:var(--accent-dark);border:1px solid var(--accent)}
+  .note{font-size:12px;color:var(--gray);margin:4px 0 0}
+  .sticky{position:sticky;top:12px}
+  .flag{border-radius:12px;padding:14px;margin-bottom:12px;font-weight:700;font-size:18px}
+  .flag small{display:block;font-weight:500;font-size:12.5px;margin-top:3px}
+  .f-ok{background:var(--okbg);color:var(--ok);border:1px solid #b9dcbc}
+  .f-cond{background:var(--warnbg);color:var(--warn);border:1px solid #e6cfa0}
+  .f-bad{background:var(--badbg);color:var(--bad);border:1px solid #f0c1bb}
+  .f-pm{background:#e8eef7;color:#1f3a5f;border:1px solid #bfd0e8}
+  table.k{width:100%;border-collapse:collapse;font-size:13.5px}
+  table.k td{padding:6px 0;border-bottom:1px solid var(--line);vertical-align:top}
+  table.k td:last-child{text-align:right;font-weight:600}
+  .pill{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:20px}
+  .p-ok{background:var(--okbg);color:var(--ok)} .p-bad{background:var(--badbg);color:var(--bad)}
+  ul.l{margin:6px 0 0;padding-left:18px;font-size:13px}
+  ul.l li{margin:3px 0}
+  .sec-t{font-size:12px;font-weight:700;text-transform:uppercase;color:var(--accent-dark);margin:12px 0 2px;letter-spacing:.03em}
+  textarea{width:100%;min-height:170px;font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:10px;border:1px solid #d9d2c5;border-radius:8px;background:#fcfbf8}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/"><img src="/static/logo.png" alt="Doss &amp; Spaulding"></a>
+  <span class="sp"></span>
+  <a href="/">&larr; All tools</a>
+</div>
+<header class="h">
+  <h1>Screening Calculator</h1>
+  <p>Applies SOP - Tenant Screening v1.3, Section 3A. You screen and recommend; the PM decides.</p>
+</header>
+<main>
+<div class="layout">
+<div>
+
+  <div class="band">1 · Application</div>
+  <div class="card">
+    <div class="row">
+      <label class="f">Property<input type="text" id="property" placeholder="102 Wafco Ln D"></label>
+      <label class="f">Applicant name(s)<input type="text" id="applicantNames" placeholder="Horak / Burns"></label>
+    </div>
+    <div class="row">
+      <label class="f">Monthly rent ($)<input type="number" id="rent" inputmode="decimal" min="0" step="1"></label>
+      <label class="f">Boom score (0–10)<input type="number" id="score" inputmode="decimal" min="0" max="10" step="0.1"></label>
+    </div>
+    <div class="chk"><input type="checkbox" id="hasVoucher"><div>Housing voucher (Section 8 / HAP)<small>Income is measured against the tenant's portion.</small></div></div>
+    <div id="voucherBox" class="hide"><label class="f">Voucher (HAP) amount per month ($)<input type="number" id="voucher" inputmode="decimal" min="0"></label></div>
+  </div>
+
+  <div class="band">2 · Income (gross monthly, every adult)</div>
+  <div class="card">
+    <div id="incomes"></div>
+    <button class="btn ghost" type="button" id="addInc">+ Add adult</button>
+    <p class="note">Use income verified from actual documents (Step 5), not the amount the applicant reported.</p>
+  </div>
+
+  <div class="band">3 · Liquid assets (only if short on income)</div>
+  <div class="card">
+    <div class="row">
+      <label class="f">Checking / savings / CDs<span class="h">Counts at 100%</span><input type="number" id="a_cash" inputmode="decimal" min="0"></label>
+      <label class="f">Home-sale proceeds<span class="h">100% · closing statement + deposit</span><input type="number" id="a_sale" inputmode="decimal" min="0"></label>
+      <label class="f">Brokerage (stocks, bonds, funds)<span class="h">Counts at 70%</span><input type="number" id="a_brokerage" inputmode="decimal" min="0"></label>
+      <label class="f">Retirement (401k, IRA)<span class="h">Counts at 60%</span><input type="number" id="a_retirement" inputmode="decimal" min="0"></label>
+    </div>
+    <p class="note">Don't count crypto, real estate equity, vehicles, or business ownership. Need the 2 most recent full statements per account.</p>
+  </div>
+
+  <div class="band">4 · Rental history and credit</div>
+  <div class="card">
+    <label class="f">Months of verifiable rental or mortgage history (last 5 years)<span class="h">Landlord reference, ledger, or mortgage history on the credit report. Under 24 caps at Upper Conditional.</span><input type="number" id="historyMonths" inputmode="numeric" min="0" max="60"></label>
+    <label class="f">Qualifying eviction filings in last 7 years<span class="h">Nonpayment or breach, matched to the applicant by address, not won by the tenant. Holdover filings don't count. 1 = Lower Conditional max; 2+ = Does not meet.</span><input type="number" id="filings" inputmode="numeric" min="0" step="1" value="0"></label>
+    <div class="chk"><input type="checkbox" id="utilityCollection"><div>Unpaid utility collection<small>Upper Conditional at best.</small></div></div>
+  </div>
+
+  <div class="band">5 · Knockouts (Does not meet criteria)</div>
+  <div class="card">
+    <div class="chk"><input type="checkbox" id="evictionJudgment"><div>Eviction judgment within 7 years</div></div>
+    <div class="chk"><input type="checkbox" id="landlordBalance"><div>Unpaid balance owed to a previous landlord<small>Including landlord/rental collections.</small></div></div>
+    <div class="chk"><input type="checkbox" id="sexOffender"><div>Lifetime sex offender registration</div></div>
+    <div class="chk"><input type="checkbox" id="identityFraud"><div>Identity fraud, confirmed by the PM</div></div>
+  </div>
+
+  <div class="band">6 · Needs PM judgment</div>
+  <div class="card">
+    <div class="chk"><input type="checkbox" id="felony"><div>Felony conviction within 7 years in a listed category<small>Violent, sexual, arson/property damage, theft, fraud, drug-related. Record offense and dates.</small></div></div>
+    <div class="chk"><input type="checkbox" id="suspectedFraud"><div>Suspected identity fraud (not yet confirmed)</div></div>
+    <div class="chk"><input type="checkbox" id="dvFiling"><div>Applicant says a filing was related to domestic violence</div></div>
+    <div class="chk"><input type="checkbox" id="international"><div>International applicant (relocating from abroad)</div></div>
+    <div class="chk"><input type="checkbox" id="otherPm"><div>Something the rules don't clearly cover</div></div>
+  </div>
+
+  <div class="band">7 · Guarantee (only if income is under 3x)</div>
+  <div class="card" id="gCard">
+    <p class="note" id="gNote">Not needed: income meets 3x.</p>
+    <div id="gFields" class="hide">
+      <label class="f">Guarantee type<select id="guaranteeType">
+        <option value="none">Not provided yet</option>
+        <option value="guarantor">Qualified guarantor</option>
+        <option value="theguarantors">TheGuarantors</option>
+      </select></label>
+      <div id="guarantorBox" class="hide">
+        <label class="f">Guarantor gross monthly income ($)<span class="h" id="gReq"></span><input type="number" id="guarantorIncome" inputmode="decimal" min="0"></label>
+        <div class="chk"><input type="checkbox" id="guarantorNC"><div>Guarantor lives in North Carolina</div></div>
+        <p class="note">The guarantor also has to pass the same screening.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="band">Before you rely on the score</div>
+  <div class="card">
+    <div class="chk"><input type="checkbox" id="pre_incomeVerified"><div>Income in Boom is verified or re-verified from actual documents</div></div>
+    <div class="chk"><input type="checkbox" id="pre_allAdults"><div>Every adult has applied and paid the $70 fee</div></div>
+    <div class="chk"><input type="checkbox" id="pre_ncSearch"><div>NC court search done for every adult</div></div>
+    <div class="chk"><input type="checkbox" id="pre_identity"><div>Identity verification passed (or re-verified)</div></div>
+  </div>
+  <button class="btn ghost" type="button" id="reset">Clear all</button>
+</div>
+
+<div class="sticky">
+  <div id="flag" class="flag f-pm">Enter rent and Boom score<small>Results update as you type.</small></div>
+  <div class="band">Results</div>
+  <div class="card">
+    <div class="sec-t">Income</div>
+    <table class="k" id="incTable"></table>
+    <div class="sec-t">Band</div>
+    <table class="k" id="bandTable"></table>
+    <div id="lists"></div>
+    <div class="sec-t">Conditions</div>
+    <div id="conds" style="font-size:13.5px"></div>
+  </div>
+  <div class="band">Slack summary</div>
+  <div class="card">
+    <textarea id="summary" readonly></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn" type="button" id="copy">Copy for Slack</button><span id="copied" class="note" style="align-self:center"></span></div>
+    <p class="note">Paste into the application's Slack thread with your screening summary.</p>
+  </div>
+</div>
+</div>
+</main>
+
+<script src="{{ url_for('screening_calc.assets', name='calc.js') }}"></script>
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const C = window.ScreeningCalc, money = C.money;
+  const CHECKS = ['hasVoucher','utilityCollection','evictionJudgment','landlordBalance','sexOffender','identityFraud','felony','suspectedFraud','dvFiling','international','otherPm','guarantorNC','pre_incomeVerified','pre_allAdults','pre_ncSearch','pre_identity'];
+  const FIELDS = ['property','applicantNames','rent','score','voucher','a_cash','a_sale','a_brokerage','a_retirement','historyMonths','filings','guaranteeType','guarantorIncome'];
+
+  function addIncome(v){
+    const d=document.createElement('div'); d.className='inc';
+    const n=$('incomes').children.length+1;
+    d.innerHTML='<label class="f" style="flex:1;margin:0">Adult '+n+'<input type="number" inputmode="decimal" min="0" class="incv"></label><button type="button" class="rm" title="Remove">&times;</button>';
+    d.querySelector('input').value=v||'';
+    d.querySelector('.rm').onclick=()=>{ d.remove(); relabel(); update(); };
+    d.querySelector('input').addEventListener('input',update);
+    $('incomes').appendChild(d);
+  }
+  function relabel(){ [...$('incomes').children].forEach((d,i)=>{ d.querySelector('label').firstChild.nodeValue='Adult '+(i+1); }); }
+
+  function gather(){
+    return {
+      property:$('property').value, applicantNames:$('applicantNames').value,
+      rent:$('rent').value, score:$('score').value,
+      hasVoucher:$('hasVoucher').checked, voucher:$('voucher').value,
+      incomes:[...document.querySelectorAll('.incv')].map(i=>i.value),
+      assets:{cash:$('a_cash').value, sale:$('a_sale').value, brokerage:$('a_brokerage').value, retirement:$('a_retirement').value},
+      historyMonths:$('historyMonths').value, filings:$('filings').value,
+      utilityCollection:$('utilityCollection').checked,
+      evictionJudgment:$('evictionJudgment').checked, landlordBalance:$('landlordBalance').checked,
+      sexOffender:$('sexOffender').checked, identityFraud:$('identityFraud').checked,
+      felony:$('felony').checked, suspectedFraud:$('suspectedFraud').checked, dvFiling:$('dvFiling').checked,
+      international:$('international').checked, otherPm:$('otherPm').checked,
+      guaranteeType:$('guaranteeType').value, guarantorIncome:$('guarantorIncome').value, guarantorNC:$('guarantorNC').checked,
+      prechecks:{incomeVerified:$('pre_incomeVerified').checked, allAdults:$('pre_allAdults').checked, ncSearch:$('pre_ncSearch').checked, identity:$('pre_identity').checked}
+    };
+  }
+  const tr=(k,v)=>'<tr><td>'+k+'</td><td>'+v+'</td></tr>';
+  const pill=(ok,a,b)=>'<span class="pill '+(ok?'p-ok':'p-bad')+'">'+(ok?a:b)+'</span>';
+  const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  function list(title,arr){ return arr.length ? '<div class="sec-t">'+title+'</div><ul class="l">'+arr.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>' : ''; }
+
+  function update(){
+    $('voucherBox').classList.toggle('hide', !$('hasVoucher').checked);
+    const inp=gather(), r=C.compute(inp), i=r.income, g=r.guarantee;
+    // flag
+    const f=$('flag'); const ready = Number(inp.rent)>0 && String(inp.score).trim()!=='';
+    if(!ready){ f.className='flag f-pm'; f.innerHTML='Enter rent and Boom score<small>Results update as you type.</small>'; }
+    else {
+      const cls = r.flag.startsWith('Does not') ? 'f-bad' : r.flag.startsWith('Needs') ? 'f-pm' : r.flag.startsWith('Conditional') ? 'f-cond' : 'f-ok';
+      f.className='flag '+cls; f.innerHTML=esc(r.flag)+'<small>'+esc(r.bandLabel)+(r.deposit?' · deposit '+r.deposit.months+' month'+(r.deposit.months===1?'':'s')+' ('+money(r.deposit.total)+')':'')+(g.required?' · guarantee required':'')+'</small>';
+    }
+    // income
+    let h='';
+    if(i.voucher>0) h+=tr('Tenant portion', money(i.tenantPortion)+' <span class="note">('+money(i.rent)+' − '+money(i.voucher)+')</span>');
+    h+=tr('Required (3x)', money(i.required));
+    h+=tr('Earned income', money(i.earned));
+    if(i.eligibleAssets>0) h+=tr('Asset income', money(i.assetIncome)+' <span class="note">('+money(i.eligibleAssets)+' ÷ 12)</span>');
+    h+=tr('Total qualifying', money(i.total)+' · '+(i.ratio?i.ratio.toFixed(2):'0.00')+'x');
+    h+=tr('3x test', pill(i.meets,'Meets','Short '+money(i.shortfall)+'/mo'));
+    if(!i.meets && i.shortfall>0) h+=tr('Eligible assets to cover gap', money(i.eligibleAssetsToCover));
+    $('incTable').innerHTML=h;
+    // band
+    let b=tr('Boom score band', ready? esc(({approve:'Approve',upper:'Upper Conditional',lower:'Lower Conditional',decline:'Decline'})[r.startBand]) : '—');
+    b+=tr('Final band', ready? '<b>'+esc(r.bandLabel)+'</b>' : '—');
+    $('bandTable').innerHTML=b;
+    $('lists').innerHTML = list('Knockouts',r.knockouts)+list('Caps applied',r.caps)+list('Needs PM judgment',r.pm)+list('Open items',r.warnings);
+    // guarantee card
+    $('gNote').textContent = g.required ? 'Required: income is under 3x. Applicant picks a qualified guarantor or TheGuarantors.' : 'Not needed: income meets 3x.';
+    $('gFields').classList.toggle('hide', !g.required);
+    $('guarantorBox').classList.toggle('hide', $('guaranteeType').value!=='guarantor');
+    $('gReq').textContent = 'Needs at least '+money(g.guarantorRequiredIncome)+' (4x rent)';
+    // conditions
+    let c='';
+    if(!ready) c='<span class="note">—</span>';
+    else if(!r.deposit) c='<span class="note">None: the file does not meet criteria.</span>';
+    else {
+      c='<table class="k">'+tr('Total security deposit', r.deposit.months+' mo = '+money(r.deposit.total))+(r.deposit.additional>0?tr('Above standard 1 month', money(r.deposit.additional)):'');
+      if(g.required){
+        let gs='Not provided';
+        if(g.type==='theguarantors') gs='TheGuarantors (their approval)';
+        if(g.type==='guarantor') gs = pill(g.guarantorIncomeOk,'4x OK','Under 4x')+' '+pill(g.guarantorNcOk,'NC','Not NC');
+        c+=tr('Lease guarantee', gs);
+      }
+      c+='</table><p class="note">Total deposit never exceeds 2 months\' rent. The PM confirms conditions and sends the outcome.</p>';
+    }
+    $('conds').innerHTML=c;
+    $('summary').value = ready ? C.summary(inp,r) : '';
+    save();
+  }
+
+  // per-browser draft (convenience only)
+  const KEY='ds-screening-calc';
+  function save(){ try{ const s={}; FIELDS.forEach(k=>s[k]=$(k).value); CHECKS.forEach(k=>s[k]=$(k).checked); s.incomes=[...document.querySelectorAll('.incv')].map(i=>i.value); localStorage.setItem(KEY,JSON.stringify(s)); }catch(e){} }
+  function load(){ let s=null; try{ s=JSON.parse(localStorage.getItem(KEY)||'null'); }catch(e){}
+    if(s){ FIELDS.forEach(k=>{ if(s[k]!=null) $(k).value=s[k]; }); CHECKS.forEach(k=>$(k).checked=!!s[k]); (s.incomes&&s.incomes.length?s.incomes:['']).forEach(v=>addIncome(v)); }
+    else addIncome(''); }
+
+  FIELDS.forEach(k=>{ $(k).addEventListener('input',update); $(k).addEventListener('change',update); });
+  CHECKS.forEach(k=>$(k).addEventListener('change',update));
+  $('addInc').onclick=()=>{ addIncome(''); update(); };
+  $('reset').onclick=()=>{ if(!confirm('Clear every field?')) return; try{localStorage.removeItem(KEY);}catch(e){} location.reload(); };
+  $('copy').onclick=async()=>{ const t=$('summary').value; if(!t) return; try{ await navigator.clipboard.writeText(t); }catch(e){ $('summary').select(); document.execCommand('copy'); } $('copied').textContent='Copied'; setTimeout(()=>$('copied').textContent='',1500); };
+  load(); update();
+})();
+</script>
+</body>
+</html>
