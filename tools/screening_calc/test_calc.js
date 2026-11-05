@@ -1,0 +1,21 @@
+const C=require('./assets/calc.js');
+const assert=require('assert');
+const pre={incomeVerified:1,allAdults:1,ncSearch:1,identity:1};
+function run(o){return C.compute(Object.assign({prechecks:pre,historyMonths:60},o));}
+let r=run({rent:2000,incomes:[6000],score:8});
+assert.equal(r.band,'approve');assert.equal(r.flag,'Meets criteria');assert.equal(r.deposit.months,1);assert(!r.guarantee.required);
+r=run({rent:2000,incomes:[3000],assets:{cash:36000},score:8});
+assert(r.income.meets);assert(r.income.assetQualified);assert.equal(r.flag,'Needs PM judgment');
+r=run({rent:2000,incomes:[0],assets:{cash:72000},score:8}); assert(r.income.meets);
+r=run({rent:2000,incomes:[0],assets:{retirement:100000},score:8}); assert.equal(Math.round(r.income.assetIncome),5000); assert(!r.income.meets); assert.equal(r.income.eligibleAssetsToCover,12000);
+r=run({rent:2000,hasVoucher:true,voucher:1500,incomes:[1500],score:6}); assert(r.income.meets); assert.equal(r.band,'upper'); assert.equal(r.deposit.total,3000);
+r=run({rent:2000,incomes:[6000],score:8,filings:1}); assert.equal(r.band,'lower'); assert.equal(r.deposit.months,2); assert.equal(r.flag,'Conditional, lower');
+r=run({rent:2000,incomes:[6000],score:8,filings:2}); assert.equal(r.flag,'Does not meet criteria'); assert.equal(r.deposit,null);
+r=run({rent:2000,incomes:[6000],score:8,utilityCollection:true}); assert.equal(r.band,'upper');
+r=run({rent:2000,incomes:[6000],score:8,historyMonths:12}); assert.equal(r.band,'upper');
+r=run({rent:2000,incomes:[4000],score:6,guaranteeType:'guarantor',guarantorIncome:8000,guarantorNC:true}); assert(r.guarantee.required); assert(r.guarantee.ok);
+r=run({rent:2000,incomes:[4000],score:6,guaranteeType:'guarantor',guarantorIncome:7999,guarantorNC:true}); assert(!r.guarantee.ok);
+assert.equal(C.bandFromScore(7.0),'upper');assert.equal(C.bandFromScore(7.1),'approve');assert.equal(C.bandFromScore(5.5),'upper');assert.equal(C.bandFromScore(5.4),'lower');assert.equal(C.bandFromScore(4.1),'lower');assert.equal(C.bandFromScore(4.0),'decline');
+r=run({rent:2000,incomes:[6000],score:4.5,utilityCollection:true}); assert.equal(r.band,'lower');
+console.log(C.summary({property:'123 Main St',applicantNames:'A. Smith'},run({rent:2000,incomes:[3000],assets:{cash:20000,brokerage:10000},score:6.2,filings:1,guaranteeType:'theguarantors'})));
+console.log('ALL TESTS PASS');

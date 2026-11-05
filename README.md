@@ -149,3 +149,23 @@ analysis, who we are, process, what we handle, pricing, guarantees & FAQ, next s
 - Images (SVG logo, headshots, QR code to book the agreement review call, Equal Housing logo) live in
   `tools/owner_packet/assets/`. Swap a file there to update it.
 
+
+## Screening Calculator (/screening-calc/)
+Applies **SOP - Tenant Screening v1.3, Section 3A** so every VA gets the same answer. Runs entirely in the
+browser: no API keys, no database, nothing stored on the server (a draft is kept in the browser's local
+storage until "Clear all").
+
+- Income test: combined verified income vs 3x rent (3x the tenant's portion for voucher holders).
+- Asset depletion: cash and home-sale proceeds at 100%, brokerage 70%, retirement 60%, divided by 12 and
+  added to income. Meeting 3x only through assets flags **Needs PM judgment** (Boom's score excludes assets).
+- Guarantee: required whenever income is still under 3x. Qualified guarantor = NC resident, income at least
+  4x the full rent, passes the same screening; or TheGuarantors.
+- Band from the Boom score: over 7.0 Approve, 5.5 to 7.0 Upper Conditional, 4.1 to 5.4 Lower Conditional,
+  4.0 or less Decline. Caps (best band allowed): 1 qualifying filing = Lower; unpaid utility collection or
+  under 24 months of verifiable rental/mortgage history = Upper. Knockouts: eviction judgment, 2+ qualifying
+  filings, unpaid landlord balance, sex offender registration, PM-confirmed identity fraud.
+- Deposit by final band: Approve 1 month, Upper 1.5, Lower 2 (never over 2).
+- Builds a Slack summary to paste into the application thread.
+
+All rule numbers live at the top of `tools/screening_calc/assets/calc.js` (`RULES`). Change them there when
+the criteria change, and run `node tools/screening_calc/test_calc.js` to check the logic.
