@@ -391,7 +391,7 @@ function listJoin(a){ if(a.length<2) return a.join(""); if(a.length===2) return 
 const DEFAULT_SETTINGS = {
   t1: 10, t2min: 4, t2: 9, t3min: 10, t3: 8,
   placementPct: 50, onboarding: 250, reserve: 500, renewal: 150, utility: 75,
-  approval: 500, projPct: 10, projMax: 1500, writFee: 50,
+  approval: 500, projPct: 10, projMax: 1500, writFee: 75,
   statProps: "100+", statVac: "150+", googleRating: "5.0", statReviews: "25", statYears: "12+"
 };
 let SETTINGS = {...DEFAULT_SETTINGS};
@@ -1016,7 +1016,7 @@ function processBody(){
     step(7,"Screening","Every applicant undergoes background, credit and eviction checks, and we verify income and rental history. The same criteria apply to everyone."))}
   ${phase(3,"Move in &amp; beyond","Ongoing",
     step(8,"Lease &amp; move-in","We review the lease with your tenant before signing, collect all move-in funds, and have your tenant complete a detailed move-in condition report.")+
-    step(9,"Ongoing management","We collect rent, coordinate maintenance, conduct routine walkthroughs, and post everything to your owner portal in real time."))}
+    step(9,"Ongoing management","We collect rent, coordinate maintenance, walk through your home before every lease renewal, and post everything to your owner portal in real time."))}
   </div>
   <div class="dark yourpart"><b>YOUR PART</b><span>Sign the agreement, approve any big ticket repairs, and watch the rent come in. We handle everything else.</span></div>`;
 }
@@ -1030,9 +1030,9 @@ function handleBody(){
   ${c("Screening &amp; placement",["Background, credit and eviction checks, plus verified income and rental history","Lease prepared and reviewed with your tenant","Deposits and move-in funds collected","Move-in condition documented"])}
   ${c("Rent &amp; accounting",["Online rent collection and late pay follow-up","Income and expense tracking per property","Monthly statements and electronic payouts","Year-end statement and 1099 by January 31"])}
   ${c("Maintenance &amp; repairs",["Emergencies dispatched same day","Trusted, insured local vendors","Preventive and routine property upkeep",`Your approval before any repair over ${ap}`])}
-  ${c("Walkthroughs &amp; compliance",["Initial walkthrough with photos","Detailed pre-renewal walkthroughs","Move-out walkthrough and deposit accounting","City, county, HOA and lease compliance"])}
+  ${c("Walkthroughs &amp; inspections",["Initial walkthrough with photos","Detailed inspection and punch list between tenants","Walkthrough before every lease renewal","Tenant move-in and move-out condition reports"])}
   ${c("Tenant relations",["Tenant questions and requests answered","Renewals with rental rate analysis","Lease violation notices and follow-through","Move-out coordination"])}
-  ${c("Legal &amp; evictions",["Notices served correctly under NC law","Eviction filing and court appearances, if needed","Current on NC landlord-tenant law","Backed by our Eviction Protection guarantee"])}
+  ${c("Legal &amp; evictions",["Notices served correctly under NC law","Eviction filing and court appearances, if needed","City, county, HOA and lease compliance","Backed by our Eviction Protection guarantee"])}
   ${c("Owner communication",["Response to every request within 24 hours","Owner portal with 24/7 access","Updates on the decisions that matter","A local team that knows your home"])}
   </div>`;
 }
@@ -1095,7 +1095,7 @@ function faqBody(){
   <div class="faq">
     ${f("My home already has a tenant. Can you take it over?","Yes. We take over the existing lease, there's no placement fee, and management starts in month 1.")}
     ${f("Who approves repairs?",`We will contact you for approval before any repair over ${ap}. The only exception is an emergency that has to be handled right away to protect your home or your tenant.`)}
-    ${f("How often do you check on my home?","We aim for a detailed walkthrough with photos twice a year, and we always do one before a lease renewal.")}
+    ${f("How often do you check on my home?","A full walkthrough when you sign on, a detailed inspection between tenants, and a walkthrough before every lease renewal. Tenants also complete move-in and move-out condition reports.")}
     ${f("When do I get paid?","We send owner distributions on the 15th of every month.")}
     ${f("Do I need to change my insurance?","Make sure it's a landlord policy, not an owner-occupied homeowner's policy, and add Doss &amp; Spaulding Properties LLC as an additional insured.")}
     ${f("Can I sell while you're managing it?","Yes. We can list your property for you at a discounted rate, or, if an agent referred you to us, we will honor your prior agent-client relationship.")}
