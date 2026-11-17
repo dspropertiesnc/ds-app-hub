@@ -76,7 +76,8 @@ def _clean(d):
         "paid_date": _date(d.get("paid_date")),
         "paid_method": _s(d, "paid_method", 40),
         "notes": _s(d, "notes", 1000),
-        "vendor": {k: _s(v, k) for k in ("name", "address", "city_line", "phone", "email", "rentvine_id")},
+        "vendor": dict({k: _s(v, k) for k in ("name", "address", "city_line", "phone", "email", "rentvine_id")},
+                       authorized=bool(v.get("authorized"))),
         "service": {k: _s(s, k) for k in ("address", "city_line", "tenant", "owner")},
         "items": items,
         "keep_photos": [secure_filename(x) for x in (d.get("keep_photos") or []) if isinstance(x, str)],
@@ -86,6 +87,9 @@ def _clean(d):
         errs.append("Enter the vendor's name.")
     if not items:
         errs.append("Add at least one line item.")
+    if not doc["vendor"]["authorized"]:
+        errs.append("Confirm the vendor has asked us to prepare their invoices (checkbox under Vendor). "
+                    "If they haven't, ask them for their own invoice instead.")
     if doc["paid"] and not doc["paid_date"]:
         errs.append("Enter the date it was paid (or switch to Unpaid).")
     if not doc["number"]:

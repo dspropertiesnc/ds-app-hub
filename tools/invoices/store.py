@@ -37,6 +37,9 @@ def init():
         c.execute("""CREATE TABLE IF NOT EXISTS vendors (
             id TEXT PRIMARY KEY, name TEXT UNIQUE COLLATE NOCASE, address TEXT, city_line TEXT,
             phone TEXT, email TEXT, rentvine_id TEXT, updated_at TEXT)""")
+        cols = [r["name"] for r in c.execute("PRAGMA table_info(vendors)").fetchall()]
+        if "authorized" not in cols:   # vendor has asked us to prepare their invoices
+            c.execute("ALTER TABLE vendors ADD COLUMN authorized INTEGER DEFAULT 0")
 
 
 def persistent():
@@ -122,7 +125,7 @@ def delete(iid):
 def vendors():
     with _conn() as c:
         return [dict(r) for r in c.execute(
-            "SELECT id, name, address, city_line, phone, email, rentvine_id FROM vendors ORDER BY name").fetchall()]
+            "SELECT id, name, address, city_line, phone, email, rentvine_id, authorized FROM vendors ORDER BY name").fetchall()]
 
 
 def upsert_vendor(v):
@@ -135,15 +138,16 @@ def upsert_vendor(v):
         if row:
             # only overwrite a saved field when the new value isn't blank
             merged = {k: (v.get(k) or row[k] or "") for k in ("address", "city_line", "phone", "email", "rentvine_id")}
-            c.execute("""UPDATE vendors SET address=?, city_line=?, phone=?, email=?, rentvine_id=?, updated_at=?
-                         WHERE id=?""", (merged["address"], merged["city_line"], merged["phone"],
-                                         merged["email"], str(merged["rentvine_id"] or ""), now, row["id"]))
+            c.execute("""UPDATE vendors SET address=?, city_line=?, phone=?, email=?, rentvine_id=?, updated_at=?,
+                         authorized=? WHERE id=?""", (merged["address"], merged["city_line"], merged["phone"],
+                                         merged["email"], str(merged["rentvine_id"] or ""), now,
+                                         1 if v.get("authorized") else (row["authorized"] or 0), row["id"]))
             return row["id"]
         vid = uuid.uuid4().hex[:10]
-        c.execute("""INSERT INTO vendors (id, name, address, city_line, phone, email, rentvine_id, updated_at)
-                     VALUES (?,?,?,?,?,?,?,?)""",
+        c.execute("""INSERT INTO vendors (id, name, address, city_line, phone, email, rentvine_id, updated_at, authorized)
+                     VALUES (?,?,?,?,?,?,?,?,?)""",
                   (vid, name, v.get("address", ""), v.get("city_line", ""), v.get("phone", ""),
-                   v.get("email", ""), str(v.get("rentvine_id") or ""), now))
+                   v.get("email", ""), str(v.get("rentvine_id") or ""), now, 1 if v.get("authorized") else 0))
         return vid
 
 
