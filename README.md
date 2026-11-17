@@ -151,24 +151,37 @@ analysis, who we are, process, what we handle, pricing, guarantees & FAQ, next s
 
 
 ## Screening Calculator (/screening-calc/)
-Applies **SOP - Tenant Screening v1.3, Section 3A** so every VA gets the same answer. Runs entirely in the
-browser: no API keys, no database, nothing stored on the server (a draft is kept in the browser's local
-storage until "Clear all").
+Applies **SOP - Tenant Screening v1.3** with the **D&S weighted score** (Nov 2026) so every application is
+scored the same way, then builds a **1-page Tenant Screening Record (PDF)** to attach to the application.
+The calculator runs in the browser; the server only lays out the PDF and stores nothing (a draft is kept in
+the browser's local storage until "Clear all").
 
-- Income test: combined verified income vs 3x rent (3x the tenant's portion for voucher holders).
-- Asset depletion: cash and home-sale proceeds at 100%, brokerage 70%, retirement 60%, divided by 12 and
-  added to income. Meeting 3x only through assets flags **Needs PM judgment** (Boom's score excludes assets).
+- **Weighted score (0-10)** from the Boom results. Each factor scores 0-10, times its weight:
+  income to rent 40% (3x or more = 10, 2.5x = 5, 2x = 2, under 2x = 0; nothing extra above 3x),
+  credit 30% (lowest adult; 750+ = 10, 700s = 8, 650s = 6, 600s = 4, 550s = 2, under 550 = 0; no score = 4
+  plus PM review), rental/mortgage history 15% (24+ months = 10, 12-23 = 5, under 12 = 0), collections 10%
+  (none = 10, general = 6, utility = 2), eviction filings 5% (none = 10, 1 = 3).
+  Boom's own score is optional and printed for reference only.
+- Band from the weighted score: over 7.0 Approve, 5.5 to 7.0 Upper Conditional, 4.1 to 5.4 Lower Conditional,
+  4.0 or less Decline. Caps (best band allowed): income under 3x, credit under 650, unpaid utility collection,
+  or under 24 months of history = Upper; 1 qualifying filing = Lower. Knockouts: eviction judgment, 2+
+  qualifying filings, unpaid landlord balance, sex offender registration, PM-confirmed identity fraud.
+- Income test: combined verified income vs 3x rent (3x the tenant's portion for voucher holders; a voucher
+  that covers the full rent passes). Asset depletion: cash and home-sale proceeds at 100%, brokerage 70%,
+  retirement 60%, divided by 12 and added to income. Meeting 3x only through assets flags PM review.
 - Guarantee: required whenever income is still under 3x. Qualified guarantor = NC resident, income at least
   4x the full rent, passes the same screening; or TheGuarantors.
-- Band from the Boom score: over 7.0 Approve, 5.5 to 7.0 Upper Conditional, 4.1 to 5.4 Lower Conditional,
-  4.0 or less Decline. Caps (best band allowed): 1 qualifying filing = Lower; unpaid utility collection or
-  under 24 months of verifiable rental/mortgage history = Upper. Knockouts: eviction judgment, 2+ qualifying
-  filings, unpaid landlord balance, sex offender registration, PM-confirmed identity fraud.
 - Deposit by final band: Approve 1 month, Upper 1.5, Lower 2 (never over 2).
-- Builds a Slack summary to paste into the application thread.
+- Criminal history is never part of the score: it's a PM review item (individual assessment).
+- **Screening record**: processed by, final decision, adverse action notice status, notes. Notes are required
+  when the decision differs from the calculator or the file needs PM judgment. The PDF shows the score table,
+  rules applied, income detail, conditions, the reasons, the pre-checks, and the FCRA notice status, and
+  always fits on 1 page (text tightens automatically; notes capped at 700 characters).
+- Also builds a Slack summary to paste into the application thread.
 
-All rule numbers live at the top of `tools/screening_calc/assets/calc.js` (`RULES`). Change them there when
-the criteria change, and run `node tools/screening_calc/test_calc.js` to check the logic.
+Weights and tiers live in `FACTORS`, rule numbers in `RULES`, both at the top of
+`tools/screening_calc/assets/calc.js`. Change them there when the criteria change, and run
+`node tools/screening_calc/test_calc.js` to check the logic. The PDF layout is `tools/screening_calc/record.py`.
 
 
 ## Invoice Generator (/invoices/)
