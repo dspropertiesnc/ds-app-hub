@@ -119,7 +119,7 @@ def _fmt_date(s):
 def build(payload, now=None, fit_check=True):
     """Render the page; if it runs long, retry with tighter text before giving up."""
     inp, r, dec = validate(payload)
-    for fs in (8.5, 7.8, 7.2):
+    for fs in (8.5, 7.8, 7.2, 6.8):
         pdf, fits = _render(inp, r, dec, now, fs)
         if fits:
             return pdf
@@ -130,6 +130,7 @@ def build(payload, now=None, fit_check=True):
 
 def _render(inp, r, dec, now, fs):
     lead = fs * 1.3
+    rowh = 15 if fs >= 8.5 else 13
     now = now or datetime.datetime.now()
     buf = io.BytesIO()
     cv = rl_canvas.Canvas(buf, pagesize=letter)
@@ -176,17 +177,22 @@ def _render(inp, r, dec, now, fs):
     d = dec["decision"]
     fg, bg = {"Approved": (OK, OK_BG), "Approved with conditions": (WARN, WARN_BG),
               "Declined": (BAD, BAD_BG)}.get(d, (MUTED, SUB))
-    bh = 40
+    bh = 58
     cv.setFillColor(bg); cv.setStrokeColor(fg); cv.setLineWidth(0.8)
     cv.roundRect(M, y - bh, CW, bh, 5, stroke=1, fill=1)
-    cv.setFillColor(fg); cv.setFont("Helvetica-Bold", 8); cv.drawString(M + 10, y - 13, "FINAL DECISION")
-    cv.setFont("Helvetica-Bold", 15); cv.drawString(M + 10, y - 31, d)
-    score = _num(r.get("score"))
-    right = "Score %.1f / 10  ·  %s" % (score, _s(r.get("bandLabel")))
-    cv.setFont("Helvetica-Bold", 11); cv.drawRightString(W - M - 10, y - 17, right)
-    cv.setFont("Helvetica", 8.5)
+    cv.setFillColor(fg); cv.setFont("Helvetica-Bold", 8); cv.drawString(M + 10, y - 14, "FINAL DECISION")
+    cv.setFont("Helvetica-Bold", 15); cv.drawString(M + 10, y - 32, d)
     differs = dec["override"] and r.get("recommendation")
-    cv.drawRightString(W - M - 10, y - 31, "Calculator: %s%s" % (_s(r.get("flag")), "  ·  PM decision differs, see notes" if differs else ""))
+    cv.setFillColor(INK); cv.setFont("Helvetica", 8)
+    cv.drawString(M + 10, y - 48, "Calculator: %s%s" % (_s(r.get("flag")), "  ·  differs, see notes" if differs else ""))
+    score = _num(r.get("score"))
+    # score bar on the right half of the banner
+    bx0 = M + CW * 0.47
+    cv.setFillColor(fg); cv.setFont("Helvetica-Bold", 8)
+    cv.drawString(bx0, y - 14, "SCORE")
+    cv.setFillColor(INK); cv.setFont("Helvetica-Bold", 10)
+    cv.drawRightString(W - M - 10, y - 14, "%.1f / 10  ·  %s" % (score, _s(r.get("bandLabel"))))
+    _meter(cv, score, bx0, W - M - 12, y - 30)
     y -= bh + 10
 
     # ---- score table ----
@@ -209,12 +215,12 @@ def _render(inp, r, dec, now, fs):
         cv.setStrokeColor(RULE); cv.setLineWidth(0.5); cv.line(M, y, W - M, y)
         row([f.get("label"), f.get("result"), f.get("tier"), "%g / 10" % _num(f.get("points")),
              "%g%%" % _num(f.get("weight")), "%.2f" % _num(f.get("weighted"))], y - 11)
-        y -= 15
+        y -= rowh
     cv.setStrokeColor(ACCENT); cv.setLineWidth(0.8); cv.line(M, y, W - M, y)
     row(["Weighted score", "Starting band: " + _s(r.get("startBandLabel")), "", "", "100%", "%.1f" % score], y - 12, True)
     y -= 18
     cv.setFillColor(MUTED); cv.setFont("Helvetica", 7.5)
-    cv.drawString(M + 4, y - 7, "Bands: above 7.0 Approve · 5.5 to 7.0 Upper Conditional · 4.1 to 5.4 Lower Conditional · 4.0 or below Decline. "
+    cv.drawString(M + 4, y - 7, "Bands: 0 to 4.0 Decline · 4.1 to 5.4 Lower Conditional · 5.5 to 7.0 Upper Conditional · 7.1 to 10 Approve. "
                   "Caps and knockouts can only lower the band.")
     y -= 16
 
@@ -223,9 +229,14 @@ def _render(inp, r, dec, now, fs):
     half = (CW - 14) / 2
     yl = _section_col(cv, "Income (gross monthly)", M, top, half)
     lines = []
+    credits = r.get("credit") or {}
+    raw = list(inp.get("credits") or [])
     for n, v in enumerate((i.get("incomes") or [])[:6]):
-        if _num(v) > 0:
-            lines.append(("Adult %d" % (n + 1), money(v)))
+        c = _s(raw[n], 4) if n < len(raw) else ""
+        if _num(v) > 0 or c:
+            lines.append(("Adult %d" % (n + 1), money(v) + ("  ·  credit %s" % c if c else "  ·  no credit score" if raw else "")))
+    if credits.get("average") is not None and len(credits.get("scores") or []) > 1:
+        lines.append(("Average credit score", "%d" % _num(credits.get("average"))))
     if _num(i.get("eligibleAssets")) > 0:
         lines.append(("Liquid assets", "%s eligible ÷ 12 = %s" % (money(i.get("eligibleAssets")), money(i.get("assetIncome")))))
     if i.get("voucherFull"):
@@ -238,7 +249,7 @@ def _render(inp, r, dec, now, fs):
     for k, v in lines:
         cv.setFillColor(MUTED); cv.setFont("Helvetica", 8.5); cv.drawString(M + 4, yl - 9, k)
         cv.setFillColor(INK); cv.setFont("Helvetica-Bold", 8.5); cv.drawRightString(M + half - 4, yl - 9, v)
-        yl -= 13
+        yl -= 13 if fs >= 8.5 else 11.5
 
     xr = M + half + 14
     yr = _section_col(cv, "Rules applied", xr, top, half)
@@ -331,8 +342,35 @@ def _render(inp, r, dec, now, fs):
                   % now.strftime("%m/%d/%Y %I:%M %p"))
     cv.drawRightString(W - M, M + 4, "Page 1 of 1")
     fits = y >= M + 20
+    _render.last_y = y
     cv.showPage(); cv.save()
     return buf.getvalue(), fits
+
+
+ZONES = [("decline", 0.0, 4.0, "0 to 4.0", "Decline", colors.HexColor("#e5483f")),
+         ("lower", 4.0, 5.5, "4.1 to 5.4", "Lower Conditional", colors.HexColor("#f08a24")),
+         ("upper", 5.5, 7.0, "5.5 to 7.0", "Upper Conditional", colors.HexColor("#f2b72b")),
+         ("approve", 7.0, 10.0, "7.1 to 10", "Approve", colors.HexColor("#4cbf4a"))]   # mirrors ZONES in calc.js
+
+
+def _meter(cv, score, x0, x1, ty):
+    """0-10 bar with the band zones and a marker at the score; ty is the bar's top edge."""
+    w = x1 - x0
+    bx = lambda v: x0 + w * max(0.0, min(10.0, v)) / 10.0
+    for key, a, b, _, _, col in ZONES:
+        cv.setFillColor(col); cv.rect(bx(a), ty - 7, bx(b) - bx(a), 7, stroke=0, fill=1)
+    mx = bx(score)
+    cv.setFillColor(colors.white); cv.setStrokeColor(INK); cv.setLineWidth(1.2)
+    cv.roundRect(mx - 3.5, ty - 10, 7, 13, 2, stroke=1, fill=1)
+    cv.setFillColor(MUTED); cv.setFont("Helvetica", 7)
+    for v in (0, 4.0, 5.5, 7.0, 10):
+        t = "%g" % v if v in (0, 10) else "%.1f" % v
+        if v == 0:
+            cv.drawString(bx(v), ty - 18, t)
+        elif v == 10:
+            cv.drawRightString(bx(v), ty - 18, t)
+        else:
+            cv.drawCentredString(bx(v), ty - 18, t)
 
 
 def _section_col(cv, title, x, y, w):

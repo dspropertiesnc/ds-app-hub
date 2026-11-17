@@ -53,6 +53,21 @@
   .sec-t{font-size:12px;font-weight:700;text-transform:uppercase;color:var(--accent-dark);margin:12px 0 2px;letter-spacing:.03em}
   textarea{width:100%;min-height:170px;font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:10px;border:1px solid #d9d2c5;border-radius:8px;background:#fcfbf8}
   .hide{display:none}
+  .meter{margin:6px 0 4px}
+  .meter .ticks{position:relative;height:26px;margin:0 6px}
+  .meter .tick{position:absolute;transform:translateX(-50%);background:#f1ede6;border-radius:6px;padding:2px 6px;font-size:12px;font-weight:600;color:#444}
+  .meter .tick:first-child{transform:none;left:-6px!important}
+  .meter .tick:last-child{transform:none;left:auto!important;right:-6px}
+  .meter .track{position:relative;height:12px;border-radius:6px;display:flex;overflow:visible;margin:6px 6px 0}
+  .meter .zone{height:100%}
+  .meter .zone:first-child{border-radius:6px 0 0 6px}.meter .zone:last-child{border-radius:0 6px 6px 0}
+  .meter .pin{position:absolute;top:-7px;width:22px;height:26px;margin-left:-11px;border-radius:6px;background:#fff;border:2px solid #1a1a1a;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .25s}
+  .meter .val{position:absolute;top:24px;transform:translateX(-50%);font-weight:800;font-size:13px;white-space:nowrap;transition:left .25s}
+  .meter .legend{margin-top:30px;font-size:12.5px}
+  .meter .legend div{display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:6px;color:var(--gray)}
+  .meter .legend div.on{background:#f7f3ec;color:#1a1a1a;font-weight:700}
+  .meter .legend i{width:10px;height:10px;border-radius:50%;flex:none}
+  .meter .legend span.r{min-width:74px}
 </style>
 </head>
 <body>
@@ -83,11 +98,12 @@
     <div id="voucherBox" class="hide"><label class="f">Voucher (HAP) amount per month ($)<input type="number" id="voucher" inputmode="decimal" min="0"></label></div>
   </div>
 
-  <div class="band">2 · Income (gross monthly, every adult)</div>
+  <div class="band">2 · Income and credit (every adult)</div>
   <div class="card">
     <div id="incomes"></div>
     <button class="btn ghost" type="button" id="addInc">+ Add adult</button>
-    <p class="note">Use income verified from actual documents (Step 5), not the amount the applicant reported.</p>
+    <p class="note">Gross monthly income verified from actual documents (Step 5), not the amount the applicant reported. Credit score from each adult's Boom report; leave it blank for an adult with no score. The score uses the average of the adults who have one.</p>
+    <div class="chk" style="margin-top:6px"><input type="checkbox" id="noCredit"><div>No adult has a credit score (thin file)<small>Scored like 600 to 649 and sent for PM review.</small></div></div>
   </div>
 
   <div class="band">3 · Liquid assets (only if short on income)</div>
@@ -101,10 +117,9 @@
     <p class="note">Don't count crypto, real estate equity, vehicles, or business ownership. Need the 2 most recent full statements per account.</p>
   </div>
 
-  <div class="band">4 · Credit, rental history and collections</div>
+  <div class="band">4 · Rental history, evictions and collections</div>
   <div class="card">
-    <label class="f">Credit score (lowest of the adults)<span class="h">Under 650 caps at Upper Conditional.</span><input type="number" id="credit" inputmode="numeric" min="300" max="850" step="1"></label>
-    <div class="chk"><input type="checkbox" id="noCredit"><div>No credit score (thin file)<small>Scored like 600 to 649 and sent for PM review.</small></div></div>
+
     <label class="f">Months of verifiable rental or mortgage history (last 5 years)<span class="h">Landlord reference, ledger, or mortgage history on the credit report. Under 24 caps at Upper Conditional.</span><input type="number" id="historyMonths" inputmode="numeric" min="0" max="60"></label>
     <label class="f">Qualifying eviction filings in last 7 years<span class="h">Nonpayment or breach, matched to the applicant by address, not won by the tenant. Holdover filings don't count. 1 = Lower Conditional max; 2+ = Does not meet.</span><input type="number" id="filings" inputmode="numeric" min="0" step="1" value="0"></label>
     <label class="f">Collections<span class="h">Landlord or rental collections are a knockout (section 5). A utility collection caps at Upper Conditional.</span><select id="collections">
@@ -193,6 +208,8 @@
   <div id="flag" class="flag f-pm">Enter rent and Boom score<small>Results update as you type.</small></div>
   <div class="band">Results</div>
   <div class="card">
+    <div class="sec-t" style="margin-top:4px">Score</div>
+    <div id="meter" class="meter"></div>
     <div class="sec-t">D&amp;S score</div>
     <table class="k" id="scoreTable"></table>
     <div class="sec-t">Income</div>
@@ -219,25 +236,28 @@
   const $ = id => document.getElementById(id);
   const C = window.ScreeningCalc, money = C.money;
   const CHECKS = ['hasVoucher','noCredit','evictionJudgment','landlordBalance','sexOffender','identityFraud','felony','suspectedFraud','dvFiling','international','otherPm','guarantorNC','pre_incomeVerified','pre_allAdults','pre_ncSearch','pre_identity'];
-  const FIELDS = ['property','applicantNames','rent','boomScore','credit','collections','voucher','a_cash','a_sale','a_brokerage','a_retirement','historyMonths','filings','guaranteeType','guarantorIncome','decBy','decDate','decDecision','decAan','decAanDate','decNotes'];
+  const FIELDS = ['property','applicantNames','rent','boomScore','collections','voucher','a_cash','a_sale','a_brokerage','a_retirement','historyMonths','filings','guaranteeType','guarantorIncome','decBy','decDate','decDecision','decAan','decAanDate','decNotes'];
 
-  function addIncome(v){
+  function addIncome(v,c){
     const d=document.createElement('div'); d.className='inc';
     const n=$('incomes').children.length+1;
-    d.innerHTML='<label class="f" style="flex:1;margin:0">Adult '+n+'<input type="number" inputmode="decimal" min="0" class="incv"></label><button type="button" class="rm" title="Remove">&times;</button>';
-    d.querySelector('input').value=v||'';
+    d.innerHTML='<label class="f" style="flex:2;margin:0"><span class="an">Adult '+n+'</span> income<input type="number" inputmode="decimal" min="0" class="incv"></label>'+
+      '<label class="f" style="flex:1;margin:0">Credit score<input type="number" inputmode="numeric" min="300" max="850" step="1" class="crv"></label><button type="button" class="rm" title="Remove">&times;</button>';
+    d.querySelector('.incv').value=v||''; d.querySelector('.crv').value=c||'';
+    d.querySelector('.crv').addEventListener('input',update);
     d.querySelector('.rm').onclick=()=>{ d.remove(); relabel(); update(); };
-    d.querySelector('input').addEventListener('input',update);
+    d.querySelector('.incv').addEventListener('input',update);
     $('incomes').appendChild(d);
   }
-  function relabel(){ [...$('incomes').children].forEach((d,i)=>{ d.querySelector('label').firstChild.nodeValue='Adult '+(i+1); }); }
+  function relabel(){ [...$('incomes').children].forEach((d,i)=>{ d.querySelector('.an').textContent='Adult '+(i+1); }); }
 
   function gather(){
     return {
       property:$('property').value, applicantNames:$('applicantNames').value,
-      rent:$('rent').value, boomScore:$('boomScore').value, credit:$('credit').value, noCredit:$('noCredit').checked, collections:$('collections').value,
+      rent:$('rent').value, boomScore:$('boomScore').value, noCredit:$('noCredit').checked, collections:$('collections').value,
       hasVoucher:$('hasVoucher').checked, voucher:$('voucher').value,
       incomes:[...document.querySelectorAll('.incv')].map(i=>i.value),
+      credits:[...document.querySelectorAll('.crv')].map(i=>i.value),
       assets:{cash:$('a_cash').value, sale:$('a_sale').value, brokerage:$('a_brokerage').value, retirement:$('a_retirement').value},
       historyMonths:$('historyMonths').value, filings:$('filings').value,
       evictionJudgment:$('evictionJudgment').checked, landlordBalance:$('landlordBalance').checked,
@@ -263,6 +283,7 @@
       const cls = r.flag.startsWith('Does not') ? 'f-bad' : r.flag.startsWith('Needs') ? 'f-pm' : r.flag.startsWith('Conditional') ? 'f-cond' : 'f-ok';
       f.className='flag '+cls; f.innerHTML=esc(r.flag)+'<small>'+esc(r.bandLabel)+(r.deposit?' · deposit '+r.deposit.months+' month'+(r.deposit.months===1?'':'s')+' ('+money(r.deposit.total)+')':'')+(g.required?' · guarantee required':'')+'</small>';
     }
+    drawMeter(ready ? r.score : null, r.startBand);
     // score
     let sc='';
     r.factors.forEach(x=>{ sc+=tr(esc(x.label)+'<br><span class="note">'+esc(x.result)+(x.tier!==x.result?' · '+esc(x.tier):'')+'</span>', x.points+'/10 <span class="note">× '+x.weight+'%</span>'); });
@@ -307,6 +328,17 @@
     decisionUi(r, ready);
     last = {inp, r};
     save();
+  }
+
+  // ---- score bar ----
+  const ZONE_COLOR={decline:'#e5483f',lower:'#f08a24',upper:'#f2b72b',approve:'#4cbf4a'};
+  function drawMeter(score, band){
+    const pct=v=>(v/10*100)+'%';
+    let h='<div class="ticks">'+[0].concat(C.ZONES.map(z=>z.to)).map(v=>'<span class="tick" style="left:'+pct(v)+'">'+(v===0||v===10?v:v.toFixed(1))+'</span>').join('')+'</div>';
+    h+='<div class="track">'+C.ZONES.map(z=>'<div class="zone" style="width:'+((z.to-z.from)*10)+'%;background:'+ZONE_COLOR[z.band]+'"></div>').join('');
+    if(score!=null) h+='<div class="pin" style="left:'+pct(Math.max(0,Math.min(10,score)))+'"></div><div class="val" style="left:'+pct(Math.max(0.4,Math.min(9.6,score)))+'">'+score.toFixed(1)+'</div>';
+    h+='</div><div class="legend">'+C.ZONES.slice().reverse().map(z=>'<div class="'+(score!=null&&z.band===band?'on':'')+'"><i style="background:'+ZONE_COLOR[z.band]+'"></i><span class="r">'+z.range+'</span>'+z.label+'</div>').join('')+'</div>';
+    $('meter').innerHTML=h;
   }
 
   // ---- decision + record ----
@@ -357,14 +389,14 @@
 
   // per-browser draft (convenience only)
   const KEY='ds-screening-calc';
-  function save(){ try{ const s={}; FIELDS.forEach(k=>s[k]=$(k).value); CHECKS.forEach(k=>s[k]=$(k).checked); s.incomes=[...document.querySelectorAll('.incv')].map(i=>i.value); localStorage.setItem(KEY,JSON.stringify(s)); }catch(e){} }
+  function save(){ try{ const s={}; FIELDS.forEach(k=>s[k]=$(k).value); CHECKS.forEach(k=>s[k]=$(k).checked); s.incomes=[...document.querySelectorAll('.incv')].map(i=>i.value); s.credits=[...document.querySelectorAll('.crv')].map(i=>i.value); localStorage.setItem(KEY,JSON.stringify(s)); }catch(e){} }
   function load(){ let s=null; try{ s=JSON.parse(localStorage.getItem(KEY)||'null'); }catch(e){}
-    if(s){ FIELDS.forEach(k=>{ if(s[k]!=null) $(k).value=s[k]; }); if(s.utilityCollection && !s.collections) $('collections').value='utility'; CHECKS.forEach(k=>$(k).checked=!!s[k]); (s.incomes&&s.incomes.length?s.incomes:['']).forEach(v=>addIncome(v)); }
-    else addIncome(''); }
+    if(s){ FIELDS.forEach(k=>{ if(s[k]!=null) $(k).value=s[k]; }); if(s.utilityCollection && !s.collections) $('collections').value='utility'; CHECKS.forEach(k=>$(k).checked=!!s[k]); (s.incomes&&s.incomes.length?s.incomes:['']).forEach((v,i)=>addIncome(v,(s.credits||[])[i]||(i===0&&s.credit)||'')); }
+    else addIncome('',''); }
 
   FIELDS.forEach(k=>{ $(k).addEventListener('input',update); $(k).addEventListener('change',update); });
   CHECKS.forEach(k=>$(k).addEventListener('change',update));
-  $('addInc').onclick=()=>{ addIncome(''); update(); };
+  $('addInc').onclick=()=>{ addIncome('',''); update(); };
   $('reset').onclick=()=>{ if(!confirm('Clear every field?')) return; try{localStorage.removeItem(KEY);}catch(e){} location.reload(); };
   $('copy').onclick=async()=>{ const t=$('summary').value; if(!t) return; try{ await navigator.clipboard.writeText(t); }catch(e){ $('summary').select(); document.execCommand('copy'); } $('copied').textContent='Copied'; setTimeout(()=>$('copied').textContent='',1500); };
   load(); { const t=new Date(); $('decDate').value=new Date(t.getTime()-t.getTimezoneOffset()*60000).toISOString().slice(0,10); } update();

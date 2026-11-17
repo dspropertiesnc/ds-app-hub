@@ -29,7 +29,7 @@ assert.equal(run({rent:2000,incomes:[3999]}).factors[0].points,0);
 assert.equal(run({rent:2000,incomes:[6000],credit:700}).factors[1].points,8);
 r=run({rent:2000,incomes:[6000],credit:640}); assert.equal(r.factors[1].points,4); assert.equal(r.score,8.2); assert.equal(r.band,'upper');
 r=run({rent:2000,incomes:[6000],credit:520}); assert.equal(r.score,7); assert.equal(r.band,'upper');
-r=run({rent:2000,incomes:[6000],noCredit:true}); assert.equal(r.factors[1].points,4); assert.equal(r.flag,'Needs PM judgment'); assert.equal(r.recommendation,null);
+r=run({rent:2000,incomes:[6000],credit:'',noCredit:true}); assert.equal(r.factors[1].points,4); assert.equal(r.flag,'Needs PM judgment'); assert.equal(r.recommendation,null);
 
 // asset depletion still counts toward 3x
 r=run({rent:2000,incomes:[3000],assets:{cash:36000}});
@@ -59,6 +59,19 @@ assert.equal(C.bandFromScore(7.0),'upper');assert.equal(C.bandFromScore(7.1),'ap
 // weak everywhere lands in decline on score alone
 r=run({rent:2000,incomes:[3000],credit:540,historyMonths:6,collections:'utility',filings:1});
 assert.equal(r.score,0.4); assert.equal(r.band,'decline');
+
+// credit is the average of the adults who have a score
+r=run({rent:2000,incomes:[3000,3000],credits:[720,640]}); assert.equal(r.credit.average,680); assert.equal(r.factors[1].points,6); assert.equal(r.band,'approve');
+r=run({rent:2000,incomes:[3000,3000],credits:[700,580]}); assert.equal(r.credit.average,640); assert.equal(r.band,'upper'); assert(r.caps.some(c=>c.startsWith('Average credit')));
+r=run({rent:2000,incomes:[3000,2000,1000],credits:[700,'',660]}); assert.equal(r.credit.average,680); assert.deepEqual(r.credit.unscored,[2]); assert(r.why.some(w=>w.includes('2 of 3 adults')));
+assert.equal(r.factors[1].result,'Avg 680 (2 of 3 adults)');
+r=run({rent:2000,incomes:[6000,0],credits:['',''],noCredit:true}); assert(r.credit.noScore); assert.equal(r.factors[1].points,4); assert(r.complete);
+r=run({rent:2000,incomes:[6000,0],credits:['','']}); assert(!r.complete); assert(r.missing.includes('credit score'));
+r=run({rent:2000,incomes:[6000,0],credits:['',700],noCredit:true}); assert(!r.credit.noScore); assert.equal(r.credit.average,700);
+
+// zones line up with the band edges
+assert.deepEqual(C.ZONES.map(z=>z.band),['decline','lower','upper','approve']);
+C.ZONES.forEach(z=>{ assert.equal(C.bandFromScore((z.from+z.to)/2),z.band); });
 
 // missing inputs are reported
 r=C.compute({rent:2000,incomes:['']}); assert(!r.complete); assert.deepEqual(r.missing,['income','credit score','months of rental/mortgage history']);

@@ -23,7 +23,7 @@
       { min: 2.5, pts: 5,  text: "2.5x to 2.99x" },
       { min: 2,   pts: 2,  text: "2x to 2.49x" },
       { min: -1,  pts: 0,  text: "Under 2x" } ] },
-    { key: "credit", label: "Credit score (lowest adult)", weight: 30, tiers: [
+    { key: "credit", label: "Credit score (average of adults)", weight: 30, tiers: [
       { min: 750, pts: 10, text: "750+" },
       { min: 700, pts: 8,  text: "700 to 749" },
       { min: 650, pts: 6,  text: "650 to 699" },
@@ -38,12 +38,21 @@
       { min: 2, pts: 10, text: "None" },
       { min: 1, pts: 6,  text: "General only" },
       { min: -1, pts: 2, text: "Utility collection" } ] },
-    { key: "evictions", label: "Eviction filings (7 yrs)", weight: 5, tiers: [
+    { key: "evictions", label: "Eviction filings (last 7 yrs)", weight: 5, tiers: [
       { min: 0, pts: 10, text: "None" },
-      { min: -1, pts: 3, text: "1 qualifying filing" },
-      { min: -99, pts: 0, text: "2+ qualifying filings" } ] }
+      { min: -1, pts: 3, text: "1 filing" },
+      { min: -99, pts: 0, text: "2+ filings" } ] }
   ];
   var NO_CREDIT_PTS = 4; // thin file / no score: treated like 600-649, and flagged for the PM
+
+  // Score bar zones (display) and the band edges they draw from. bandFromScore uses the same edges.
+  var EDGES = { lower: 4.0, upper: 5.5, approve: 7.0 };
+  var ZONES = [
+    { band: "decline", from: 0,             to: EDGES.lower,   range: "0 to 4.0",   label: "Decline" },
+    { band: "lower",   from: EDGES.lower,   to: EDGES.upper,   range: "4.1 to 5.4", label: "Lower Conditional" },
+    { band: "upper",   from: EDGES.upper,   to: EDGES.approve, range: "5.5 to 7.0", label: "Upper Conditional" },
+    { band: "approve", from: EDGES.approve, to: 10,            range: "7.1 to 10",  label: "Approve" }
+  ];
 
   var BAND_ORDER = ["approve", "upper", "lower", "decline"]; // best -> worst
   var BAND_LABEL = {
@@ -66,9 +75,9 @@
     return BAND_ORDER.indexOf(a) >= BAND_ORDER.indexOf(b) ? a : b;
   }
   function bandFromScore(score) {
-    if (score > 7.0) return "approve";
-    if (score >= 5.5) return "upper";
-    if (score > 4.0) return "lower";
+    if (score > EDGES.approve) return "approve";
+    if (score >= EDGES.upper) return "upper";
+    if (score > EDGES.lower) return "lower";
     return "decline";
   }
   function tierFor(factor, value) {
@@ -136,11 +145,20 @@
 
     // ---- factor inputs ----
     var filings = Math.max(0, Math.floor(num(inp.filings)));
-    var noCredit = !!inp.noCredit;
-    var creditKnown = noCredit || !blank(inp.credit);
-    var credit = num(inp.credit);
+    // credit: average of the adults who have a score (blank = that adult has no score)
+    var rawCredits = inp.credits || (blank(inp.credit) ? [] : [inp.credit]);
+    var adults = Math.max((inp.incomes || []).length, rawCredits.length, 1);
+    var scored = [], unscored = [];
+    for (var ci = 0; ci < adults; ci++) {
+      if (blank(rawCredits[ci])) unscored.push(ci + 1); else scored.push(num(rawCredits[ci]));
+    }
+    var noCredit = !!inp.noCredit && scored.length === 0;
+    var credit = scored.length ? scored.reduce(function (x, y) { return x + y; }, 0) / scored.length : 0;
+    credit = Math.round(credit);
+    var creditKnown = noCredit || scored.length > 0;
     if (!creditKnown) r.missing.push("credit score");
-    if (!noCredit && creditKnown && (credit < 300 || credit > 850)) r.warnings.push("Credit score should be between 300 and 850.");
+    if (scored.some(function (c) { return c < 300 || c > 850; })) r.warnings.push("Credit scores should be between 300 and 850.");
+    r.credit = { scores: scored, average: scored.length ? credit : null, unscored: scored.length ? unscored : [], noScore: noCredit };
     var histKnown = !blank(inp.historyMonths);
     var hist = num(inp.historyMonths);
     if (!histKnown) r.missing.push("months of rental/mortgage history");
@@ -159,7 +177,9 @@
     var detail = {
       income: voucherFull ? "Voucher covers the full rent"
         : (ratio ? ratio.toFixed(2) : "0.00") + "x " + (i_base(r.income)),
-      credit: noCredit ? "No credit score" : (creditKnown ? String(Math.round(credit)) : "Not entered"),
+      credit: noCredit ? "No credit score" : (!creditKnown ? "Not entered"
+        : scored.length === 1 && adults === 1 ? String(credit)
+        : "Avg " + credit + " (" + scored.length + " of " + adults + " adults)"),
       history: histKnown ? Math.round(hist) + " months" : "Not entered",
       collections: coll === "utility" ? "Utility collection" : coll === "general" ? "General collection(s)" : "None",
       evictions: filings === 0 ? "None" : filings + " filing" + (filings === 1 ? "" : "s")
@@ -188,10 +208,10 @@
       band = worse(band, "upper");
     }
     if (!noCredit && creditKnown && credit < RULES.creditCapBelow) {
-      r.caps.push("Credit score under 650: Upper Conditional at best");
+      r.caps.push("Average credit score under 650: Upper Conditional at best");
       band = worse(band, "upper");
     }
-    if (filings === 1) { r.caps.push("1 qualifying eviction filing: Lower Conditional at best"); band = worse(band, "lower"); }
+    if (filings === 1) { r.caps.push("1 qualifying eviction filing in the last 7 years: Lower Conditional at best"); band = worse(band, "lower"); }
     if (coll === "utility") { r.caps.push("Unpaid utility collection: Upper Conditional at best"); band = worse(band, "upper"); }
     if (histKnown && hist < RULES.historyMonthsMin) {
       r.caps.push("Under 24 months of verifiable rental/mortgage history: Upper Conditional at best");
@@ -262,6 +282,7 @@
              " (" + ({ approve: "above 7.0", upper: "5.5 to 7.0", lower: "4.1 to 5.4", decline: "4.0 or below" })[startBand] + ").");
     if (r.knockouts.length) why.push("Does not meet criteria: " + r.knockouts.join("; ") + ". A knockout applies regardless of score.");
     else if (band !== startBand) why.push("Final band lowered to " + BAND_LABEL[band] + " by " + (r.caps.length === 1 ? "the cap" : "the " + r.caps.length + " caps") + " listed under Rules applied.");
+    if (r.credit.unscored.length) why.push("Credit average uses " + scored.length + " of " + adults + " adults; Adult " + r.credit.unscored.join(", Adult ") + (r.credit.unscored.length === 1 ? " has" : " have") + " no credit score.");
     if (voucherFull) why.push("The housing voucher covers the full rent, so the 3x income test does not apply.");
     else if (rent > 0 && !meetsIncome) why.push("Qualifying income is " + (ratio || 0).toFixed(2) + "x the " + (voucher > 0 ? "tenant portion" : "rent") + ", " + money(shortfall) + "/mo short of 3x, so a lease guarantee is required.");
     else if (r.income.assetQualified) why.push("Meets 3x only after counting " + money(eligible) + " in eligible liquid assets (÷ 12 = " + money(assetIncome) + "/mo).");
@@ -301,14 +322,14 @@
       else gl += "not yet provided";
       L.push(gl);
     }
-    if (r.deposit) L.push("Deposit: " + r.deposit.months + " months = " + money(r.deposit.total) + (r.deposit.additional > 0 ? " (" + money(r.deposit.additional) + " above standard)" : ""));
+    if (r.deposit) L.push("Deposit: " + r.deposit.months + (r.deposit.months === 1 ? " month" : " months") + " = " + money(r.deposit.total) + (r.deposit.additional > 0 ? " (" + money(r.deposit.additional) + " above standard)" : ""));
     L.push("Flag: *" + r.flag + "*");
     if (r.missing.length) L.push("Missing: " + r.missing.join(", "));
     if (r.warnings.length) L.push("Open items: " + r.warnings.join(" "));
     return L.join("\n");
   }
 
-  var api = { compute: compute, summary: summary, RULES: RULES, FACTORS: FACTORS, money: money,
+  var api = { compute: compute, summary: summary, RULES: RULES, FACTORS: FACTORS, ZONES: ZONES, EDGES: EDGES, money: money,
               bandFromScore: bandFromScore, BAND_LABEL: BAND_LABEL };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.ScreeningCalc = api;
