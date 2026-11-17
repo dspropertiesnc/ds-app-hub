@@ -36,6 +36,8 @@
   .res:hover{border-color:var(--accent)}
   .res b{color:var(--accent-dark)}.res small{display:block;color:var(--gray);font-size:12px;margin-top:2px}
   .tag{font-size:11px;padding:1px 7px;border-radius:20px;background:var(--sub);color:var(--accent-dark);margin-left:6px}
+  .auth{display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-weight:600;font-size:13.5px}
+  .auth input{width:auto;margin-top:3px}
   .del{background:none;border:0;color:#b3261e;font-size:13px;cursor:pointer;margin-top:14px}
   @media(max-width:560px){.grid{grid-template-columns:1fr}.items .it{grid-template-columns:1fr 54px 92px 30px}}
 {% endblock %}
@@ -70,6 +72,8 @@
     <div><label for="v_phone">Phone (optional)</label><input id="v_phone"></div>
     <div><label for="v_email">Email (optional, not printed)</label><input id="v_email"></div>
   </div>
+  <label class="auth"><input type="checkbox" id="v_authorized"> This vendor has asked us to prepare their invoices for them
+    <span class="hint" style="display:block;font-weight:400">The PDF goes out under the vendor's name, so only use it for vendors who've asked (e.g. Jose Hernandez). Remembered for saved vendors.</span></label>
   <div class="hint">Vendors are saved to the list automatically when you save an invoice.</div>
 </div>
 
@@ -79,7 +83,7 @@
     <div><label for="s_address">Property address</label><input id="s_address"></div>
     <div><label for="s_city_line">City, state ZIP</label><input id="s_city_line"></div>
     <div><label for="s_tenant">Tenant (optional)</label><input id="s_tenant"></div>
-    <div><label for="s_owner">Owner (optional)</label><input id="s_owner" placeholder="Prints as &quot;Property Manager for ...&quot;"></div>
+    <div><label for="s_owner">Owner (optional)</label><input id="s_owner" placeholder="Prints under Bill To / Paid By"></div>
   </div>
 </div>
 
@@ -114,7 +118,7 @@
     <div><label for="due_date">Due date (optional)</label><input id="due_date" type="date"></div>
   </div>
   <div style="margin-top:10px"><label for="notes">Note on the invoice (optional)</label>
-    <textarea id="notes" placeholder="Leave blank for &quot;Paid in full to the vendor on [date].&quot;"></textarea></div>
+    <textarea id="notes" placeholder="Leave blank for &quot;Paid in full on [date].&quot;"></textarea></div>
 </div>
 
 <div class="card">
@@ -179,12 +183,15 @@ function collect(){
              vendor: {rentvine_id: state.vendor_rv || ""}, service: {}};
   F.forEach(k => d[k] = $(k).value.trim());
   V.forEach(k => d.vendor[k] = $("v_"+k).value.trim());
+  d.vendor.authorized = $("v_authorized").checked;
   SV.forEach(k => d.service[k] = $("s_"+k).value.trim());
   return d;
 }
 function fill(d){
   F.forEach(k => { if (d[k] != null) $(k).value = d[k]; });
   V.forEach(k => { if (d.vendor && d.vendor[k] != null) $("v_"+k).value = d.vendor[k]; });
+  if (d.vendor && d.vendor.authorized != null) $("v_authorized").checked = !!d.vendor.authorized;
+  else if (d.vendor && d.vendor.name) { const sv = VENDORS.find(x => x.name.toLowerCase() === d.vendor.name.toLowerCase()); $("v_authorized").checked = !!(sv && sv.authorized); }
   SV.forEach(k => { if (d.service && d.service[k] != null) $("s_"+k).value = d.service[k]; });
   if (d.vendor && d.vendor.rentvine_id) state.vendor_rv = d.vendor.rentvine_id;
   if (d.items) { $("items").innerHTML = ""; (d.items.length ? d.items : [null]).forEach(addItem); }
@@ -202,7 +209,8 @@ fetch("/invoices/api/vendors").then(r=>r.json()).then(list => {
 });
 $("vpick").onchange = () => {
   const v = VENDORS.find(x => x.id === $("vpick").value); if (!v) return;
-  V.forEach(k => $("v_"+k).value = v[k] || ""); state.vendor_rv = v.rentvine_id || ""; saveDraft();
+  V.forEach(k => $("v_"+k).value = v[k] || ""); state.vendor_rv = v.rentvine_id || "";
+  $("v_authorized").checked = !!v.authorized; saveDraft();
 };
 
 // invoice number
