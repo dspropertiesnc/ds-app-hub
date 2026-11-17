@@ -23,7 +23,7 @@
       { min: 2.5, pts: 5,  text: "2.5x to 2.99x" },
       { min: 2,   pts: 2,  text: "2x to 2.49x" },
       { min: -1,  pts: 0,  text: "Under 2x" } ] },
-    { key: "credit", label: "Credit score (average of adults)", weight: 30, tiers: [
+    { key: "credit", label: "Credit score (average of adults)", weight: 25, tiers: [
       { min: 750, pts: 10, text: "750+" },
       { min: 700, pts: 8,  text: "700 to 749" },
       { min: 650, pts: 6,  text: "650 to 699" },
@@ -34,14 +34,14 @@
       { min: 24, pts: 10, text: "24+ months" },
       { min: 12, pts: 5,  text: "12 to 23 months" },
       { min: -1, pts: 0,  text: "Under 12 months" } ] },
-    { key: "collections", label: "Collections", weight: 10, tiers: [
+    { key: "collections", label: "Collections", weight: 5, tiers: [
       { min: 2, pts: 10, text: "None" },
       { min: 1, pts: 6,  text: "General only" },
       { min: -1, pts: 2, text: "Utility collection" } ] },
-    { key: "evictions", label: "Eviction filings (last 7 yrs)", weight: 5, tiers: [
-      { min: 0, pts: 10, text: "None" },
-      { min: -1, pts: 3, text: "1 filing" },
-      { min: -99, pts: 0, text: "2+ filings" } ] }
+    { key: "evictions", label: "Eviction filings (last 7 yrs)", weight: 15, tiers: [
+      { min: 2, pts: 10, text: "None" },
+      { min: 1, pts: 4,  text: "1 filing, 3+ yrs ago" },
+      { min: -1, pts: 0, text: "Recent (3 yrs) or 2+" } ] }
   ];
   var NO_CREDIT_PTS = 4; // thin file / no score: treated like 600-649, and flagged for the PM
 
@@ -145,6 +145,9 @@
 
     // ---- factor inputs ----
     var filings = Math.max(0, Math.floor(num(inp.filings)));
+    var currentResFiling = !!inp.currentResidenceFiling;
+    if (currentResFiling && filings === 0) filings = 1;          // that filing is a qualifying filing
+    var recentFiling = filings > 0 && (!!inp.recentFiling || currentResFiling);
     // credit: average of the adults who have a score (blank = that adult has no score)
     var rawCredits = inp.credits || (blank(inp.credit) ? [] : [inp.credit]);
     var adults = Math.max((inp.incomes || []).length, rawCredits.length, 1);
@@ -166,7 +169,7 @@
 
     // ---- weighted score ----
     var collVal = coll === "utility" ? 0 : coll === "general" ? 1 : 2;
-    var evVal = filings === 0 ? 0 : filings === 1 ? -1 : -99;
+    var evVal = filings === 0 ? 2 : (filings === 1 && !recentFiling) ? 1 : 0;
     var values = {
       income: voucherFull ? 99 : ratio,
       credit: credit,
@@ -182,7 +185,8 @@
         : "Avg " + credit + " (" + scored.length + " of " + adults + " adults)"),
       history: histKnown ? Math.round(hist) + " months" : "Not entered",
       collections: coll === "utility" ? "Utility collection" : coll === "general" ? "General collection(s)" : "None",
-      evictions: filings === 0 ? "None" : filings + " filing" + (filings === 1 ? "" : "s")
+      evictions: filings === 0 ? "None" : filings + " filing" + (filings === 1 ? "" : "s") +
+        (currentResFiling ? ", current home" : recentFiling ? ", within 3 yrs" : "")
     };
     var total = 0;
     r.factors = FACTORS.map(function (f) {
@@ -221,6 +225,10 @@
     // ---- knockouts ----
     if (inp.evictionJudgment) r.knockouts.push("Eviction judgment within 7 years");
     if (filings >= 2) r.knockouts.push(filings + " qualifying eviction filings within 7 years");
+    // A filing at the home they're leaving is a knockout. If the applicant says it was related to
+    // domestic violence, it goes to the PM instead (same as every other DV-related filing).
+    if (currentResFiling && !inp.dvFiling) r.knockouts.push("Eviction filing at the applicant's current residence");
+    if (currentResFiling && inp.dvFiling) r.pm.push("Filing at the current residence the applicant says was DV-related (knockout held for PM review)");
     if (inp.landlordBalance) r.knockouts.push("Unpaid balance owed to a previous landlord");
     if (inp.sexOffender) r.knockouts.push("Lifetime sex offender registration");
     if (inp.identityFraud) r.knockouts.push("Identity fraud (confirmed by the PM)");

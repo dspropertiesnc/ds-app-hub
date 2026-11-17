@@ -27,8 +27,8 @@ assert.equal(run({rent:2000,incomes:[3999]}).factors[0].points,0);
 
 // credit tiers + under-650 cap
 assert.equal(run({rent:2000,incomes:[6000],credit:700}).factors[1].points,8);
-r=run({rent:2000,incomes:[6000],credit:640}); assert.equal(r.factors[1].points,4); assert.equal(r.score,8.2); assert.equal(r.band,'upper');
-r=run({rent:2000,incomes:[6000],credit:520}); assert.equal(r.score,7); assert.equal(r.band,'upper');
+r=run({rent:2000,incomes:[6000],credit:640}); assert.equal(r.factors[1].points,4); assert.equal(r.score,8.5); assert.equal(r.band,'upper');
+r=run({rent:2000,incomes:[6000],credit:520}); assert.equal(r.score,7.5); assert.equal(r.band,'upper');
 r=run({rent:2000,incomes:[6000],credit:'',noCredit:true}); assert.equal(r.factors[1].points,4); assert.equal(r.flag,'Needs PM judgment'); assert.equal(r.recommendation,null);
 
 // asset depletion still counts toward 3x
@@ -41,11 +41,16 @@ r=run({rent:2000,hasVoucher:true,voucher:1500,incomes:[1500]}); assert(r.income.
 r=run({rent:2000,hasVoucher:true,voucher:2000,incomes:['']}); assert(r.income.meets); assert(!r.guarantee.required); assert(r.complete); assert.equal(r.factors[0].points,10);
 
 // evictions
-r=run({rent:2000,incomes:[6000],filings:1}); assert.equal(r.band,'lower'); assert.equal(r.deposit.months,2); assert.equal(r.flag,'Conditional, lower'); assert.equal(r.factors[4].points,3);
+r=run({rent:2000,incomes:[6000],filings:1}); assert.equal(r.band,'lower'); assert.equal(r.deposit.months,2); assert.equal(r.flag,'Conditional, lower'); assert.equal(r.factors[4].points,4); assert.equal(r.score,9.1);
+r=run({rent:2000,incomes:[6000],filings:1,recentFiling:true}); assert.equal(r.factors[4].points,0); assert.equal(r.score,8.5); assert.equal(r.band,'lower');
+// filing at the current residence: knockout, counts as a recent filing even if the count was left at 0
+r=run({rent:2000,incomes:[6000],currentResidenceFiling:true}); assert.equal(r.flag,'Does not meet criteria'); assert(r.knockouts.some(k=>k.includes('current residence'))); assert.equal(r.factors[4].points,0); assert.equal(r.recommendation,'Declined');
+// ...unless the applicant says it was DV-related: PM review instead of an automatic decline
+r=run({rent:2000,incomes:[6000],currentResidenceFiling:true,dvFiling:true}); assert.equal(r.knockouts.length,0); assert.equal(r.flag,'Needs PM judgment'); assert.equal(r.band,'lower');
 r=run({rent:2000,incomes:[6000],filings:2}); assert.equal(r.flag,'Does not meet criteria'); assert.equal(r.deposit,null); assert.equal(r.recommendation,'Declined');
 
 // collections + history
-r=run({rent:2000,incomes:[6000],collections:'utility'}); assert.equal(r.band,'upper'); assert.equal(r.factors[3].points,2);
+r=run({rent:2000,incomes:[6000],collections:'utility'}); assert.equal(r.band,'upper'); assert.equal(r.factors[3].points,2); assert.equal(r.score,9.6);
 r=run({rent:2000,incomes:[6000],collections:'general'}); assert.equal(r.band,'approve'); assert.equal(r.factors[3].points,6);
 r=run({rent:2000,incomes:[6000],historyMonths:12}); assert.equal(r.band,'upper'); assert.equal(r.factors[2].points,5);
 
@@ -58,7 +63,7 @@ assert.equal(C.bandFromScore(7.0),'upper');assert.equal(C.bandFromScore(7.1),'ap
 
 // weak everywhere lands in decline on score alone
 r=run({rent:2000,incomes:[3000],credit:540,historyMonths:6,collections:'utility',filings:1});
-assert.equal(r.score,0.4); assert.equal(r.band,'decline');
+assert.equal(r.score,0.7); assert.equal(r.band,'decline');
 
 // credit is the average of the adults who have a score
 r=run({rent:2000,incomes:[3000,3000],credits:[720,640]}); assert.equal(r.credit.average,680); assert.equal(r.factors[1].points,6); assert.equal(r.band,'approve');

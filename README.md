@@ -158,15 +158,17 @@ the browser's local storage until "Clear all").
 
 - **Weighted score (0-10)** from the Boom results. Each factor scores 0-10, times its weight:
   income to rent 40% (3x or more = 10, 2.5x = 5, 2x = 2, under 2x = 0; nothing extra above 3x),
-  credit 30% (average of the adults who have a score, entered per adult; 750+ = 10, 700s = 8, 650s = 6,
-  600s = 4, 550s = 2, under 550 = 0; no adult with a score = 4 plus PM review), rental/mortgage history 15% (24+ months = 10, 12-23 = 5, under 12 = 0), collections 10%
-  (none = 10, general = 6, utility = 2), eviction filings in the last 7 years 5% (none = 10, 1 = 3).
+  credit 25% (average of the adults who have a score, entered per adult; 750+ = 10, 700s = 8, 650s = 6,
+  600s = 4, 550s = 2, under 550 = 0; no adult with a score = 4 plus PM review), rental/mortgage history 15%
+  (24+ months = 10, 12-23 = 5, under 12 = 0), eviction filings in the last 7 years 15% (none = 10, 1 filing
+  3+ years ago = 4, a filing in the last 3 years or 2+ = 0), collections 5% (none = 10, general = 6, utility = 2).
   Boom's own score is optional and printed for reference only. A 0-10 bar (like Boom's recommendation
   settings) shows where the score falls; it's display-only, and its zones come from `ZONES`/`EDGES` in calc.js.
 - Band from the weighted score: over 7.0 Approve, 5.5 to 7.0 Upper Conditional, 4.1 to 5.4 Lower Conditional,
   4.0 or less Decline. Caps (best band allowed): income under 3x, average credit under 650, unpaid utility collection,
   or under 24 months of history = Upper; 1 qualifying filing = Lower. Knockouts: eviction judgment, 2+
-  qualifying filings, unpaid landlord balance, sex offender registration, PM-confirmed identity fraud.
+  qualifying filings, a filing at the applicant's current residence (PM review instead if the applicant says
+  it was DV-related), unpaid landlord balance, sex offender registration, PM-confirmed identity fraud.
 - Income test: combined verified income vs 3x rent (3x the tenant's portion for voucher holders; a voucher
   that covers the full rent passes). Asset depletion: cash and home-sale proceeds at 100%, brokerage 70%,
   retirement 60%, divided by 12 and added to income. Meeting 3x only through assets flags PM review.
