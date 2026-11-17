@@ -143,12 +143,38 @@ def api_bill(bill_id):
         return jsonify({"error": str(e)}), 502
 
 
+@bp.route("/api/rentvine/wo/<int:wo_id>")
+def api_wo(wo_id):
+    try:
+        return jsonify(rv.work_order(wo_id))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
+
+
+@bp.route("/api/rentvine/find")
+def api_find():
+    try:
+        return jsonify({"results": rv.find(request.args.get("q", ""))})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
+
+
 @bp.route("/api/rentvine/bill/<int:bill_id>/fields")
 def api_bill_fields(bill_id):
     try:
         return jsonify(rv.bill_fields(bill_id))
     except Exception as e:
         return jsonify({"error": str(e)}), 502
+
+
+@bp.route("/api/rentvine/probe")
+def api_probe():
+    """Field names (no values) for a read-only Rentvine path, for setup checks."""
+    params = {k: v for k, v in request.args.items() if k != "path"}
+    try:
+        return jsonify(rv.probe(request.args.get("path", ""), params))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 
 @bp.route("/api/vendors")
