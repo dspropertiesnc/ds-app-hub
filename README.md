@@ -169,3 +169,23 @@ storage until "Clear all").
 
 All rule numbers live at the top of `tools/screening_calc/assets/calc.js` (`RULES`). Change them there when
 the criteria change, and run `node tools/screening_calc/test_calc.js` to check the logic.
+
+
+## Invoice Generator (/invoices/)
+Makes an invoice PDF to upload to a Rentvine bill, mainly for vendors who can't send us one. Works for
+work outside Rentvine too (manual entry).
+
+- **Fill from Rentvine**: type the bill # (the number at the end of the bill's Rentvine URL). `rv.py` pulls
+  the vendor (name, address, phone), line items, bill date, work order #, service address, tenant, owner
+  (portfolio) and the paid date. Everything stays editable; anything Rentvine doesn't return is flagged
+  for staff to type in. Uses the same `RENTVINE_*` key as the renewal tool. Rentvine's bill fields aren't
+  fully documented, so on the first live run open `/invoices/api/rentvine/bill/<billID>/fields` to see the
+  field names it returns and tighten the mapping in `rv.py` if something comes back blank.
+- **Paid / Unpaid**: Paid prints "PAID INVOICE", a PAID stamp with the date, Amount Paid and a $0.00 balance,
+  plus "Paid in full to the vendor on [date]." unless a note is typed. Unpaid prints the balance and due date.
+- **Invoice numbers**: `INV-<WO#>` when there's a work order (a 2nd invoice on the same WO gets `-2`);
+  otherwise `<street #>-<YYMM>-<NN>`, counting up per address per month. Numbers are unique.
+- **Saved vendors**: every vendor on a saved invoice goes into a shared list for next time.
+- **Photos**: upload job photos (HEIC works); they print 4 per page after the invoice.
+- Invoices, vendors and photos are stored on the Render disk (`INVOICES_DB`, photos in
+  `invoice_photos/` beside it) and listed at `/invoices/` to reopen, edit or re-download.

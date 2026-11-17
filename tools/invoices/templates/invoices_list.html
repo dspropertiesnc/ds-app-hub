@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Invoice Generator — Doss &amp; Spaulding{% endblock %}
+{% block nav %}<a href="/">&larr; All tools</a>{% endblock %}
+{% block style %}
+  h1{color:var(--accent-dark);margin:6px 0 2px}
+  .lead{color:var(--gray);font-size:14px;margin:0 0 14px}
+  .bar{display:flex;gap:10px;margin-bottom:14px}
+  .bar input{flex:1;padding:10px;border:1px solid var(--line);border-radius:9px;font-size:15px}
+  .btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:11px 16px;font-weight:700;text-decoration:none;font-size:14px;white-space:nowrap}
+  .row{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;text-decoration:none;color:inherit}
+  .row:hover{border-color:var(--accent)}
+  .num{font-weight:700;color:var(--accent-dark);min-width:120px}
+  .mid{flex:1;font-size:14px}.mid small{display:block;color:var(--gray);font-size:12px}
+  .amt{font-weight:700;text-align:right}
+  .pill{font-size:11px;padding:2px 8px;border-radius:20px;background:var(--sub);color:var(--accent-dark);margin-left:6px}
+  .warn{background:#fbf3e2;border:1px solid #e6cfa0;color:#7a5b1a;padding:10px;border-radius:8px;font-size:12.5px;margin-bottom:12px}
+  .empty{color:var(--gray);text-align:center;padding:30px 0}
+  @media(max-width:560px){.num{min-width:0}.row{flex-wrap:wrap}}
+{% endblock %}
+{% block content %}
+  <h1>Invoice Generator</h1>
+  <p class="lead">Make an invoice PDF to upload to a Rentvine bill, for vendors who can't send us one.</p>
+  {% if not persistent %}<div class="warn">No saved-data disk is set up, so the invoice history resets on every deploy.</div>{% endif %}
+  <form class="bar" method="get">
+    <input name="q" value="{{ q }}" placeholder="Search invoice #, vendor or address">
+    <a class="btn" href="/invoices/new">+ New invoice</a>
+  </form>
+  {% for r in rows %}
+    <a class="row" href="/invoices/i/{{ r.id }}">
+      <span class="num">{{ r.number }}</span>
+      <span class="mid">{{ r.vendor }}<small>{{ r.service_address or "No service address" }} · {{ r.created_at[:10] }}</small></span>
+      <span class="amt">${{ "{:,.2f}".format(r.total or 0) }}<span class="pill">{{ "Paid" if r.paid else "Open" }}</span></span>
+    </a>
+  {% else %}
+    <div class="empty">No invoices yet.</div>
+  {% endfor %}
+{% endblock %}
