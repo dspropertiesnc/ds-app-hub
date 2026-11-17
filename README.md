@@ -182,8 +182,12 @@ work outside Rentvine too (manual entry).
   charge's amountPaid covers its amount; the paid date is the bill's payout (type 8) transaction.
   Everything stays editable. `/invoices/api/rentvine/probe?path=/maintenance/...` shows the field names any
   read-only path returns, for future mapping fixes.
+- **Vendor-issued layout**: no D&S logo. The vendor's name and address sit at the top; Doss & Spaulding is the
+  customer ("Paid By" when paid, "Bill To" when unpaid, with "Property Manager for [owner]").
+- **Only for vendors who asked**: staff must tick "This vendor has asked us to prepare their invoices" (saved on
+  the vendor, e.g. Jose Hernandez) before an invoice can be saved. Vendors who can invoice should send their own.
 - **Paid / Unpaid**: Paid prints "PAID INVOICE", a PAID stamp with the date, Amount Paid and a $0.00 balance,
-  plus "Paid in full to the vendor on [date]." unless a note is typed. Unpaid prints the balance and due date.
+  plus "Paid in full on [date]." unless a note is typed. Unpaid prints the balance and due date.
 - **Invoice numbers**: `INV-<WO#>` when there's a work order (a 2nd invoice on the same WO gets `-2`);
   otherwise `<street #>-<YYMM>-<NN>`, counting up per address per month. Numbers are unique.
 - **Saved vendors**: every vendor on a saved invoice goes into a shared list for next time.
