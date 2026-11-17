@@ -39,6 +39,8 @@ services:
         value: /var/data/renewals.db              # saved renewal proposals (on the disk above)
       - key: OWNER_PACKETS_DB
         value: /var/data/owner_packets.db         # saved owner packets + shared packet pricing (same disk)
+      - key: INVOICES_DB
+        value: /var/data/invoices.db              # saved invoices + vendor list (photos in /var/data/invoice_photos)
       - key: RENTVINE_ACCOUNT
         value: dossspauldingpropertiesllc         # the subdomain in your Rentvine URL
       - key: RENTVINE_API_KEY
