@@ -8,7 +8,8 @@ from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table, Tab
                                 Image as RLImage, PageBreak, Flowable)
 from PIL import Image as PILImage, ImageOps
 
-GOLD = colors.HexColor("#9a7b4f"); INK = colors.HexColor("#1a1a1a")
+GOLD = colors.HexColor("#444444")   # neutral accent: the PDF carries the vendor's name, not D&S branding
+INK = colors.HexColor("#1a1a1a")
 LINE = colors.HexColor("#dddddd"); GRAY = colors.HexColor("#555555")
 HERE = os.path.dirname(os.path.abspath(__file__))
 LOGO = os.path.normpath(os.path.join(HERE, "..", "..", "static", "logo.png"))
@@ -93,7 +94,7 @@ def _photo(path, w, h):
 def build_pdf(doc, photo_paths, out_path):
     pdf = SimpleDocTemplate(out_path, pagesize=letter, topMargin=0.6 * inch, bottomMargin=0.6 * inch,
                             leftMargin=0.6 * inch, rightMargin=0.6 * inch,
-                            title="Invoice %s" % doc["number"], author="Doss & Spaulding Properties")
+                            title="Invoice %s" % doc["number"], author="")
     el = []
     paid = doc["paid"]
 
@@ -101,17 +102,11 @@ def build_pdf(doc, photo_paths, out_path):
     left = [Paragraph("PAID INVOICE" if paid else "INVOICE", S["title"])]
     if paid:
         left.append(Stamp("PAID %s" % us_date(doc["paid_date"]) if doc.get("paid_date") else "PAID"))
-    co = ["<b>Doss &amp; Spaulding Properties LLC</b>"]
-    if doc["service"].get("owner"):
-        co += ["Property Manager for", esc(doc["service"]["owner"])]
-    right = []
-    if os.path.exists(LOGO):
-        try:
-            right.append(RLImage(LOGO, width=1.45 * inch, height=1.45 * inch * 303 / 1009, hAlign="RIGHT"))
-            right.append(Spacer(1, 4))
-        except Exception:
-            pass
-    right.append(Paragraph("<br/>".join(co), S["co"]))
+    # vendor letterhead (no D&S logo): the vendor issues the invoice, D&S is the customer
+    v = doc["vendor"]
+    vend = ["<b>%s</b>" % esc(v.get("name"))] + [esc(x) for x in (v.get("address"), v.get("city_line"),
+                                                                   phone(v.get("phone"))) if x]
+    right = [Paragraph("<br/>".join(vend), S["co"])]
     head = Table([[left, right]], colWidths=[W * 0.55, W * 0.45])
     head.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
                               ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
@@ -120,7 +115,10 @@ def build_pdf(doc, photo_paths, out_path):
     el += [head, Spacer(1, 16)]
 
     # ---- vendor / service / details ----
-    v, s = doc["vendor"], doc["service"]
+    s = doc["service"]
+    customer = ["Doss & Spaulding Properties LLC"]
+    if s.get("owner"):
+        customer += ["Property Manager for", s["owner"]]
     details = ["Invoice #: %s" % doc["number"]]
     if doc.get("wo_number"):
         details.append("Work Order: #%s" % doc["wo_number"])
@@ -137,7 +135,7 @@ def build_pdf(doc, photo_paths, out_path):
     svc = [s.get("address"), s.get("city_line")]
     if s.get("tenant"):
         svc.append("Tenant: %s" % s["tenant"])
-    grid = Table([[_block("Vendor", [v.get("name"), v.get("address"), v.get("city_line"), phone(v.get("phone"))]),
+    grid = Table([[_block("Paid By" if paid else "Bill To", customer),
                    _block("Service Location", svc),
                    _block("Details", details)]], colWidths=[W / 3] * 3)
     grid.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
@@ -183,7 +181,7 @@ def build_pdf(doc, photo_paths, out_path):
     # ---- notes ----
     note = (doc.get("notes") or "").strip()
     if paid and doc.get("paid_date") and not note:
-        note = "Paid in full to the vendor on %s." % us_date(doc["paid_date"])
+        note = "Paid in full on %s." % us_date(doc["paid_date"])
     if photo_paths:
         note = (note + " Job photos attached.").strip()
     if note:

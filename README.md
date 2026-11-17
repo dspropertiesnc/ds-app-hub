@@ -175,14 +175,19 @@ the criteria change, and run `node tools/screening_calc/test_calc.js` to check t
 Makes an invoice PDF to upload to a Rentvine bill, mainly for vendors who can't send us one. Works for
 work outside Rentvine too (manual entry).
 
-- **Fill from Rentvine**: type the bill # (the number at the end of the bill's Rentvine URL). `rv.py` pulls
-  the vendor (name, address, phone), line items, bill date, work order #, service address, tenant, owner
-  (portfolio) and the paid date. Everything stays editable; anything Rentvine doesn't return is flagged
-  for staff to type in. Uses the same `RENTVINE_*` key as the renewal tool. Rentvine's bill fields aren't
-  fully documented, so on the first live run open `/invoices/api/rentvine/bill/<billID>/fields` to see the
-  field names it returns and tighten the mapping in `rv.py` if something comes back blank.
+- **Find it in Rentvine**: one search box takes a WO # (100389), "bill 1231", a street, a vendor name, or a few
+  words about the job ("303 Kirk shower"). It searches work orders (Rentvine's WO search covers WO #,
+  description, address and vendor), lists each one's bills (or "No bill yet"), and fills the invoice from the
+  one picked: vendor, line items, WO #, service address, tenant, owner, and paid status/date. Paid = every
+  charge's amountPaid covers its amount; the paid date is the bill's payout (type 8) transaction.
+  Everything stays editable. `/invoices/api/rentvine/probe?path=/maintenance/...` shows the field names any
+  read-only path returns, for future mapping fixes.
+- **Vendor-issued layout**: no D&S logo. The vendor's name and address sit at the top; Doss & Spaulding is the
+  customer ("Paid By" when paid, "Bill To" when unpaid, with "Property Manager for [owner]").
+- **Only for vendors who asked**: staff must tick "This vendor has asked us to prepare their invoices" (saved on
+  the vendor, e.g. Jose Hernandez) before an invoice can be saved. Vendors who can invoice should send their own.
 - **Paid / Unpaid**: Paid prints "PAID INVOICE", a PAID stamp with the date, Amount Paid and a $0.00 balance,
-  plus "Paid in full to the vendor on [date]." unless a note is typed. Unpaid prints the balance and due date.
+  plus "Paid in full on [date]." unless a note is typed. Unpaid prints the balance and due date.
 - **Invoice numbers**: `INV-<WO#>` when there's a work order (a 2nd invoice on the same WO gets `-2`);
   otherwise `<street #>-<YYMM>-<NN>`, counting up per address per month. Numbers are unique.
 - **Saved vendors**: every vendor on a saved invoice goes into a shared list for next time.

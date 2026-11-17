@@ -32,6 +32,12 @@
   .th button{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:50%;width:22px;height:22px;cursor:pointer}
   #save{width:100%;padding:15px;font-size:16px}
   .done{display:flex;gap:8px;margin-top:10px}.done a{flex:1;text-align:center;text-decoration:none}
+  .res{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;cursor:pointer;font-family:inherit;font-size:14px;color:inherit}
+  .res:hover{border-color:var(--accent)}
+  .res b{color:var(--accent-dark)}.res small{display:block;color:var(--gray);font-size:12px;margin-top:2px}
+  .tag{font-size:11px;padding:1px 7px;border-radius:20px;background:var(--sub);color:var(--accent-dark);margin-left:6px}
+  .auth{display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-weight:600;font-size:13.5px}
+  .auth input{width:auto;margin-top:3px}
   .del{background:none;border:0;color:#b3261e;font-size:13px;cursor:pointer;margin-top:14px}
   @media(max-width:560px){.grid{grid-template-columns:1fr}.items .it{grid-template-columns:1fr 54px 92px 30px}}
 {% endblock %}
@@ -39,18 +45,20 @@
 <h1 id="title">New invoice</h1>
 
 <div class="card">
-  <h3>Pull from Rentvine</h3>
+  <h3>Find it in Rentvine</h3>
   <div class="row">
-    <div><label for="bill_id">Rentvine bill #</label>
-      <input id="bill_id" inputmode="numeric" placeholder="e.g. 1099 (from the bill's URL)"></div>
-    <button class="btn" id="pull" {% if not rv %}disabled{% endif %}>Fill from Rentvine</button>
+    <div><label for="q">Search</label>
+      <input id="q" placeholder="WO #, bill #, address, vendor, or a few words about the job"></div>
+    <button class="btn" id="pull" {% if not rv %}disabled{% endif %}>Search</button>
   </div>
   {% if rv %}
-  <div class="hint">Open the bill in Rentvine; the number at the end of its web address is the bill #. Everything stays editable.</div>
+  <div class="hint">Examples: <b>100389</b> &middot; <b>bill 1231</b> &middot; <b>303 Kirk shower</b> &middot; <b>Hernandez faucet</b>. Pick a result to fill the invoice; everything stays editable.</div>
   {% else %}
   <div class="warn">Rentvine isn't connected on this server, so fill the invoice in by hand.</div>
   {% endif %}
+  <div id="results"></div>
   <div id="pullmsg"></div>
+  <input type="hidden" id="bill_id">
 </div>
 
 <div class="card">
@@ -64,6 +72,8 @@
     <div><label for="v_phone">Phone (optional)</label><input id="v_phone"></div>
     <div><label for="v_email">Email (optional, not printed)</label><input id="v_email"></div>
   </div>
+  <label class="auth"><input type="checkbox" id="v_authorized"> This vendor has asked us to prepare their invoices for them
+    <span class="hint" style="display:block;font-weight:400">The PDF goes out under the vendor's name, so only use it for vendors who've asked (e.g. Jose Hernandez). Remembered for saved vendors.</span></label>
   <div class="hint">Vendors are saved to the list automatically when you save an invoice.</div>
 </div>
 
@@ -73,7 +83,7 @@
     <div><label for="s_address">Property address</label><input id="s_address"></div>
     <div><label for="s_city_line">City, state ZIP</label><input id="s_city_line"></div>
     <div><label for="s_tenant">Tenant (optional)</label><input id="s_tenant"></div>
-    <div><label for="s_owner">Owner (optional)</label><input id="s_owner" placeholder="Prints as &quot;Property Manager for ...&quot;"></div>
+    <div><label for="s_owner">Owner (optional)</label><input id="s_owner" placeholder="Prints under Bill To / Paid By"></div>
   </div>
 </div>
 
@@ -108,7 +118,7 @@
     <div><label for="due_date">Due date (optional)</label><input id="due_date" type="date"></div>
   </div>
   <div style="margin-top:10px"><label for="notes">Note on the invoice (optional)</label>
-    <textarea id="notes" placeholder="Leave blank for &quot;Paid in full to the vendor on [date].&quot;"></textarea></div>
+    <textarea id="notes" placeholder="Leave blank for &quot;Paid in full on [date].&quot;"></textarea></div>
 </div>
 
 <div class="card">
@@ -173,12 +183,15 @@ function collect(){
              vendor: {rentvine_id: state.vendor_rv || ""}, service: {}};
   F.forEach(k => d[k] = $(k).value.trim());
   V.forEach(k => d.vendor[k] = $("v_"+k).value.trim());
+  d.vendor.authorized = $("v_authorized").checked;
   SV.forEach(k => d.service[k] = $("s_"+k).value.trim());
   return d;
 }
 function fill(d){
   F.forEach(k => { if (d[k] != null) $(k).value = d[k]; });
   V.forEach(k => { if (d.vendor && d.vendor[k] != null) $("v_"+k).value = d.vendor[k]; });
+  if (d.vendor && d.vendor.authorized != null) $("v_authorized").checked = !!d.vendor.authorized;
+  else if (d.vendor && d.vendor.name) { const sv = VENDORS.find(x => x.name.toLowerCase() === d.vendor.name.toLowerCase()); $("v_authorized").checked = !!(sv && sv.authorized); }
   SV.forEach(k => { if (d.service && d.service[k] != null) $("s_"+k).value = d.service[k]; });
   if (d.vendor && d.vendor.rentvine_id) state.vendor_rv = d.vendor.rentvine_id;
   if (d.items) { $("items").innerHTML = ""; (d.items.length ? d.items : [null]).forEach(addItem); }
@@ -196,7 +209,8 @@ fetch("/invoices/api/vendors").then(r=>r.json()).then(list => {
 });
 $("vpick").onchange = () => {
   const v = VENDORS.find(x => x.id === $("vpick").value); if (!v) return;
-  V.forEach(k => $("v_"+k).value = v[k] || ""); state.vendor_rv = v.rentvine_id || ""; saveDraft();
+  V.forEach(k => $("v_"+k).value = v[k] || ""); state.vendor_rv = v.rentvine_id || "";
+  $("v_authorized").checked = !!v.authorized; saveDraft();
 };
 
 // invoice number
@@ -207,22 +221,50 @@ async function renumber(){
 $("renum").onclick = renumber;
 
 // rentvine
-$("pull").onclick = async () => {
-  const id = $("bill_id").value.replace(/\D/g,""); if (!id) { $("bill_id").focus(); return; }
-  $("pull").disabled = true; $("pull").textContent = "Pulling...";
-  $("pullmsg").innerHTML = "";
+function applyPull(d, label){
+  fill({bill_id: d.bill_id || "", wo_number: d.wo_number, service_date: d.bill_date, vendor: d.vendor, service: d.service,
+        items: d.items, paid: d.paid, paid_date: d.paid_date, due_date: d.due_date});
+  const w = (d.warnings || []).filter(x => !(d.paid && /didn't confirm/.test(x)));
+  let html = `<div class="ok">Filled from ${esc(label)}. Check it over.</div>`;
+  if (!d.paid && d.bill_id) html = `<div class="warn">Rentvine doesn't show this bill as fully paid, so it's set to Unpaid. Switch to Paid if it was.</div>`;
+  if (w.length) html += `<div class="warn">${w.map(esc).join("<br>")}</div>`;
+  $("pullmsg").innerHTML = html;
+}
+async function pick(c){
+  $("results").innerHTML = ""; $("pullmsg").innerHTML = `<div class="hint">Loading...</div>`;
   try {
-    const r = await fetch("/invoices/api/rentvine/bill/" + id); const d = await r.json();
+    const url = c.type === "bill" ? "/invoices/api/rentvine/bill/" + c.bill_id : "/invoices/api/rentvine/wo/" + c.wo_id;
+    const r = await fetch(url); const d = await r.json();
     if (!r.ok) throw new Error(d.error || "Couldn't reach Rentvine.");
-    fill({bill_id: id, wo_number: d.wo_number, service_date: d.bill_date, vendor: d.vendor, service: d.service,
-          items: d.items, paid: d.paid, paid_date: d.paid_date, due_date: d.due_date});
-    if (!d.paid) $("pullmsg").innerHTML = `<div class="warn">Rentvine doesn't show this bill as paid yet, so it's set to Unpaid. Switch to Paid once the payout goes out.</div>`;
-    if (d.warnings && d.warnings.length) $("pullmsg").innerHTML += `<div class="warn">${d.warnings.map(esc).join("<br>")}</div>`;
-    else if (d.paid) $("pullmsg").innerHTML = `<div class="ok">Filled from bill #${esc(id)}. Check it over.</div>`;
-    await renumber();
+    applyPull(d, c.type === "bill" ? "bill #" + c.bill_id : "work order #" + c.wo_number);
+    await renumber(); saveDraft();
   } catch(e) { $("pullmsg").innerHTML = `<div class="err">${esc(e.message)}</div>`; }
-  $("pull").disabled = false; $("pull").textContent = "Fill from Rentvine";
-};
+}
+async function search(){
+  const q = $("q").value.trim(); if (!q) { $("q").focus(); return; }
+  $("pull").disabled = true; $("pull").textContent = "Searching...";
+  $("results").innerHTML = ""; $("pullmsg").innerHTML = "";
+  try {
+    const r = await fetch("/invoices/api/rentvine/find?q=" + encodeURIComponent(q)); const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Couldn't reach Rentvine.");
+    const res = d.results || [];
+    if (!res.length) { $("pullmsg").innerHTML = `<div class="warn">Nothing in Rentvine matched "${esc(q)}". Try the WO #, the street name, or one key word about the job.</div>`; }
+    else if (res.length === 1) { await pick(res[0]); }
+    else {
+      $("results").innerHTML = `<div class="hint">${res.length} matches. Pick one:</div>` + res.map((c,i) => `
+        <button type="button" class="res" data-i="${i}">
+          <b>${c.type === "bill" ? "Bill #" + esc(c.bill_id) : "No bill yet"}</b>${c.wo_number ? " &middot; WO #" + esc(c.wo_number) : ""}
+          ${c.amount != null ? " &middot; " + money(c.amount) : ""}${c.type === "bill" ? `<span class="tag">${c.paid ? "Paid" : "Unpaid"}</span>` : ""}
+          <small>${esc([c.address, c.vendor, c.date].filter(Boolean).join(" · "))}</small>
+          <small>${esc(c.description || "")}</small>
+        </button>`).join("");
+      $("results").querySelectorAll(".res").forEach(b => b.onclick = () => pick(res[+b.dataset.i]));
+    }
+  } catch(e) { $("pullmsg").innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+  $("pull").disabled = false; $("pull").textContent = "Search";
+}
+$("pull").onclick = search;
+$("q").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); search(); } });
 
 // photos
 function drawThumbs(){
