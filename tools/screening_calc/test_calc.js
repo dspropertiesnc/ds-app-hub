@@ -27,8 +27,8 @@ assert.equal(run({rent:2000,incomes:[3999]}).factors[0].points,0);
 
 // credit tiers + under-650 cap
 assert.equal(run({rent:2000,incomes:[6000],credit:700}).factors[1].points,8);
-r=run({rent:2000,incomes:[6000],credit:640}); assert.equal(r.factors[1].points,4); assert.equal(r.score,8.5); assert.equal(r.band,'upper');
-r=run({rent:2000,incomes:[6000],credit:520}); assert.equal(r.score,7.5); assert.equal(r.band,'upper');
+r=run({rent:2000,incomes:[6000],credit:640}); assert.equal(r.factors[1].points,4); assert.equal(r.score,8.8); assert.equal(r.band,'upper');
+r=run({rent:2000,incomes:[6000],credit:520}); assert.equal(r.score,8); assert.equal(r.band,'upper');
 r=run({rent:2000,incomes:[6000],credit:'',noCredit:true}); assert.equal(r.factors[1].points,4); assert.equal(r.flag,'Needs PM judgment'); assert.equal(r.recommendation,null);
 
 // asset depletion still counts toward 3x
@@ -56,8 +56,14 @@ r=run({rent:2000,incomes:[6000],currentResidenceFiling:true,dvFiling:true}); ass
 r=run({rent:2000,incomes:[6000],filings:2}); assert.equal(r.flag,'Does not meet criteria'); assert.equal(r.deposit,null); assert.equal(r.recommendation,'Declined');
 
 // collections + history
-r=run({rent:2000,incomes:[6000],collections:'utility'}); assert.equal(r.band,'upper'); assert.equal(r.factors[3].points,2); assert.equal(r.score,9.6);
-r=run({rent:2000,incomes:[6000],collections:'general'}); assert.equal(r.band,'approve'); assert.equal(r.factors[3].points,6);
+r=run({rent:2000,incomes:[6000],collections:'utility',collectionsBalance:400}); assert.equal(r.band,'upper'); assert.equal(r.factors[3].points,2); assert.equal(r.score,9.6);
+r=run({rent:2000,incomes:[6000],collections:'utility',collectionsBalance:1500}); assert.equal(r.factors[3].points,0); assert.equal(r.score,9.5);
+r=run({rent:2000,incomes:[6000],collections:'general',collectionsBalance:1499}); assert.equal(r.factors[3].points,6); assert.equal(r.score,9.8);
+r=run({rent:2000,incomes:[6000],collections:'general',collectionsBalance:2200}); assert.equal(r.factors[3].points,3); assert.equal(r.score,9.7); assert.equal(r.band,'approve');
+r=run({rent:2000,incomes:[6000],collections:'general'}); assert(!r.complete); assert(r.missing.includes('total collections balance'));
+// bankruptcy: light weight, not a knockout
+r=run({rent:2000,incomes:[6000],bankruptcy:true}); assert.equal(r.factors[5].points,0); assert.equal(r.score,9.5); assert.equal(r.band,'approve'); assert.equal(r.knockouts.length,0);
+r=run({rent:2000,incomes:[6000],collections:'general',collectionsBalance:300}); assert.equal(r.band,'approve'); assert.equal(r.factors[3].points,6);
 r=run({rent:2000,incomes:[6000],historyMonths:12}); assert.equal(r.band,'upper'); assert.equal(r.factors[2].points,5);
 
 // guarantor
@@ -69,7 +75,7 @@ assert.equal(C.bandFromScore(7.0),'upper');assert.equal(C.bandFromScore(7.1),'ap
 
 // weak everywhere lands in decline on score alone
 r=run({rent:2000,incomes:[3000],credit:540,historyMonths:6,collections:'utility',filings:1});
-assert.equal(r.score,0.7); assert.equal(r.band,'decline');
+assert.equal(r.score,1.2); assert.equal(r.band,'decline');
 
 // credit is the average of the adults who have a score
 r=run({rent:2000,incomes:[3000,3000],credits:[720,640]}); assert.equal(r.credit.average,680); assert.equal(r.factors[1].points,6); assert.equal(r.band,'approve');

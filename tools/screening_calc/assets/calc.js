@@ -11,6 +11,7 @@
     assetPct: { cash: 1.0, sale: 1.0, brokerage: 0.7, retirement: 0.6 },
     historyMonthsMin: 24,       // verifiable rental/mortgage months in last 5 yrs
     creditCapBelow: 650,        // credit under this caps at Upper Conditional
+    collectionsBalanceLine: 1500, // total collections at or above this score lower
     depositMonths: { approve: 1, upper: 1.5, lower: 2 },
     depositCap: 2
   };
@@ -23,7 +24,7 @@
       { min: 2.5, pts: 5,  text: "2.5x to 2.99x" },
       { min: 2,   pts: 2,  text: "2x to 2.49x" },
       { min: -1,  pts: 0,  text: "Under 2x" } ] },
-    { key: "credit", label: "Credit score (average of adults)", weight: 25, tiers: [
+    { key: "credit", label: "Credit score (average of adults)", weight: 20, tiers: [
       { min: 750, pts: 10, text: "750+" },
       { min: 700, pts: 8,  text: "700 to 749" },
       { min: 650, pts: 6,  text: "650 to 699" },
@@ -35,13 +36,18 @@
       { min: 12, pts: 5,  text: "12 to 23 months" },
       { min: -1, pts: 0,  text: "Under 12 months" } ] },
     { key: "collections", label: "Collections", weight: 5, tiers: [
-      { min: 2, pts: 10, text: "None" },
-      { min: 1, pts: 6,  text: "General only" },
-      { min: -1, pts: 2, text: "Utility collection" } ] },
+      { min: 3, pts: 10, text: "None" },
+      { min: 2, pts: 6,  text: "Under $1,500" },
+      { min: 1, pts: 3,  text: "$1,500 or more" },
+      { min: 0, pts: 2,  text: "Utility, under $1,500" },
+      { min: -1, pts: 0, text: "Utility, $1,500+" } ] },
     { key: "evictions", label: "Eviction filings (last 7 yrs)", weight: 15, tiers: [
       { min: 2, pts: 10, text: "None" },
       { min: 1, pts: 4,  text: "1 filing, 3+ yrs ago" },
-      { min: -1, pts: 0, text: "Recent (3 yrs) or 2+" } ] }
+      { min: -1, pts: 0, text: "Recent (3 yrs) or 2+" } ] },
+    { key: "bankruptcy", label: "Bankruptcy (last 5 yrs)", weight: 5, tiers: [
+      { min: 1, pts: 10, text: "None" },
+      { min: -1, pts: 0, text: "Filed or discharged" } ] }
   ];
   var NO_CREDIT_PTS = 4; // thin file / no score: treated like 600-649, and flagged for the PM
 
@@ -168,13 +174,19 @@
     var coll = inp.collections || (inp.utilityCollection ? "utility" : "none");
 
     // ---- weighted score ----
-    var collVal = coll === "utility" ? 0 : coll === "general" ? 1 : 2;
+    var collBalKnown = !blank(inp.collectionsBalance);
+    var collBal = num(inp.collectionsBalance);
+    if (coll !== "none" && !collBalKnown) r.missing.push("total collections balance");
+    var collBig = collBal >= RULES.collectionsBalanceLine;
+    var collVal = coll === "none" ? 3 : coll === "general" ? (collBig ? 1 : 2) : (collBig ? -1 : 0);
+    var bk = !!inp.bankruptcy;
     var evVal = filings === 0 ? 2 : (filings === 1 && !recentFiling) ? 1 : 0;
     var values = {
       income: voucherFull ? 99 : ratio,
       credit: credit,
       history: hist,
       collections: collVal,
+      bankruptcy: bk ? -1 : 1,
       evictions: evVal
     };
     var detail = {
@@ -184,7 +196,8 @@
         : scored.length === 1 && adults === 1 ? String(credit)
         : "Avg " + credit + " (" + scored.length + " of " + adults + " adults)"),
       history: histKnown ? Math.round(hist) + " months" : "Not entered",
-      collections: coll === "utility" ? "Utility collection" : coll === "general" ? "General collection(s)" : "None",
+      collections: coll === "none" ? "None" : (coll === "utility" ? "Utility" : "General") + (collBalKnown ? ", " + money(collBal) + " total" : ", balance not entered"),
+      bankruptcy: bk ? "Yes" : "None",
       evictions: filings === 0 ? "None" : filings + " filing" + (filings === 1 ? "" : "s") +
         (currentResFiling ? ", current home" : recentFiling ? ", within 3 yrs" : "")
     };
