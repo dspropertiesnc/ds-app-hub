@@ -64,7 +64,7 @@ r=run({rent:2000,incomes:[6000],collections:'general'}); assert(!r.complete); as
 // bankruptcy: light weight, not a knockout
 r=run({rent:2000,incomes:[6000],bankruptcy:true}); assert.equal(r.factors[5].points,0); assert.equal(r.score,9.5); assert.equal(r.band,'approve'); assert.equal(r.knockouts.length,0);
 r=run({rent:2000,incomes:[6000],collections:'general',collectionsBalance:300}); assert.equal(r.band,'approve'); assert.equal(r.factors[3].points,6);
-r=run({rent:2000,incomes:[6000],historyMonths:12}); assert.equal(r.band,'upper'); assert.equal(r.factors[2].points,5);
+r=run({rent:2000,incomes:[6000],historyMonths:12}); assert.equal(r.band,'upper'); assert.equal(r.factors[2].points,2);
 
 // guarantor
 r=run({rent:2000,incomes:[4000],guaranteeType:'guarantor',guarantorIncome:8000,guarantorNC:true}); assert(r.guarantee.required); assert(r.guarantee.ok);
@@ -96,7 +96,11 @@ assert.equal(run({rent:2000,incomes:[6000],dti:43}).factors[6].points,5);
 r=run({rent:2000,incomes:[6000],dti:50}); assert.equal(r.factors[6].points,5); assert.equal(r.score,9.8);
 r=run({rent:2000,incomes:[6000],dti:50.1}); assert.equal(r.factors[6].points,0); assert.equal(r.score,9.5); assert.equal(r.band,'approve');
 // history now 10%
-r=run({rent:2000,incomes:[6000],historyMonths:12}); assert.equal(r.score,9.5);
+r=run({rent:2000,incomes:[6000],historyMonths:12}); assert.equal(r.score,9.2);
+assert.equal(run({rent:2000,incomes:[6000],historyMonths:59}).factors[2].points,7);
+assert.equal(run({rent:2000,incomes:[6000],historyMonths:30}).factors[2].points,5);
+// negative landlord reference: 0 on history, Lower Conditional at best, PM documents it
+r=run({rent:2000,incomes:[6000],negativeReference:true}); assert.equal(r.factors[2].points,0); assert.equal(r.band,'lower'); assert.equal(r.flag,'Needs PM judgment'); assert.equal(r.score,9);
 
 // missing inputs are reported
 r=C.compute({rent:2000,incomes:['']}); assert(!r.complete); assert.deepEqual(r.missing,['income','credit score','months of rental/mortgage history','debt-to-income']);

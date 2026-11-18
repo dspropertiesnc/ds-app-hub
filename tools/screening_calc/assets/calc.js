@@ -31,10 +31,13 @@
       { min: 600, pts: 4,  text: "600 to 649" },
       { min: 550, pts: 2,  text: "550 to 599" },
       { min: -1,  pts: 0,  text: "Under 550" } ] },
-    { key: "history", label: "Verifiable rental/mortgage history", weight: 10, tiers: [
-      { min: 24, pts: 10, text: "24+ months" },
-      { min: 12, pts: 5,  text: "12 to 23 months" },
-      { min: -1, pts: 0,  text: "Under 12 months" } ] },
+    { key: "history", label: "Rental/ownership history (5 yrs)", weight: 10, tiers: [
+      { min: 60, pts: 10, text: "Full 5 years" },
+      { min: 36, pts: 7,  text: "36 to 59 months" },
+      { min: 24, pts: 5,  text: "24 to 35 months" },
+      { min: 12, pts: 2,  text: "12 to 23 months" },
+      { min: -1, pts: 0,  text: "Under 12 months" },
+      { min: -Infinity, pts: 0, text: "Negative reference" } ] },
     { key: "collections", label: "Collections", weight: 5, tiers: [
       { min: 3, pts: 10, text: "None" },
       { min: 2, pts: 6,  text: "Under $1,500" },
@@ -177,6 +180,7 @@
     var histKnown = !blank(inp.historyMonths);
     var hist = num(inp.historyMonths);
     if (!histKnown) r.missing.push("months of rental/mortgage history");
+    var negRef = !!inp.negativeReference;
     var coll = inp.collections || (inp.utilityCollection ? "utility" : "none");
 
     // ---- weighted score ----
@@ -193,7 +197,7 @@
     var values = {
       income: voucherFull ? 99 : ratio,
       credit: credit,
-      history: hist,
+      history: negRef ? -Infinity : hist,
       collections: collVal,
       bankruptcy: bk ? -1 : 1,
       dti: dti,
@@ -205,7 +209,7 @@
       credit: noCredit ? "No credit score" : (!creditKnown ? "Not entered"
         : scored.length === 1 && adults === 1 ? String(credit)
         : "Avg " + credit + " (" + scored.length + " of " + adults + " adults)"),
-      history: histKnown ? Math.round(hist) + " months" : "Not entered",
+      history: (histKnown ? Math.round(hist) + " months" : "Not entered") + (negRef ? ", negative ref" : ""),
       collections: coll === "none" ? "None" : (coll === "utility" ? "Utility" : "General") + (collBalKnown ? ", " + money(collBal) + " total" : ", balance not entered"),
       bankruptcy: bk ? "Yes" : "None",
       dti: dtiKnown ? (Math.round(dti * 10) / 10) + "%" : "Not entered",
@@ -241,6 +245,10 @@
     }
     if (filings === 1) { r.caps.push("1 qualifying eviction filing in the last 7 years: Lower Conditional at best"); band = worse(band, "lower"); }  // older filing; recent ones knock out below
     if (coll === "utility") { r.caps.push("Unpaid utility collection: Upper Conditional at best"); band = worse(band, "upper"); }
+    if (negRef) {
+      r.caps.push("Negative reference from a current or past landlord: Lower Conditional at best");
+      band = worse(band, "lower");
+    }
     if (histKnown && hist < RULES.historyMonthsMin) {
       r.caps.push("Under 24 months of verifiable rental/mortgage history: Upper Conditional at best");
       band = worse(band, "upper");
@@ -269,6 +277,7 @@
     if (inp.suspectedFraud && !inp.identityFraud) r.pm.push("Suspected identity fraud (PM to confirm)");
     if (noCredit) r.pm.push("No credit score (thin file)");
     if (r.income.assetQualified) r.pm.push("Meets 3x only by counting liquid assets");
+    if (negRef) r.pm.push("Negative landlord reference: record who gave it and what they said in the notes");
     if (inp.otherPm) r.pm.push("Not clearly covered by the rules");
 
     // ---- pre-checks ----

@@ -121,7 +121,8 @@
   <div class="band">4 · Rental history, evictions, collections, bankruptcy</div>
   <div class="card">
 
-    <label class="f">Months of verifiable rental or mortgage history (last 5 years)<span class="h">Landlord reference, ledger, or mortgage history on the credit report. Under 24 caps at Upper Conditional.</span><input type="number" id="historyMonths" inputmode="numeric" min="0" max="60"></label>
+    <label class="f">Months of verifiable rental or homeownership history (last 5 years, max 60)<span class="h">We ask for 5 years. Count only months you could verify: landlord reference, ledger, mortgage on the credit report, or deed/tax records for an owned home. Under 24 caps at Upper Conditional.</span><input type="number" id="historyMonths" inputmode="numeric" min="0" max="60"></label>
+    <div class="chk"><input type="checkbox" id="negativeReference"><div>Negative reference from a current or past landlord<small>Would not rent to them again, damage beyond normal wear, repeated late payments, or lease violations. Lower Conditional at best, 0 on the history factor, and the PM records what was said.</small></div></div>
     <label class="f">Qualifying eviction filings in last 7 years<span class="h">Nonpayment or breach, matched to the applicant by address, not won by the tenant. Holdover filings don't count. 1 filing 3+ years ago = Lower Conditional max. A filing in the last 3 years, or 2+ filings = Does not meet.</span><input type="number" id="filings" inputmode="numeric" min="0" step="1" value="0"></label>
     <div id="recentBox" class="chk hide"><input type="checkbox" id="recentFiling"><div>The most recent filing was in the last 3 years<small>Does not meet criteria (a knockout), unless the applicant says it was DV-related; then it goes to PM review.</small></div></div>
     <label class="f">Collections<span class="h">Landlord or rental collections are a knockout (section 5). A utility collection caps at Upper Conditional.</span><select id="collections">
@@ -240,7 +241,7 @@
 (function(){
   const $ = id => document.getElementById(id);
   const C = window.ScreeningCalc, money = C.money;
-  const CHECKS = ['hasVoucher','noCredit','bankruptcy','recentFiling','currentResidenceFiling','evictionJudgment','landlordBalance','sexOffender','identityFraud','felony','suspectedFraud','dvFiling','international','otherPm','guarantorNC','pre_incomeVerified','pre_allAdults','pre_ncSearch','pre_identity'];
+  const CHECKS = ['hasVoucher','noCredit','bankruptcy','negativeReference','recentFiling','currentResidenceFiling','evictionJudgment','landlordBalance','sexOffender','identityFraud','felony','suspectedFraud','dvFiling','international','otherPm','guarantorNC','pre_incomeVerified','pre_allAdults','pre_ncSearch','pre_identity'];
   const FIELDS = ['property','applicantNames','rent','boomScore','dti','collections','collectionsBalance','voucher','a_cash','a_sale','a_brokerage','a_retirement','historyMonths','filings','guaranteeType','guarantorIncome','decBy','decDate','decDecision','decAan','decAanDate','decNotes'];
 
   function addIncome(v,c){
@@ -264,7 +265,7 @@
       incomes:[...document.querySelectorAll('.incv')].map(i=>i.value),
       credits:[...document.querySelectorAll('.crv')].map(i=>i.value),
       assets:{cash:$('a_cash').value, sale:$('a_sale').value, brokerage:$('a_brokerage').value, retirement:$('a_retirement').value},
-      historyMonths:$('historyMonths').value, filings:$('filings').value,
+      historyMonths:$('historyMonths').value, negativeReference:$('negativeReference').checked, filings:$('filings').value,
       evictionJudgment:$('evictionJudgment').checked, recentFiling:$('recentFiling').checked, currentResidenceFiling:$('currentResidenceFiling').checked, landlordBalance:$('landlordBalance').checked,
       sexOffender:$('sexOffender').checked, identityFraud:$('identityFraud').checked,
       felony:$('felony').checked, suspectedFraud:$('suspectedFraud').checked, dvFiling:$('dvFiling').checked,
