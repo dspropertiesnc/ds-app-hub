@@ -24,8 +24,8 @@
   .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
   label.f{display:block;font-size:12.5px;font-weight:600;color:#333;margin-bottom:8px}
   label.f span.h{display:block;font-weight:400;color:var(--gray);font-size:11.5px;margin-top:2px}
-  input[type=text],input[type=number],select{width:100%;margin-top:4px;padding:9px 10px;border:1px solid #d9d2c5;border-radius:8px;font-size:15px;background:#fff}
-  input:focus,select:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+  input[type=text],input[type=number],input[type=date],select{width:100%;margin-top:4px;padding:9px 10px;border:1px solid #d9d2c5;border-radius:8px;font-size:15px;background:#fff}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);border-color:var(--accent)}
   .chk{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;padding:6px 0;border-bottom:1px solid #f1ece3}
   .chk:last-child{border-bottom:0}
   .chk input{margin-top:3px;width:17px;height:17px;accent-color:var(--accent)}
@@ -53,6 +53,21 @@
   .sec-t{font-size:12px;font-weight:700;text-transform:uppercase;color:var(--accent-dark);margin:12px 0 2px;letter-spacing:.03em}
   textarea{width:100%;min-height:170px;font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:10px;border:1px solid #d9d2c5;border-radius:8px;background:#fcfbf8}
   .hide{display:none}
+  .meter{margin:6px 0 4px}
+  .meter .ticks{position:relative;height:26px;margin:0 6px}
+  .meter .tick{position:absolute;transform:translateX(-50%);background:#f1ede6;border-radius:6px;padding:2px 6px;font-size:12px;font-weight:600;color:#444}
+  .meter .tick:first-child{transform:none;left:-6px!important}
+  .meter .tick:last-child{transform:none;left:auto!important;right:-6px}
+  .meter .track{position:relative;height:12px;border-radius:6px;display:flex;overflow:visible;margin:6px 6px 0}
+  .meter .zone{height:100%}
+  .meter .zone:first-child{border-radius:6px 0 0 6px}.meter .zone:last-child{border-radius:0 6px 6px 0}
+  .meter .pin{position:absolute;top:-7px;width:22px;height:26px;margin-left:-11px;border-radius:6px;background:#fff;border:2px solid #1a1a1a;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .25s}
+  .meter .val{position:absolute;top:24px;transform:translateX(-50%);font-weight:800;font-size:13px;white-space:nowrap;transition:left .25s}
+  .meter .legend{margin-top:30px;font-size:12.5px}
+  .meter .legend div{display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:6px;color:var(--gray)}
+  .meter .legend div.on{background:#f7f3ec;color:#1a1a1a;font-weight:700}
+  .meter .legend i{width:10px;height:10px;border-radius:50%;flex:none}
+  .meter .legend span.r{min-width:74px}
 </style>
 </head>
 <body>
@@ -63,7 +78,7 @@
 </div>
 <header class="h">
   <h1>Screening Calculator</h1>
-  <p>Applies SOP - Tenant Screening v1.3, Section 3A. You screen and recommend; the PM decides.</p>
+  <p>Applies SOP - Tenant Screening v1.3 with the D&amp;S weighted score. Enter the Boom results; the calculator scores the file and builds the 1-page screening record.</p>
 </header>
 <main>
 <div class="layout">
@@ -77,17 +92,19 @@
     </div>
     <div class="row">
       <label class="f">Monthly rent ($)<input type="number" id="rent" inputmode="decimal" min="0" step="1"></label>
-      <label class="f">Boom score (0–10)<input type="number" id="score" inputmode="decimal" min="0" max="10" step="0.1"></label>
+      <label class="f">Boom score (optional)<span class="h">Reference only. The D&amp;S score below decides the band.</span><input type="number" id="boomScore" inputmode="decimal" min="0" max="10" step="0.1"></label>
     </div>
     <div class="chk"><input type="checkbox" id="hasVoucher"><div>Housing voucher (Section 8 / HAP)<small>Income is measured against the tenant's portion.</small></div></div>
     <div id="voucherBox" class="hide"><label class="f">Voucher (HAP) amount per month ($)<input type="number" id="voucher" inputmode="decimal" min="0"></label></div>
   </div>
 
-  <div class="band">2 · Income (gross monthly, every adult)</div>
+  <div class="band">2 · Income and credit (every adult)</div>
   <div class="card">
     <div id="incomes"></div>
     <button class="btn ghost" type="button" id="addInc">+ Add adult</button>
-    <p class="note">Use income verified from actual documents (Step 5), not the amount the applicant reported.</p>
+    <p class="note">Gross monthly income verified from actual documents (Step 5), not the amount the applicant reported. Credit score from each adult's Boom report; leave it blank for an adult with no score. The score uses the average of the adults who have one.</p>
+    <div class="chk" style="margin-top:6px"><input type="checkbox" id="noCredit"><div>No adult has a credit score (thin file)<small>Scored like 600 to 649 and sent for PM review.</small></div></div>
+    <label class="f" style="margin-top:10px">Debt-to-income from Boom (%)<span class="h">If Boom shows a DTI for each applicant, enter the average. Under 43% scores full; 43% to 50% partial; over 50% scores 0. Light weight (5%).</span><input type="number" id="dti" inputmode="decimal" min="0" max="200" step="0.1"></label>
   </div>
 
   <div class="band">3 · Liquid assets (only if short on income)</div>
@@ -101,16 +118,26 @@
     <p class="note">Don't count crypto, real estate equity, vehicles, or business ownership. Need the 2 most recent full statements per account.</p>
   </div>
 
-  <div class="band">4 · Rental history and credit</div>
+  <div class="band">4 · Rental history, evictions, collections, bankruptcy</div>
   <div class="card">
-    <label class="f">Months of verifiable rental or mortgage history (last 5 years)<span class="h">Landlord reference, ledger, or mortgage history on the credit report. Under 24 caps at Upper Conditional.</span><input type="number" id="historyMonths" inputmode="numeric" min="0" max="60"></label>
-    <label class="f">Qualifying eviction filings in last 7 years<span class="h">Nonpayment or breach, matched to the applicant by address, not won by the tenant. Holdover filings don't count. 1 = Lower Conditional max; 2+ = Does not meet.</span><input type="number" id="filings" inputmode="numeric" min="0" step="1" value="0"></label>
-    <div class="chk"><input type="checkbox" id="utilityCollection"><div>Unpaid utility collection<small>Upper Conditional at best.</small></div></div>
+
+    <label class="f">Months of verifiable rental or homeownership history (last 5 years, max 60)<span class="h">We ask for 5 years. Count only months you could verify: landlord reference, ledger, mortgage on the credit report, or deed/tax records for an owned home. Under 24 caps at Upper Conditional.</span><input type="number" id="historyMonths" inputmode="numeric" min="0" max="60"></label>
+    <div class="chk"><input type="checkbox" id="negativeReference"><div>Negative reference from a current or past landlord<small>Would not rent to them again, damage beyond normal wear, repeated late payments, or lease violations. Lower Conditional at best, 0 on the history factor, and the PM records what was said.</small></div></div>
+    <label class="f">Qualifying eviction filings in last 7 years<span class="h">Nonpayment or breach, matched to the applicant by address, not won by the tenant. Holdover filings don't count. 1 filing 3+ years ago = Lower Conditional max. A filing in the last 3 years, or 2+ filings = Does not meet.</span><input type="number" id="filings" inputmode="numeric" min="0" step="1" value="0"></label>
+    <div id="recentBox" class="chk hide"><input type="checkbox" id="recentFiling"><div>The most recent filing was in the last 3 years<small>Does not meet criteria (a knockout), unless the applicant says it was DV-related; then it goes to PM review.</small></div></div>
+    <label class="f">Collections<span class="h">Landlord or rental collections are a knockout (section 5). A utility collection caps at Upper Conditional.</span><select id="collections">
+      <option value="none">None</option>
+      <option value="general">General collections only</option>
+      <option value="utility">Unpaid utility collection</option>
+    </select></label>
+    <div id="collBalBox" class="hide"><label class="f">Total collections balance (all adults)<span class="h">$1,500 or more scores lower.</span><input type="number" id="collectionsBalance" inputmode="decimal" min="0"></label></div>
+    <div class="chk"><input type="checkbox" id="bankruptcy"><div>Bankruptcy filed or discharged in the last 5 years<small>Any adult. Light weight (5% of the score); not a knockout.</small></div></div>
   </div>
 
   <div class="band">5 · Knockouts (Does not meet criteria)</div>
   <div class="card">
     <div class="chk"><input type="checkbox" id="evictionJudgment"><div>Eviction judgment within 7 years</div></div>
+    <div class="chk"><input type="checkbox" id="currentResidenceFiling"><div>Eviction filing at the applicant's current residence<small>They'd be leaving a home where they've been filed on. Counts as a recent filing. If the applicant says it was DV-related (section 6), it goes to PM review instead.</small></div></div>
     <div class="chk"><input type="checkbox" id="landlordBalance"><div>Unpaid balance owed to a previous landlord<small>Including landlord/rental collections.</small></div></div>
     <div class="chk"><input type="checkbox" id="sexOffender"><div>Lifetime sex offender registration</div></div>
     <div class="chk"><input type="checkbox" id="identityFraud"><div>Identity fraud, confirmed by the PM</div></div>
@@ -136,8 +163,9 @@
       </select></label>
       <div id="guarantorBox" class="hide">
         <label class="f">Guarantor gross monthly income ($)<span class="h" id="gReq"></span><input type="number" id="guarantorIncome" inputmode="decimal" min="0"></label>
+        <label class="f">Guarantor credit score<span class="h">Must be 700 or higher.</span><input type="number" id="guarantorCredit" inputmode="numeric" min="300" max="850" step="1"></label>
         <div class="chk"><input type="checkbox" id="guarantorNC"><div>Guarantor lives in North Carolina</div></div>
-        <p class="note">The guarantor also has to pass the same screening.</p>
+        <p class="note">All 3 are required: NC resident, 700+ credit, and gross monthly income of at least 4x the rent.</p>
       </div>
     </div>
   </div>
@@ -149,6 +177,37 @@
     <div class="chk"><input type="checkbox" id="pre_ncSearch"><div>NC court search done for every adult</div></div>
     <div class="chk"><input type="checkbox" id="pre_identity"><div>Identity verification passed (or re-verified)</div></div>
   </div>
+  <div class="band">8 · Decision and screening record</div>
+  <div class="card">
+    <p class="note" id="recHint" style="margin:0 0 10px;font-size:13px"></p>
+    <div class="row">
+      <label class="f">Processed by<input type="text" id="decBy" maxlength="60" placeholder="Your name"></label>
+      <label class="f">Decision date<input type="date" id="decDate"></label>
+    </div>
+    <label class="f">Final decision<select id="decDecision">
+      <option value="">Pick one</option>
+      <option>Approved</option>
+      <option>Approved with conditions</option>
+      <option>Declined</option>
+      <option>Applicant withdrew</option>
+    </select></label>
+    <div id="aanBox" class="hide">
+      <div class="row">
+        <label class="f">Adverse action notice<span class="h">Required by the FCRA when a decline or conditions are based on the screening report.</span><select id="decAan">
+          <option value="">Pick one</option>
+          <option value="sent">Sent</option>
+          <option value="pending">Not sent yet</option>
+        </select></label>
+        <label class="f" id="aanDateBox">Date sent<input type="date" id="decAanDate"></label>
+      </div>
+    </div>
+    <label class="f">Notes for the record <span id="notesReq" class="h" style="display:inline"></span><textarea id="decNotes" maxlength="700" style="min-height:90px;font-family:inherit;font-size:14px"></textarea><span class="h"><span id="notesCount">0</span> / 700</span></label>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn" type="button" id="dlRecord">Download screening record (PDF)</button>
+      <span id="recMsg" class="note" style="margin:0"></span>
+    </div>
+    <p class="note">Attach the PDF to the application. Nothing is saved on the server.</p>
+  </div>
   <button class="btn ghost" type="button" id="reset">Clear all</button>
 </div>
 
@@ -156,6 +215,10 @@
   <div id="flag" class="flag f-pm">Enter rent and Boom score<small>Results update as you type.</small></div>
   <div class="band">Results</div>
   <div class="card">
+    <div class="sec-t" style="margin-top:4px">Score</div>
+    <div id="meter" class="meter"></div>
+    <div class="sec-t">D&amp;S score</div>
+    <table class="k" id="scoreTable"></table>
     <div class="sec-t">Income</div>
     <table class="k" id="incTable"></table>
     <div class="sec-t">Band</div>
@@ -179,34 +242,36 @@
 (function(){
   const $ = id => document.getElementById(id);
   const C = window.ScreeningCalc, money = C.money;
-  const CHECKS = ['hasVoucher','utilityCollection','evictionJudgment','landlordBalance','sexOffender','identityFraud','felony','suspectedFraud','dvFiling','international','otherPm','guarantorNC','pre_incomeVerified','pre_allAdults','pre_ncSearch','pre_identity'];
-  const FIELDS = ['property','applicantNames','rent','score','voucher','a_cash','a_sale','a_brokerage','a_retirement','historyMonths','filings','guaranteeType','guarantorIncome'];
+  const CHECKS = ['hasVoucher','noCredit','bankruptcy','negativeReference','recentFiling','currentResidenceFiling','evictionJudgment','landlordBalance','sexOffender','identityFraud','felony','suspectedFraud','dvFiling','international','otherPm','guarantorNC','pre_incomeVerified','pre_allAdults','pre_ncSearch','pre_identity'];
+  const FIELDS = ['property','applicantNames','rent','boomScore','dti','collections','collectionsBalance','voucher','a_cash','a_sale','a_brokerage','a_retirement','historyMonths','filings','guaranteeType','guarantorIncome','guarantorCredit','decBy','decDate','decDecision','decAan','decAanDate','decNotes'];
 
-  function addIncome(v){
+  function addIncome(v,c){
     const d=document.createElement('div'); d.className='inc';
     const n=$('incomes').children.length+1;
-    d.innerHTML='<label class="f" style="flex:1;margin:0">Adult '+n+'<input type="number" inputmode="decimal" min="0" class="incv"></label><button type="button" class="rm" title="Remove">&times;</button>';
-    d.querySelector('input').value=v||'';
+    d.innerHTML='<label class="f" style="flex:2;margin:0"><span class="an">Adult '+n+'</span> income<input type="number" inputmode="decimal" min="0" class="incv"></label>'+
+      '<label class="f" style="flex:1;margin:0">Credit score<input type="number" inputmode="numeric" min="300" max="850" step="1" class="crv"></label><button type="button" class="rm" title="Remove">&times;</button>';
+    d.querySelector('.incv').value=v||''; d.querySelector('.crv').value=c||'';
+    d.querySelector('.crv').addEventListener('input',update);
     d.querySelector('.rm').onclick=()=>{ d.remove(); relabel(); update(); };
-    d.querySelector('input').addEventListener('input',update);
+    d.querySelector('.incv').addEventListener('input',update);
     $('incomes').appendChild(d);
   }
-  function relabel(){ [...$('incomes').children].forEach((d,i)=>{ d.querySelector('label').firstChild.nodeValue='Adult '+(i+1); }); }
+  function relabel(){ [...$('incomes').children].forEach((d,i)=>{ d.querySelector('.an').textContent='Adult '+(i+1); }); }
 
   function gather(){
     return {
       property:$('property').value, applicantNames:$('applicantNames').value,
-      rent:$('rent').value, score:$('score').value,
+      rent:$('rent').value, boomScore:$('boomScore').value, noCredit:$('noCredit').checked, dti:$('dti').value, collections:$('collections').value, collectionsBalance:$('collectionsBalance').value, bankruptcy:$('bankruptcy').checked,
       hasVoucher:$('hasVoucher').checked, voucher:$('voucher').value,
       incomes:[...document.querySelectorAll('.incv')].map(i=>i.value),
+      credits:[...document.querySelectorAll('.crv')].map(i=>i.value),
       assets:{cash:$('a_cash').value, sale:$('a_sale').value, brokerage:$('a_brokerage').value, retirement:$('a_retirement').value},
-      historyMonths:$('historyMonths').value, filings:$('filings').value,
-      utilityCollection:$('utilityCollection').checked,
-      evictionJudgment:$('evictionJudgment').checked, landlordBalance:$('landlordBalance').checked,
+      historyMonths:$('historyMonths').value, negativeReference:$('negativeReference').checked, filings:$('filings').value,
+      evictionJudgment:$('evictionJudgment').checked, recentFiling:$('recentFiling').checked, currentResidenceFiling:$('currentResidenceFiling').checked, landlordBalance:$('landlordBalance').checked,
       sexOffender:$('sexOffender').checked, identityFraud:$('identityFraud').checked,
       felony:$('felony').checked, suspectedFraud:$('suspectedFraud').checked, dvFiling:$('dvFiling').checked,
       international:$('international').checked, otherPm:$('otherPm').checked,
-      guaranteeType:$('guaranteeType').value, guarantorIncome:$('guarantorIncome').value, guarantorNC:$('guarantorNC').checked,
+      guaranteeType:$('guaranteeType').value, guarantorIncome:$('guarantorIncome').value, guarantorCredit:$('guarantorCredit').value, guarantorNC:$('guarantorNC').checked,
       prechecks:{incomeVerified:$('pre_incomeVerified').checked, allAdults:$('pre_allAdults').checked, ncSearch:$('pre_ncSearch').checked, identity:$('pre_identity').checked}
     };
   }
@@ -217,14 +282,23 @@
 
   function update(){
     $('voucherBox').classList.toggle('hide', !$('hasVoucher').checked);
+    $('collBalBox').classList.toggle('hide', $('collections').value==='none');
+    if(!(Number($('filings').value)>0)) $('recentFiling').checked=false;
+    $('recentBox').classList.toggle('hide', !(Number($('filings').value)>0));
     const inp=gather(), r=C.compute(inp), i=r.income, g=r.guarantee;
     // flag
-    const f=$('flag'); const ready = Number(inp.rent)>0 && String(inp.score).trim()!=='';
-    if(!ready){ f.className='flag f-pm'; f.innerHTML='Enter rent and Boom score<small>Results update as you type.</small>'; }
+    const f=$('flag'); const ready = r.complete;
+    if(!ready){ f.className='flag f-pm'; f.innerHTML='Still needed: '+esc(r.missing.join(', '))+'<small>Results update as you type.</small>'; }
     else {
       const cls = r.flag.startsWith('Does not') ? 'f-bad' : r.flag.startsWith('Needs') ? 'f-pm' : r.flag.startsWith('Conditional') ? 'f-cond' : 'f-ok';
       f.className='flag '+cls; f.innerHTML=esc(r.flag)+'<small>'+esc(r.bandLabel)+(r.deposit?' · deposit '+r.deposit.months+' month'+(r.deposit.months===1?'':'s')+' ('+money(r.deposit.total)+')':'')+(g.required?' · guarantee required':'')+'</small>';
     }
+    drawMeter(ready ? r.score : null, r.startBand);
+    // score
+    let sc='';
+    r.factors.forEach(x=>{ sc+=tr(esc(x.label)+'<br><span class="note">'+esc(x.result)+(x.tier!==x.result?' · '+esc(x.tier):'')+'</span>', x.points+'/10 <span class="note">× '+x.weight+'%</span>'); });
+    sc+=tr('<b>Weighted score</b>', ready ? '<b>'+r.score.toFixed(1)+' / 10</b>' : '—');
+    $('scoreTable').innerHTML=sc;
     // income
     let h='';
     if(i.voucher>0) h+=tr('Tenant portion', money(i.tenantPortion)+' <span class="note">('+money(i.rent)+' − '+money(i.voucher)+')</span>');
@@ -236,7 +310,7 @@
     if(!i.meets && i.shortfall>0) h+=tr('Eligible assets to cover gap', money(i.eligibleAssetsToCover));
     $('incTable').innerHTML=h;
     // band
-    let b=tr('Boom score band', ready? esc(({approve:'Approve',upper:'Upper Conditional',lower:'Lower Conditional',decline:'Decline'})[r.startBand]) : '—');
+    let b=tr('Score band', ready? esc(r.startBandLabel) : '—');
     b+=tr('Final band', ready? '<b>'+esc(r.bandLabel)+'</b>' : '—');
     $('bandTable').innerHTML=b;
     $('lists').innerHTML = list('Knockouts',r.knockouts)+list('Caps applied',r.caps)+list('Needs PM judgment',r.pm)+list('Open items',r.warnings);
@@ -254,29 +328,88 @@
       if(g.required){
         let gs='Not provided';
         if(g.type==='theguarantors') gs='TheGuarantors (their approval)';
-        if(g.type==='guarantor') gs = pill(g.guarantorIncomeOk,'4x OK','Under 4x')+' '+pill(g.guarantorNcOk,'NC','Not NC');
+        if(g.type==='guarantor') gs = pill(g.guarantorIncomeOk,'4x OK','Under 4x')+' '+pill(g.guarantorCreditOk,'700+','Under 700')+' '+pill(g.guarantorNcOk,'NC','Not NC');
         c+=tr('Lease guarantee', gs);
       }
       c+='</table><p class="note">Total deposit never exceeds 2 months\' rent. The PM confirms conditions and sends the outcome.</p>';
     }
     $('conds').innerHTML=c;
     $('summary').value = ready ? C.summary(inp,r) : '';
+    decisionUi(r, ready);
+    last = {inp, r};
     save();
   }
 
+  // ---- score bar ----
+  const ZONE_COLOR={decline:'#e5483f',lower:'#f08a24',upper:'#f2b72b',approve:'#4cbf4a'};
+  function drawMeter(score, band){
+    const pct=v=>(v/10*100)+'%';
+    let h='<div class="ticks">'+[0].concat(C.ZONES.map(z=>z.to)).map(v=>'<span class="tick" style="left:'+pct(v)+'">'+(v===0||v===10?v:v.toFixed(1))+'</span>').join('')+'</div>';
+    h+='<div class="track">'+C.ZONES.map(z=>'<div class="zone" style="width:'+((z.to-z.from)*10)+'%;background:'+ZONE_COLOR[z.band]+'"></div>').join('');
+    if(score!=null) h+='<div class="pin" style="left:'+pct(Math.max(0,Math.min(10,score)))+'"></div><div class="val" style="left:'+pct(Math.max(0.4,Math.min(9.6,score)))+'">'+score.toFixed(1)+'</div>';
+    h+='</div><div class="legend">'+C.ZONES.slice().reverse().map(z=>'<div class="'+(score!=null&&z.band===band?'on':'')+'"><i style="background:'+ZONE_COLOR[z.band]+'"></i><span class="r">'+z.range+'</span>'+z.label+'</div>').join('')+'</div>';
+    $('meter').innerHTML=h;
+  }
+
+  // ---- decision + record ----
+  let last = null;
+  const NEEDS_AAN = ['Approved with conditions','Declined'];
+  function needsNotes(r){ const d=$('decDecision').value; return !!d && d!=='Applicant withdrew' && (!r.recommendation || d!==r.recommendation); }
+  function decisionUi(r, ready){
+    const d=$('decDecision').value;
+    $('recHint').innerHTML = !ready ? 'Finish the inputs above to get a recommendation.'
+      : r.recommendation ? 'Calculator recommends: <b>'+esc(r.recommendation)+'</b>. If you decide differently, explain why in the notes.'
+      : 'This file needs <b>PM judgment</b>. Record the decision and the reasoning in the notes.';
+    $('aanBox').classList.toggle('hide', !NEEDS_AAN.includes(d));
+    $('aanDateBox').classList.toggle('hide', $('decAan').value!=='sent');
+    $('notesReq').textContent = needsNotes(r) ? '(required)' : '(optional)';
+    $('notesCount').textContent = $('decNotes').value.length;
+  }
+  function recordProblem(){
+    if(!last || !last.r.complete) return 'Fill in: '+(last?last.r.missing.join(', '):'the inputs')+'.';
+    if(!$('property').value.trim()) return 'Enter the property address.';
+    if(!$('applicantNames').value.trim()) return 'Enter the applicant name(s).';
+    if(!$('decBy').value.trim()) return 'Enter who processed the application.';
+    const d=$('decDecision').value;
+    if(!d) return 'Pick the final decision.';
+    if(NEEDS_AAN.includes(d) && !$('decAan').value) return 'Mark whether the adverse action notice was sent.';
+    if(NEEDS_AAN.includes(d) && $('decAan').value==='sent' && !$('decAanDate').value) return 'Enter the date the adverse action notice was sent.';
+    if(needsNotes(last.r) && !$('decNotes').value.trim()) return 'Add notes explaining the decision.';
+    return '';
+  }
+  $('dlRecord').onclick=async()=>{
+    const msg=$('recMsg'); msg.style.color='';
+    const p=recordProblem(); if(p){ msg.textContent=p; msg.style.color='var(--bad)'; return; }
+    const body={inp:last.inp, r:last.r, decision:{by:$('decBy').value, date:$('decDate').value, decision:$('decDecision').value,
+      aan:$('decAan').value, aanDate:$('decAanDate').value, notes:$('decNotes').value}};
+    msg.textContent='Building…'; $('dlRecord').disabled=true;
+    try{
+      const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),30000);
+      const res=await fetch('{{ url_for("screening_calc.record_pdf") }}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:ctl.signal});
+      clearTimeout(t);
+      if(!res.ok){ let e='Could not build the record.'; try{ e=(await res.json()).error||e; }catch(_){} throw new Error(e); }
+      const blob=await res.blob();
+      const cd=res.headers.get('Content-Disposition')||''; const m=cd.match(/filename="([^"]+)"/);
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=m?m[1]:'Screening Record.pdf';
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+      msg.textContent='Downloaded.'; msg.style.color='var(--ok)';
+    }catch(e){ msg.textContent=e.name==='AbortError'?'Timed out. Try again.':e.message; msg.style.color='var(--bad)'; }
+    finally{ $('dlRecord').disabled=false; }
+  };
+
   // per-browser draft (convenience only)
   const KEY='ds-screening-calc';
-  function save(){ try{ const s={}; FIELDS.forEach(k=>s[k]=$(k).value); CHECKS.forEach(k=>s[k]=$(k).checked); s.incomes=[...document.querySelectorAll('.incv')].map(i=>i.value); localStorage.setItem(KEY,JSON.stringify(s)); }catch(e){} }
+  function save(){ try{ const s={}; FIELDS.forEach(k=>s[k]=$(k).value); CHECKS.forEach(k=>s[k]=$(k).checked); s.incomes=[...document.querySelectorAll('.incv')].map(i=>i.value); s.credits=[...document.querySelectorAll('.crv')].map(i=>i.value); localStorage.setItem(KEY,JSON.stringify(s)); }catch(e){} }
   function load(){ let s=null; try{ s=JSON.parse(localStorage.getItem(KEY)||'null'); }catch(e){}
-    if(s){ FIELDS.forEach(k=>{ if(s[k]!=null) $(k).value=s[k]; }); CHECKS.forEach(k=>$(k).checked=!!s[k]); (s.incomes&&s.incomes.length?s.incomes:['']).forEach(v=>addIncome(v)); }
-    else addIncome(''); }
+    if(s){ FIELDS.forEach(k=>{ if(s[k]!=null) $(k).value=s[k]; }); if(s.utilityCollection && !s.collections) $('collections').value='utility'; CHECKS.forEach(k=>$(k).checked=!!s[k]); (s.incomes&&s.incomes.length?s.incomes:['']).forEach((v,i)=>addIncome(v,(s.credits||[])[i]||(i===0&&s.credit)||'')); }
+    else addIncome('',''); }
 
   FIELDS.forEach(k=>{ $(k).addEventListener('input',update); $(k).addEventListener('change',update); });
   CHECKS.forEach(k=>$(k).addEventListener('change',update));
-  $('addInc').onclick=()=>{ addIncome(''); update(); };
+  $('addInc').onclick=()=>{ addIncome('',''); update(); };
   $('reset').onclick=()=>{ if(!confirm('Clear every field?')) return; try{localStorage.removeItem(KEY);}catch(e){} location.reload(); };
   $('copy').onclick=async()=>{ const t=$('summary').value; if(!t) return; try{ await navigator.clipboard.writeText(t); }catch(e){ $('summary').select(); document.execCommand('copy'); } $('copied').textContent='Copied'; setTimeout(()=>$('copied').textContent='',1500); };
-  load(); update();
+  load(); { const t=new Date(); $('decDate').value=new Date(t.getTime()-t.getTimezoneOffset()*60000).toISOString().slice(0,10); } update();
 })();
 </script>
 </body>
