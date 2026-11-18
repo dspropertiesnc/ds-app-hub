@@ -156,16 +156,18 @@ scored the same way, then builds a **1-page Tenant Screening Record (PDF)** to a
 The calculator runs in the browser; the server only lays out the PDF and stores nothing (a draft is kept in
 the browser's local storage until "Clear all").
 
-- **Weighted score (0-10)** from the Boom results. Each factor scores 0-10, times its weight:
-  income to rent 40% (3x or more = 10, 2.5x = 5, 2x = 2, under 2x = 0; nothing extra above 3x),
-  credit 20% (average of the adults who have a score, entered per adult; 750+ = 10, 700s = 8, 650s = 6,
-  600s = 4, 550s = 2, under 550 = 0; no adult with a score = 4 plus PM review), verifiable rental or
-  homeownership history in the last 5 years 10% (60 months = 10, 36-59 = 7, 24-35 = 5, 12-23 = 2, under 12 = 0;
-  a negative landlord reference = 0, Lower Conditional at best, and PM documents it), eviction filings in the last 7 years 15% (none = 10, 1 filing
-  3+ years ago = 4, a filing in the last 3 years or 2+ = 0), collections 5% (none = 10, general under $1,500
-  total = 6, general $1,500+ = 3, utility under $1,500 = 2, utility $1,500+ = 0), bankruptcy filed or
-  discharged in the last 5 years 5% (none = 10, any = 0), debt-to-income from Boom 5% (under 43% = 10,
-  43% to 50% = 5, over 50% = 0; average if Boom shows one per applicant).
+- **Income is a gate, not a score factor.** 3x or more passes (more earns nothing extra). Under 3x requires a
+  guarantee, caps the file at Upper Conditional, and so carries the 1.5-month deposit.
+- **Weighted score (0-10)** from the Boom results, measuring credit and rental risk. Each factor scores 0-10,
+  times its weight: credit 35% (average of the adults who have a score, entered per adult; 750+ = 10,
+  700s = 8, 650s = 6, 600s = 4, 550s = 2, under 550 = 0; no adult with a score = 4 plus PM review),
+  verifiable rental or homeownership history in the last 5 years 25% (60 months = 10, 36-59 = 7, 24-35 = 5,
+  12-23 = 2, under 12 = 0; a negative landlord reference = 0, Lower Conditional at best, and PM documents it),
+  eviction filings in the last 7 years 25% (none = 10, 1 filing 3+ years ago = 4, a filing in the last
+  3 years or 2+ = 0), collections 5% (none = 10, general under $1,500 total = 6, general $1,500+ = 3,
+  utility under $1,500 = 2, utility $1,500+ = 0), bankruptcy filed or discharged in the last 5 years 5%
+  (none = 10, any = 0), debt-to-income from Boom 5% (under 43% = 10, 43% to 50% = 5, over 50% = 0; average if
+  Boom shows one per applicant).
   Boom's own score is optional and printed for reference only. A 0-10 bar (like Boom's recommendation
   settings) shows where the score falls; it's display-only, and its zones come from `ZONES`/`EDGES` in calc.js.
 - Band from the weighted score: over 7.0 Approve, 5.5 to 7.0 Upper Conditional, 4.1 to 5.4 Lower Conditional,

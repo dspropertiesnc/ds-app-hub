@@ -19,19 +19,15 @@
   // ---- the weighted score. Weights must add to 100. Edit here to change the model. ----
   // Each factor scores 0-10 from its tiers (first tier whose test passes wins).
   var FACTORS = [
-    { key: "income", label: "Income to rent (3x advertised)", weight: 40, tiers: [
-      { min: 3,   pts: 10, text: "3x or more" },
-      { min: 2.5, pts: 5,  text: "2.5x to 2.99x" },
-      { min: 2,   pts: 2,  text: "2x to 2.49x" },
-      { min: -1,  pts: 0,  text: "Under 2x" } ] },
-    { key: "credit", label: "Credit score (average of adults)", weight: 20, tiers: [
+    // Income is NOT scored: 3x is pass/fail. Under 3x = guarantee + Upper Conditional at best (see caps).
+    { key: "credit", label: "Credit score (average of adults)", weight: 35, tiers: [
       { min: 750, pts: 10, text: "750+" },
       { min: 700, pts: 8,  text: "700 to 749" },
       { min: 650, pts: 6,  text: "650 to 699" },
       { min: 600, pts: 4,  text: "600 to 649" },
       { min: 550, pts: 2,  text: "550 to 599" },
       { min: -1,  pts: 0,  text: "Under 550" } ] },
-    { key: "history", label: "Rental/ownership history (5 yrs)", weight: 10, tiers: [
+    { key: "history", label: "Rental/ownership history (5 yrs)", weight: 25, tiers: [
       { min: 60, pts: 10, text: "Full 5 years" },
       { min: 36, pts: 7,  text: "36 to 59 months" },
       { min: 24, pts: 5,  text: "24 to 35 months" },
@@ -44,7 +40,7 @@
       { min: 1, pts: 3,  text: "$1,500 or more" },
       { min: 0, pts: 2,  text: "Utility, under $1,500" },
       { min: -1, pts: 0, text: "Utility, $1,500+" } ] },
-    { key: "evictions", label: "Eviction filings (last 7 yrs)", weight: 15, tiers: [
+    { key: "evictions", label: "Eviction filings (last 7 yrs)", weight: 25, tiers: [
       { min: 2, pts: 10, text: "None" },
       { min: 1, pts: 4,  text: "1 filing, 3+ yrs ago" },
       { min: -1, pts: 0, text: "Recent (3 yrs) or 2+" } ] },

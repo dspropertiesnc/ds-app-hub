@@ -230,7 +230,7 @@ def _render(inp, r, dec, now, fs):
     # ---- two columns: income | rules ----
     top = y
     half = (CW - 14) / 2
-    yl = _section_col(cv, "Income (gross monthly)", M, top, half)
+    yl = _section_col(cv, "Income: 3x gate (gross monthly)", M, top, half)
     lines = []
     credits = r.get("credit") or {}
     raw = list(inp.get("credits") or [])
