@@ -70,8 +70,14 @@ r=run({rent:2000,incomes:[6000],dti:50}); assert.equal(P(r,'dti'),5); assert.equ
 r=run({rent:2000,incomes:[6000],dti:50.1}); assert.equal(P(r,'dti'),0); assert.equal(r.score,9.5);
 
 // guarantor
-r=run({rent:2000,incomes:[4000],guaranteeType:'guarantor',guarantorIncome:8000,guarantorNC:true}); assert(r.guarantee.required); assert(r.guarantee.ok);
-r=run({rent:2000,incomes:[4000],guaranteeType:'guarantor',guarantorIncome:7999,guarantorNC:true}); assert(!r.guarantee.ok);
+// guarantor: NC resident, 700+ credit, 4x rent
+const G={rent:2000,incomes:[4000],guaranteeType:'guarantor',guarantorIncome:8000,guarantorCredit:700,guarantorNC:true};
+r=run(G); assert(r.guarantee.required); assert(r.guarantee.ok); assert(r.complete);
+r=run(Object.assign({},G,{guarantorIncome:7999})); assert(!r.guarantee.ok); assert(r.why.some(w=>w.includes('income under 4x rent')));
+r=run(Object.assign({},G,{guarantorCredit:699})); assert(!r.guarantee.ok); assert(r.warnings.some(w=>w.includes('credit score under 700')));
+r=run(Object.assign({},G,{guarantorNC:false})); assert(!r.guarantee.ok); assert(r.why.some(w=>w.includes('not an NC resident')));
+r=run(Object.assign({},G,{guarantorCredit:''})); assert(!r.complete); assert(r.missing.includes('guarantor credit score'));
+r=run({rent:2000,incomes:[4000],guaranteeType:'theguarantors'}); assert(r.guarantee.ok); assert(r.complete);
 
 // band edges + zones
 assert.equal(C.bandFromScore(7.0),'upper');assert.equal(C.bandFromScore(7.1),'approve');assert.equal(C.bandFromScore(5.5),'upper');assert.equal(C.bandFromScore(5.4),'lower');assert.equal(C.bandFromScore(4.1),'lower');assert.equal(C.bandFromScore(4.0),'decline');

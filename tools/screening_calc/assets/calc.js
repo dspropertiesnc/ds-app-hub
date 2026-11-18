@@ -7,6 +7,7 @@
   var RULES = {
     incomeMultiple: 3,          // household income vs rent (or tenant portion): the advertised requirement
     guarantorMultiple: 4,       // guarantor income vs full monthly rent
+    guarantorCreditMin: 700,    // guarantor credit score floor
     assetMonths: 12,            // asset depletion divisor
     assetPct: { cash: 1.0, sale: 1.0, brokerage: 0.7, retirement: 0.6 },
     historyMonthsMin: 24,       // verifiable rental/mortgage months in last 5 yrs
@@ -146,7 +147,15 @@
       g.guarantorIncome = gi;
       g.guarantorIncomeOk = gi >= g.guarantorRequiredIncome - 0.005;
       g.guarantorNcOk = !!inp.guarantorNC;
-      g.ok = g.guarantorIncomeOk && g.guarantorNcOk;
+      g.guarantorCredit = blank(inp.guarantorCredit) ? null : num(inp.guarantorCredit);
+      g.guarantorCreditOk = g.guarantorCredit != null && g.guarantorCredit >= RULES.guarantorCreditMin;
+      g.ok = g.guarantorIncomeOk && g.guarantorNcOk && g.guarantorCreditOk;
+      if (blank(inp.guarantorIncome)) r.missing.push("guarantor income");
+      if (g.guarantorCredit == null) r.missing.push("guarantor credit score");
+      g.problems = [];
+      if (!blank(inp.guarantorIncome) && !g.guarantorIncomeOk) g.problems.push("income under 4x rent");
+      if (g.guarantorCredit != null && !g.guarantorCreditOk) g.problems.push("credit score under 700");
+      if (!g.guarantorNcOk) g.problems.push("not an NC resident");
     } else if (g.required && g.type === "theguarantors") {
       g.ok = true; // TheGuarantors runs its own approval
     } else {
@@ -314,7 +323,7 @@
     // ---- conditions ----
     var cond = [];
     if (r.deposit && r.deposit.months > 1) cond.push("Total security deposit of " + r.deposit.months + " months' rent (" + money(r.deposit.total) + ")");
-    if (g.required && band !== "decline") cond.push("Lease guarantee: qualified guarantor (NC resident, income at least 4x rent, passes screening) or TheGuarantors");
+    if (g.required && band !== "decline") cond.push("Lease guarantee: qualified guarantor (NC resident, 700+ credit, income at least 4x rent) or TheGuarantors");
     r.conditions = cond;
 
     // ---- plain-English reasons, for the record ----
@@ -329,6 +338,10 @@
     else if (r.income.assetQualified) why.push("Meets 3x only after counting " + money(eligible) + " in eligible liquid assets (÷ 12 = " + money(assetIncome) + "/mo).");
     else if (rent > 0) why.push("Qualifying income is " + (ratio || 0).toFixed(2) + "x the " + (voucher > 0 ? "tenant portion" : "rent") + ", meeting the 3x requirement.");
     if (r.deposit && band !== "decline") why.push("Security deposit: " + monthsText(r.deposit.months) + " (" + money(r.deposit.total) + ") per the " + BAND_LABEL[band] + ".");
+    if (g.required && g.type === "guarantor" && g.problems && g.problems.length) {
+      why.push("The guarantor does not qualify (" + g.problems.join(", ") + "). The applicant needs a qualified guarantor or TheGuarantors.");
+      r.warnings.push("Guarantor does not qualify: " + g.problems.join(", ") + ".");
+    }
     if (r.pm.length) why.push(r.pm.length + " item" + (r.pm.length === 1 ? "" : "s") + " needed PM review (listed under Rules applied).");
     r.why = why;
     return r;
@@ -358,7 +371,7 @@
     if (r.pm.length) L.push("Needs PM: " + r.pm.join("; "));
     if (r.guarantee.required) {
       var gl = "Guarantee required: ";
-      if (r.guarantee.type === "guarantor") gl += "guarantor " + money(r.guarantee.guarantorIncome || 0) + "/mo vs " + money(r.guarantee.guarantorRequiredIncome) + " (4x) " + (r.guarantee.guarantorIncomeOk ? "OK" : "SHORT") + ", NC resident: " + (r.guarantee.guarantorNcOk ? "yes" : "NO");
+      if (r.guarantee.type === "guarantor") gl += "guarantor " + money(r.guarantee.guarantorIncome || 0) + "/mo vs " + money(r.guarantee.guarantorRequiredIncome) + " (4x) " + (r.guarantee.guarantorIncomeOk ? "OK" : "SHORT") + ", credit " + (r.guarantee.guarantorCredit == null ? "not entered" : r.guarantee.guarantorCredit + (r.guarantee.guarantorCreditOk ? " OK" : " UNDER 700")) + ", NC resident: " + (r.guarantee.guarantorNcOk ? "yes" : "NO");
       else if (r.guarantee.type === "theguarantors") gl += "TheGuarantors (pending their approval)";
       else gl += "not yet provided";
       L.push(gl);

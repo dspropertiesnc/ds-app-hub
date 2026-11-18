@@ -178,8 +178,8 @@ the browser's local storage until "Clear all").
 - Income test: combined verified income vs 3x rent (3x the tenant's portion for voucher holders; a voucher
   that covers the full rent passes). Asset depletion: cash and home-sale proceeds at 100%, brokerage 70%,
   retirement 60%, divided by 12 and added to income. Meeting 3x only through assets flags PM review.
-- Guarantee: required whenever income is still under 3x. Qualified guarantor = NC resident, income at least
-  4x the full rent, passes the same screening; or TheGuarantors.
+- Guarantee: required whenever income is still under 3x. Qualified guarantor = NC resident, credit score
+  700+, and gross monthly income of at least 4x the full rent (all 3 entered and checked); or TheGuarantors.
 - Deposit by final band: Approve 1 month, Upper 1.5, Lower 2 (never over 2).
 - Criminal history is never part of the score: it's a PM review item (individual assessment).
 - **Screening record**: processed by, final decision, adverse action notice status, notes. Notes are required

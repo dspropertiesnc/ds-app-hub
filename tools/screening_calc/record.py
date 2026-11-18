@@ -285,9 +285,12 @@ def _render(inp, r, dec, now, fs):
         if g.get("required"):
             t = g.get("type")
             if t == "guarantor":
-                gs = "qualified guarantor, %s/mo vs %s needed (4x rent): %s; NC resident: %s" % (
+                gc = g.get("guarantorCredit")
+                gs = "qualified guarantor, %s/mo vs %s needed (4x rent): %s; credit %s; NC resident: %s" % (
                     money(g.get("guarantorIncome")), money(g.get("guarantorRequiredIncome")),
-                    "meets" if g.get("guarantorIncomeOk") else "SHORT", "yes" if g.get("guarantorNcOk") else "NO")
+                    "meets" if g.get("guarantorIncomeOk") else "SHORT",
+                    ("%d (%s)" % (_num(gc), "meets 700" if g.get("guarantorCreditOk") else "UNDER 700")) if gc is not None else "not entered",
+                    "yes" if g.get("guarantorNcOk") else "NO")
             elif t == "theguarantors":
                 gs = "TheGuarantors (subject to their approval)"
             else:
