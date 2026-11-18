@@ -29,7 +29,7 @@ LOGO = os.path.normpath(os.path.join(HERE, "..", "..", "static", "logo.png"))
 DECISIONS = ["Approved", "Approved with conditions", "Declined", "Applicant withdrew"]
 NEEDS_AAN = {"Approved with conditions", "Declined"}
 NOTES_MAX = 700
-SOP_LINE = "SOP - Tenant Screening v1.3 · D&S weighted score"
+SOP_LINE = "SOP - Tenant Screening v1.4"
 
 
 class RecordError(ValueError):
@@ -145,7 +145,7 @@ def _render(inp, r, dec, now, fs):
     cv.setFillColor(INK); cv.setFont("Helvetica-Bold", 17)
     cv.drawString(M, y - 16, "Tenant Screening Record")
     cv.setFillColor(MUTED); cv.setFont("Helvetica", 8.5)
-    cv.drawString(M, y - 30, "Doss & Spaulding Properties LLC · " + SOP_LINE)
+    cv.drawString(M, y - 30, "Doss & Spaulding Properties LLC · " + SOP_LINE + " · Scoring model " + _model(r))
     y -= 46
     cv.setStrokeColor(ACCENT); cv.setLineWidth(1.5); cv.line(M, y, W - M, y)
     y -= 8
@@ -286,11 +286,11 @@ def _render(inp, r, dec, now, fs):
             t = g.get("type")
             if t == "guarantor":
                 gc = g.get("guarantorCredit")
-                gs = "qualified guarantor, %s/mo vs %s needed (4x rent): %s; credit %s; NC resident: %s" % (
+                gs = "qualified guarantor, %s/mo vs %s needed (4x rent): %s; credit %s; NC resident: %s; no evictions: %s" % (
                     money(g.get("guarantorIncome")), money(g.get("guarantorRequiredIncome")),
                     "meets" if g.get("guarantorIncomeOk") else "SHORT",
                     ("%d (%s)" % (_num(gc), "meets 700" if g.get("guarantorCreditOk") else "UNDER 700")) if gc is not None else "not entered",
-                    "yes" if g.get("guarantorNcOk") else "NO")
+                    "yes" if g.get("guarantorNcOk") else "NO", "yes" if g.get("guarantorNoEvictionsOk") else "NOT CLEARED")
             elif t == "theguarantors":
                 gs = "TheGuarantors (subject to their approval)"
             else:
@@ -385,6 +385,14 @@ def _section_col(cv, title, x, y, w):
     cv.setFillColor(H2); cv.setFont("Helvetica-Bold", 8.5)
     cv.drawString(x + 8, y - 11, title.upper())
     return y - 20
+
+
+def _model(r):
+    v = _s(r.get("scoringVersion"), 20)
+    try:
+        return datetime.date.fromisoformat(v).strftime("%b %-d, %Y")
+    except (TypeError, ValueError):
+        return v or "unknown"
 
 
 def filename(payload):
