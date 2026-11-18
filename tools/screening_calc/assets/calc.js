@@ -1,4 +1,4 @@
-// Screening calculator logic. Mirrors SOP - Tenant Screening v1.3, Section 3A,
+// Screening calculator logic. Mirrors SOP - Tenant Screening v1.4, Section 3A,
 // with the D&S weighted score (Nov 2026) replacing Boom's own score.
 // Pure function: no DOM access, so it can be tested with node (see test_calc.js).
 (function (root) {
@@ -8,6 +8,9 @@
     incomeMultiple: 3,          // household income vs rent (or tenant portion): the advertised requirement
     guarantorMultiple: 4,       // guarantor income vs full monthly rent
     guarantorCreditMin: 700,    // guarantor credit score floor
+    // Bump this date whenever FACTORS or RULES change, and log the change in the README.
+    // Every Screening Record prints it, so each file shows which scoring model was used.
+    scoringVersion: "2026-11-17",
     assetMonths: 12,            // asset depletion divisor
     assetPct: { cash: 1.0, sale: 1.0, brokerage: 0.7, retirement: 0.6 },
     historyMonthsMin: 24,       // verifiable rental/mortgage months in last 5 yrs
@@ -149,13 +152,15 @@
       g.guarantorNcOk = !!inp.guarantorNC;
       g.guarantorCredit = blank(inp.guarantorCredit) ? null : num(inp.guarantorCredit);
       g.guarantorCreditOk = g.guarantorCredit != null && g.guarantorCredit >= RULES.guarantorCreditMin;
-      g.ok = g.guarantorIncomeOk && g.guarantorNcOk && g.guarantorCreditOk;
+      g.guarantorNoEvictionsOk = !!inp.guarantorNoEvictions;
+      g.ok = g.guarantorIncomeOk && g.guarantorNcOk && g.guarantorCreditOk && g.guarantorNoEvictionsOk;
       if (blank(inp.guarantorIncome)) r.missing.push("guarantor income");
       if (g.guarantorCredit == null) r.missing.push("guarantor credit score");
       g.problems = [];
       if (!blank(inp.guarantorIncome) && !g.guarantorIncomeOk) g.problems.push("income under 4x rent");
       if (g.guarantorCredit != null && !g.guarantorCreditOk) g.problems.push("credit score under 700");
       if (!g.guarantorNcOk) g.problems.push("not an NC resident");
+      if (!g.guarantorNoEvictionsOk) g.problems.push("eviction history not cleared");
     } else if (g.required && g.type === "theguarantors") {
       g.ok = true; // TheGuarantors runs its own approval
     } else {
@@ -327,7 +332,7 @@
     // ---- conditions ----
     var cond = [];
     if (r.deposit && r.deposit.months > 1) cond.push("Total security deposit of " + r.deposit.months + " months' rent (" + money(r.deposit.total) + ")");
-    if (g.required && band !== "decline") cond.push("Lease guarantee: qualified guarantor (NC resident, 700+ credit, income at least 4x rent) or TheGuarantors");
+    if (g.required && band !== "decline") cond.push("Lease guarantee: qualified guarantor (NC resident, 700+ credit, income at least 4x rent, no evictions in 7 years) or TheGuarantors");
     r.conditions = cond;
 
     // ---- plain-English reasons, for the record ----
@@ -348,6 +353,7 @@
     }
     if (r.pm.length) why.push(r.pm.length + " item" + (r.pm.length === 1 ? "" : "s") + " needed PM review (listed under Rules applied).");
     r.why = why;
+    r.scoringVersion = RULES.scoringVersion;
     return r;
   }
 
@@ -375,7 +381,7 @@
     if (r.pm.length) L.push("Needs PM: " + r.pm.join("; "));
     if (r.guarantee.required) {
       var gl = "Guarantee required: ";
-      if (r.guarantee.type === "guarantor") gl += "guarantor " + money(r.guarantee.guarantorIncome || 0) + "/mo vs " + money(r.guarantee.guarantorRequiredIncome) + " (4x) " + (r.guarantee.guarantorIncomeOk ? "OK" : "SHORT") + ", credit " + (r.guarantee.guarantorCredit == null ? "not entered" : r.guarantee.guarantorCredit + (r.guarantee.guarantorCreditOk ? " OK" : " UNDER 700")) + ", NC resident: " + (r.guarantee.guarantorNcOk ? "yes" : "NO");
+      if (r.guarantee.type === "guarantor") gl += "guarantor " + money(r.guarantee.guarantorIncome || 0) + "/mo vs " + money(r.guarantee.guarantorRequiredIncome) + " (4x) " + (r.guarantee.guarantorIncomeOk ? "OK" : "SHORT") + ", credit " + (r.guarantee.guarantorCredit == null ? "not entered" : r.guarantee.guarantorCredit + (r.guarantee.guarantorCreditOk ? " OK" : " UNDER 700")) + ", NC resident: " + (r.guarantee.guarantorNcOk ? "yes" : "NO") + ", no evictions: " + (r.guarantee.guarantorNoEvictionsOk ? "yes" : "NOT CLEARED");
       else if (r.guarantee.type === "theguarantors") gl += "TheGuarantors (pending their approval)";
       else gl += "not yet provided";
       L.push(gl);

@@ -78,7 +78,7 @@
 </div>
 <header class="h">
   <h1>Screening Calculator</h1>
-  <p>Applies SOP - Tenant Screening v1.3 with the D&amp;S weighted score. Enter the Boom results; the calculator scores the file and builds the 1-page screening record.</p>
+  <p>Applies SOP - Tenant Screening v1.4 with the D&amp;S weighted score. Enter the Boom results; the calculator scores the file and builds the 1-page screening record.</p>
 </header>
 <main>
 <div class="layout">
@@ -165,7 +165,8 @@
         <label class="f">Guarantor gross monthly income ($)<span class="h" id="gReq"></span><input type="number" id="guarantorIncome" inputmode="decimal" min="0"></label>
         <label class="f">Guarantor credit score<span class="h">Must be 700 or higher.</span><input type="number" id="guarantorCredit" inputmode="numeric" min="300" max="850" step="1"></label>
         <div class="chk"><input type="checkbox" id="guarantorNC"><div>Guarantor lives in North Carolina</div></div>
-        <p class="note">All 3 are required: NC resident, 700+ credit, and gross monthly income of at least 4x the rent.</p>
+        <div class="chk"><input type="checkbox" id="guarantorNoEvictions"><div>Guarantor has no eviction judgments or filings in the last 7 years<small>Confirmed by the guarantor's screening report and an NC court search.</small></div></div>
+        <p class="note">All 4 are required: NC resident, 700+ credit, gross monthly income of at least 4x the rent, and no evictions in the last 7 years.</p>
       </div>
     </div>
   </div>
@@ -242,7 +243,7 @@
 (function(){
   const $ = id => document.getElementById(id);
   const C = window.ScreeningCalc, money = C.money;
-  const CHECKS = ['hasVoucher','noCredit','bankruptcy','negativeReference','recentFiling','currentResidenceFiling','evictionJudgment','landlordBalance','sexOffender','identityFraud','felony','suspectedFraud','dvFiling','international','otherPm','guarantorNC','pre_incomeVerified','pre_allAdults','pre_ncSearch','pre_identity'];
+  const CHECKS = ['hasVoucher','noCredit','bankruptcy','negativeReference','recentFiling','currentResidenceFiling','evictionJudgment','landlordBalance','sexOffender','identityFraud','felony','suspectedFraud','dvFiling','international','otherPm','guarantorNC','pre_incomeVerified','pre_allAdults','pre_ncSearch','pre_identity','guarantorNoEvictions'];
   const FIELDS = ['property','applicantNames','rent','boomScore','dti','collections','collectionsBalance','voucher','a_cash','a_sale','a_brokerage','a_retirement','historyMonths','filings','guaranteeType','guarantorIncome','guarantorCredit','decBy','decDate','decDecision','decAan','decAanDate','decNotes'];
 
   function addIncome(v,c){
@@ -271,7 +272,7 @@
       sexOffender:$('sexOffender').checked, identityFraud:$('identityFraud').checked,
       felony:$('felony').checked, suspectedFraud:$('suspectedFraud').checked, dvFiling:$('dvFiling').checked,
       international:$('international').checked, otherPm:$('otherPm').checked,
-      guaranteeType:$('guaranteeType').value, guarantorIncome:$('guarantorIncome').value, guarantorCredit:$('guarantorCredit').value, guarantorNC:$('guarantorNC').checked,
+      guaranteeType:$('guaranteeType').value, guarantorIncome:$('guarantorIncome').value, guarantorCredit:$('guarantorCredit').value, guarantorNC:$('guarantorNC').checked, guarantorNoEvictions:$('guarantorNoEvictions').checked,
       prechecks:{incomeVerified:$('pre_incomeVerified').checked, allAdults:$('pre_allAdults').checked, ncSearch:$('pre_ncSearch').checked, identity:$('pre_identity').checked}
     };
   }
@@ -328,7 +329,7 @@
       if(g.required){
         let gs='Not provided';
         if(g.type==='theguarantors') gs='TheGuarantors (their approval)';
-        if(g.type==='guarantor') gs = pill(g.guarantorIncomeOk,'4x OK','Under 4x')+' '+pill(g.guarantorCreditOk,'700+','Under 700')+' '+pill(g.guarantorNcOk,'NC','Not NC');
+        if(g.type==='guarantor') gs = pill(g.guarantorIncomeOk,'4x OK','Under 4x')+' '+pill(g.guarantorCreditOk,'700+','Under 700')+' '+pill(g.guarantorNcOk,'NC','Not NC')+' '+pill(g.guarantorNoEvictionsOk,'No evictions','Evictions?');
         c+=tr('Lease guarantee', gs);
       }
       c+='</table><p class="note">Total deposit never exceeds 2 months\' rent. The PM confirms conditions and sends the outcome.</p>';

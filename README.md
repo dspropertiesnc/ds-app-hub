@@ -179,7 +179,8 @@ the browser's local storage until "Clear all").
   that covers the full rent passes). Asset depletion: cash and home-sale proceeds at 100%, brokerage 70%,
   retirement 60%, divided by 12 and added to income. Meeting 3x only through assets flags PM review.
 - Guarantee: required whenever income is still under 3x. Qualified guarantor = NC resident, credit score
-  700+, and gross monthly income of at least 4x the full rent (all 3 entered and checked); or TheGuarantors.
+  700+, gross monthly income of at least 4x the full rent, and no eviction judgments or filings in the last
+  7 years (all 4 entered and checked); or TheGuarantors.
 - Deposit by final band: Approve 1 month, Upper 1.5, Lower 2 (never over 2).
 - Criminal history is never part of the score: it's a PM review item (individual assessment).
 - **Screening record**: processed by, final decision, adverse action notice status, notes. Notes are required
@@ -189,8 +190,20 @@ the browser's local storage until "Clear all").
 - Also builds a Slack summary to paste into the application thread.
 
 Weights and tiers live in `FACTORS`, rule numbers in `RULES`, both at the top of
-`tools/screening_calc/assets/calc.js`. Change them there when the criteria change, and run
-`node tools/screening_calc/test_calc.js` to check the logic. The PDF layout is `tools/screening_calc/record.py`.
+`tools/screening_calc/assets/calc.js`. The SOP deliberately does not repeat the weights or tiers, so tuning
+them doesn't require an SOP edit. When you change them:
+
+1. Edit `FACTORS` / `RULES`, then bump `RULES.scoringVersion` to the date the change takes effect.
+2. Add a line to the scoring change log below (date, what changed, why).
+3. Run `node tools/screening_calc/test_calc.js` and update any expected scores.
+
+Every Screening Record prints its scoring model date, so each application's file shows exactly which
+weights were used. The PDF layout is `tools/screening_calc/record.py`.
+
+### Scoring change log
+- **2026-11-17**: First D&S model. Income is a 3x gate (not scored). Credit 35, rental/ownership history
+  25, evictions 25, collections 5, bankruptcy 5, DTI 5. No credit score caps at Upper Conditional. Guarantor
+  must be NC resident, 700+ credit, 4x rent, no evictions in 7 years.
 
 
 ## Invoice Generator (/invoices/)
