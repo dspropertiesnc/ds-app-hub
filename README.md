@@ -171,7 +171,7 @@ the browser's local storage until "Clear all").
   Boom's own score is optional and printed for reference only. A 0-10 bar (like Boom's recommendation
   settings) shows where the score falls; it's display-only, and its zones come from `ZONES`/`EDGES` in calc.js.
 - Band from the weighted score: over 7.0 Approve, 5.5 to 7.0 Upper Conditional, 4.1 to 5.4 Lower Conditional,
-  4.0 or less Decline. Caps (best band allowed): income under 3x, average credit under 650, unpaid utility collection,
+  4.0 or less Decline. Caps (best band allowed): income under 3x, average credit under 650, no credit score, unpaid utility collection,
   or under 24 months of history = Upper; 1 qualifying filing = Lower. Knockouts: eviction judgment, 2+
   qualifying filings, any filing in the last 3 years, a filing at the applicant's current residence (the
   filing knockouts go to PM review instead if the applicant says the filing was DV-related), unpaid landlord balance, sex offender registration, PM-confirmed identity fraud.
