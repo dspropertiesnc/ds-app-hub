@@ -121,8 +121,8 @@
   <div class="card">
 
     <label class="f">Months of verifiable rental or mortgage history (last 5 years)<span class="h">Landlord reference, ledger, or mortgage history on the credit report. Under 24 caps at Upper Conditional.</span><input type="number" id="historyMonths" inputmode="numeric" min="0" max="60"></label>
-    <label class="f">Qualifying eviction filings in last 7 years<span class="h">Nonpayment or breach, matched to the applicant by address, not won by the tenant. Holdover filings don't count. 1 = Lower Conditional max; 2+ = Does not meet.</span><input type="number" id="filings" inputmode="numeric" min="0" step="1" value="0"></label>
-    <div id="recentBox" class="chk hide"><input type="checkbox" id="recentFiling"><div>The most recent filing was in the last 3 years<small>A recent filing scores 0 on the eviction factor; an older single filing scores 4 of 10.</small></div></div>
+    <label class="f">Qualifying eviction filings in last 7 years<span class="h">Nonpayment or breach, matched to the applicant by address, not won by the tenant. Holdover filings don't count. 1 filing 3+ years ago = Lower Conditional max. A filing in the last 3 years, or 2+ filings = Does not meet.</span><input type="number" id="filings" inputmode="numeric" min="0" step="1" value="0"></label>
+    <div id="recentBox" class="chk hide"><input type="checkbox" id="recentFiling"><div>The most recent filing was in the last 3 years<small>Does not meet criteria (a knockout), unless the applicant says it was DV-related; then it goes to PM review.</small></div></div>
     <label class="f">Collections<span class="h">Landlord or rental collections are a knockout (section 5). A utility collection caps at Upper Conditional.</span><select id="collections">
       <option value="none">None</option>
       <option value="general">General collections only</option>

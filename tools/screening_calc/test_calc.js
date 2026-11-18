@@ -42,7 +42,13 @@ r=run({rent:2000,hasVoucher:true,voucher:2000,incomes:['']}); assert(r.income.me
 
 // evictions
 r=run({rent:2000,incomes:[6000],filings:1}); assert.equal(r.band,'lower'); assert.equal(r.deposit.months,2); assert.equal(r.flag,'Conditional, lower'); assert.equal(r.factors[4].points,4); assert.equal(r.score,9.1);
-r=run({rent:2000,incomes:[6000],filings:1,recentFiling:true}); assert.equal(r.factors[4].points,0); assert.equal(r.score,8.5); assert.equal(r.band,'lower');
+r=run({rent:2000,incomes:[6000],filings:1,recentFiling:true}); assert.equal(r.factors[4].points,0); assert.equal(r.score,8.5); assert.equal(r.band,'decline');
+assert(r.knockouts.includes('Eviction filing within the last 3 years')); assert.equal(r.recommendation,'Declined');
+r=run({rent:2000,incomes:[6000],filings:1,recentFiling:true,dvFiling:true}); assert.equal(r.knockouts.length,0); assert.equal(r.flag,'Needs PM judgment'); assert.equal(r.band,'lower');
+// current residence shows its own knockout, not a duplicate 3-year one
+r=run({rent:2000,incomes:[6000],filings:1,recentFiling:true,currentResidenceFiling:true}); assert.equal(r.knockouts.length,1);
+// under 3x: guarantee AND the Upper Conditional deposit (1.5 months)
+r=run({rent:2000,incomes:[5000]}); assert(r.guarantee.required); assert.equal(r.deposit.months,1.5); assert(r.conditions.length===2);
 // filing at the current residence: knockout, counts as a recent filing even if the count was left at 0
 r=run({rent:2000,incomes:[6000],currentResidenceFiling:true}); assert.equal(r.flag,'Does not meet criteria'); assert(r.knockouts.some(k=>k.includes('current residence'))); assert.equal(r.factors[4].points,0); assert.equal(r.recommendation,'Declined');
 // ...unless the applicant says it was DV-related: PM review instead of an automatic decline

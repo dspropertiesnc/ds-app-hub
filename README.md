@@ -167,8 +167,8 @@ the browser's local storage until "Clear all").
 - Band from the weighted score: over 7.0 Approve, 5.5 to 7.0 Upper Conditional, 4.1 to 5.4 Lower Conditional,
   4.0 or less Decline. Caps (best band allowed): income under 3x, average credit under 650, unpaid utility collection,
   or under 24 months of history = Upper; 1 qualifying filing = Lower. Knockouts: eviction judgment, 2+
-  qualifying filings, a filing at the applicant's current residence (PM review instead if the applicant says
-  it was DV-related), unpaid landlord balance, sex offender registration, PM-confirmed identity fraud.
+  qualifying filings, any filing in the last 3 years, a filing at the applicant's current residence (the
+  filing knockouts go to PM review instead if the applicant says the filing was DV-related), unpaid landlord balance, sex offender registration, PM-confirmed identity fraud.
 - Income test: combined verified income vs 3x rent (3x the tenant's portion for voucher holders; a voucher
   that covers the full rent passes). Asset depletion: cash and home-sale proceeds at 100%, brokerage 70%,
   retirement 60%, divided by 12 and added to income. Meeting 3x only through assets flags PM review.

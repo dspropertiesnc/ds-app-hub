@@ -215,7 +215,7 @@
       r.caps.push("Average credit score under 650: Upper Conditional at best");
       band = worse(band, "upper");
     }
-    if (filings === 1) { r.caps.push("1 qualifying eviction filing in the last 7 years: Lower Conditional at best"); band = worse(band, "lower"); }
+    if (filings === 1) { r.caps.push("1 qualifying eviction filing in the last 7 years: Lower Conditional at best"); band = worse(band, "lower"); }  // older filing; recent ones knock out below
     if (coll === "utility") { r.caps.push("Unpaid utility collection: Upper Conditional at best"); band = worse(band, "upper"); }
     if (histKnown && hist < RULES.historyMonthsMin) {
       r.caps.push("Under 24 months of verifiable rental/mortgage history: Upper Conditional at best");
@@ -229,6 +229,10 @@
     // domestic violence, it goes to the PM instead (same as every other DV-related filing).
     if (currentResFiling && !inp.dvFiling) r.knockouts.push("Eviction filing at the applicant's current residence");
     if (currentResFiling && inp.dvFiling) r.pm.push("Filing at the current residence the applicant says was DV-related (knockout held for PM review)");
+    // Any other filing in the last 3 years is also a knockout, with the same DV exception.
+    var recentOnly = recentFiling && !currentResFiling;
+    if (recentOnly && !inp.dvFiling) r.knockouts.push("Eviction filing within the last 3 years");
+    if (recentOnly && inp.dvFiling) r.pm.push("Filing within the last 3 years the applicant says was DV-related (knockout held for PM review)");
     if (inp.landlordBalance) r.knockouts.push("Unpaid balance owed to a previous landlord");
     if (inp.sexOffender) r.knockouts.push("Lifetime sex offender registration");
     if (inp.identityFraud) r.knockouts.push("Identity fraud (confirmed by the PM)");
