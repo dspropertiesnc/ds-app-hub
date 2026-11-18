@@ -248,6 +248,10 @@
       r.caps.push("Average credit score under 650: Upper Conditional at best");
       band = worse(band, "upper");
     }
+    if (noCredit) {
+      r.caps.push("No credit score: Upper Conditional at best");
+      band = worse(band, "upper");
+    }
     if (filings === 1) { r.caps.push("1 qualifying eviction filing in the last 7 years: Lower Conditional at best"); band = worse(band, "lower"); }  // older filing; recent ones knock out below
     if (coll === "utility") { r.caps.push("Unpaid utility collection: Upper Conditional at best"); band = worse(band, "upper"); }
     if (negRef) {

@@ -27,6 +27,7 @@ r=run({rent:2000,incomes:[6000],credit:700}); assert.equal(P(r,'credit'),8); ass
 r=run({rent:2000,incomes:[6000],credit:640}); assert.equal(P(r,'credit'),4); assert.equal(r.score,7.9); assert.equal(r.band,'upper');
 r=run({rent:2000,incomes:[6000],credit:520}); assert.equal(r.score,6.5); assert.equal(r.band,'upper');
 r=run({rent:2000,incomes:[6000],credit:'',noCredit:true}); assert.equal(P(r,'credit'),4); assert.equal(r.flag,'Needs PM judgment'); assert.equal(r.recommendation,null);
+assert.equal(r.band,'upper'); assert(r.caps.includes('No credit score: Upper Conditional at best'));
 
 // asset depletion still counts toward 3x
 r=run({rent:2000,incomes:[3000],assets:{cash:36000}});
