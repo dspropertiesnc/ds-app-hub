@@ -104,6 +104,7 @@
     <button class="btn ghost" type="button" id="addInc">+ Add adult</button>
     <p class="note">Gross monthly income verified from actual documents (Step 5), not the amount the applicant reported. Credit score from each adult's Boom report; leave it blank for an adult with no score. The score uses the average of the adults who have one.</p>
     <div class="chk" style="margin-top:6px"><input type="checkbox" id="noCredit"><div>No adult has a credit score (thin file)<small>Scored like 600 to 649 and sent for PM review.</small></div></div>
+    <label class="f" style="margin-top:10px">Debt-to-income from Boom (%)<span class="h">If Boom shows a DTI for each applicant, enter the average. Under 43% scores full; 43% to 50% partial; over 50% scores 0. Light weight (5%).</span><input type="number" id="dti" inputmode="decimal" min="0" max="200" step="0.1"></label>
   </div>
 
   <div class="band">3 · Liquid assets (only if short on income)</div>
@@ -240,7 +241,7 @@
   const $ = id => document.getElementById(id);
   const C = window.ScreeningCalc, money = C.money;
   const CHECKS = ['hasVoucher','noCredit','bankruptcy','recentFiling','currentResidenceFiling','evictionJudgment','landlordBalance','sexOffender','identityFraud','felony','suspectedFraud','dvFiling','international','otherPm','guarantorNC','pre_incomeVerified','pre_allAdults','pre_ncSearch','pre_identity'];
-  const FIELDS = ['property','applicantNames','rent','boomScore','collections','collectionsBalance','voucher','a_cash','a_sale','a_brokerage','a_retirement','historyMonths','filings','guaranteeType','guarantorIncome','decBy','decDate','decDecision','decAan','decAanDate','decNotes'];
+  const FIELDS = ['property','applicantNames','rent','boomScore','dti','collections','collectionsBalance','voucher','a_cash','a_sale','a_brokerage','a_retirement','historyMonths','filings','guaranteeType','guarantorIncome','decBy','decDate','decDecision','decAan','decAanDate','decNotes'];
 
   function addIncome(v,c){
     const d=document.createElement('div'); d.className='inc';
@@ -258,7 +259,7 @@
   function gather(){
     return {
       property:$('property').value, applicantNames:$('applicantNames').value,
-      rent:$('rent').value, boomScore:$('boomScore').value, noCredit:$('noCredit').checked, collections:$('collections').value, collectionsBalance:$('collectionsBalance').value, bankruptcy:$('bankruptcy').checked,
+      rent:$('rent').value, boomScore:$('boomScore').value, noCredit:$('noCredit').checked, dti:$('dti').value, collections:$('collections').value, collectionsBalance:$('collectionsBalance').value, bankruptcy:$('bankruptcy').checked,
       hasVoucher:$('hasVoucher').checked, voucher:$('voucher').value,
       incomes:[...document.querySelectorAll('.incv')].map(i=>i.value),
       credits:[...document.querySelectorAll('.crv')].map(i=>i.value),

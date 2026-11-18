@@ -159,11 +159,12 @@ the browser's local storage until "Clear all").
 - **Weighted score (0-10)** from the Boom results. Each factor scores 0-10, times its weight:
   income to rent 40% (3x or more = 10, 2.5x = 5, 2x = 2, under 2x = 0; nothing extra above 3x),
   credit 20% (average of the adults who have a score, entered per adult; 750+ = 10, 700s = 8, 650s = 6,
-  600s = 4, 550s = 2, under 550 = 0; no adult with a score = 4 plus PM review), rental/mortgage history 15%
+  600s = 4, 550s = 2, under 550 = 0; no adult with a score = 4 plus PM review), rental/mortgage history 10%
   (24+ months = 10, 12-23 = 5, under 12 = 0), eviction filings in the last 7 years 15% (none = 10, 1 filing
   3+ years ago = 4, a filing in the last 3 years or 2+ = 0), collections 5% (none = 10, general under $1,500
   total = 6, general $1,500+ = 3, utility under $1,500 = 2, utility $1,500+ = 0), bankruptcy filed or
-  discharged in the last 5 years 5% (none = 10, any = 0).
+  discharged in the last 5 years 5% (none = 10, any = 0), debt-to-income from Boom 5% (under 43% = 10,
+  43% to 50% = 5, over 50% = 0; average if Boom shows one per applicant).
   Boom's own score is optional and printed for reference only. A 0-10 bar (like Boom's recommendation
   settings) shows where the score falls; it's display-only, and its zones come from `ZONES`/`EDGES` in calc.js.
 - Band from the weighted score: over 7.0 Approve, 5.5 to 7.0 Upper Conditional, 4.1 to 5.4 Lower Conditional,

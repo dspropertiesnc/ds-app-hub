@@ -2,7 +2,7 @@
 const C=require('./assets/calc.js');
 const assert=require('assert');
 const pre={incomeVerified:1,allAdults:1,ncSearch:1,identity:1};
-function run(o){return C.compute(Object.assign({prechecks:pre,historyMonths:60,credit:760,collections:'none'},o));}
+function run(o){return C.compute(Object.assign({prechecks:pre,historyMonths:60,credit:760,collections:'none',dti:30},o));}
 
 // weights add to 100
 assert.equal(C.FACTORS.reduce((a,f)=>a+f.weight,0),100);
@@ -75,7 +75,7 @@ assert.equal(C.bandFromScore(7.0),'upper');assert.equal(C.bandFromScore(7.1),'ap
 
 // weak everywhere lands in decline on score alone
 r=run({rent:2000,incomes:[3000],credit:540,historyMonths:6,collections:'utility',filings:1});
-assert.equal(r.score,1.2); assert.equal(r.band,'decline');
+assert.equal(r.score,1.7); assert.equal(r.band,'decline');
 
 // credit is the average of the adults who have a score
 r=run({rent:2000,incomes:[3000,3000],credits:[720,640]}); assert.equal(r.credit.average,680); assert.equal(r.factors[1].points,6); assert.equal(r.band,'approve');
@@ -90,8 +90,16 @@ r=run({rent:2000,incomes:[6000,0],credits:['',700],noCredit:true}); assert(!r.cr
 assert.deepEqual(C.ZONES.map(z=>z.band),['decline','lower','upper','approve']);
 C.ZONES.forEach(z=>{ assert.equal(C.bandFromScore((z.from+z.to)/2),z.band); });
 
+// DTI: under 43 = 10, 43 to 50 = 5, over 50 = 0
+assert.equal(run({rent:2000,incomes:[6000],dti:42.9}).factors[6].points,10);
+assert.equal(run({rent:2000,incomes:[6000],dti:43}).factors[6].points,5);
+r=run({rent:2000,incomes:[6000],dti:50}); assert.equal(r.factors[6].points,5); assert.equal(r.score,9.8);
+r=run({rent:2000,incomes:[6000],dti:50.1}); assert.equal(r.factors[6].points,0); assert.equal(r.score,9.5); assert.equal(r.band,'approve');
+// history now 10%
+r=run({rent:2000,incomes:[6000],historyMonths:12}); assert.equal(r.score,9.5);
+
 // missing inputs are reported
-r=C.compute({rent:2000,incomes:['']}); assert(!r.complete); assert.deepEqual(r.missing,['income','credit score','months of rental/mortgage history']);
+r=C.compute({rent:2000,incomes:['']}); assert(!r.complete); assert.deepEqual(r.missing,['income','credit score','months of rental/mortgage history','debt-to-income']);
 
 console.log(C.summary({property:'123 Main St',applicantNames:'A. Smith'},run({rent:2000,incomes:[3000],assets:{cash:20000,brokerage:10000},credit:680,filings:1,guaranteeType:'theguarantors',boomScore:6.2})));
 console.log('ALL TESTS PASS');

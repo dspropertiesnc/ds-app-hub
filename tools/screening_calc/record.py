@@ -130,7 +130,7 @@ def build(payload, now=None, fit_check=True):
 
 def _render(inp, r, dec, now, fs):
     lead = fs * 1.3
-    rowh = 15 if fs >= 8.5 else 13
+    rowh = 15 if fs >= 8.5 else 13 if fs >= 7.8 else 12
     now = now or datetime.datetime.now()
     buf = io.BytesIO()
     cv = rl_canvas.Canvas(buf, pagesize=letter)
@@ -214,15 +214,18 @@ def _render(inp, r, dec, now, fs):
     for f in (r.get("factors") or [])[:8]:
         cv.setStrokeColor(RULE); cv.setLineWidth(0.5); cv.line(M, y, W - M, y)
         row([f.get("label"), f.get("result"), f.get("tier"), "%g / 10" % _num(f.get("points")),
-             "%g%%" % _num(f.get("weight")), "%.2f" % _num(f.get("weighted"))], y - 11)
+             "%g%%" % _num(f.get("weight")), "%.2f" % _num(f.get("weighted"))], y - rowh + 4)
         y -= rowh
     cv.setStrokeColor(ACCENT); cv.setLineWidth(0.8); cv.line(M, y, W - M, y)
     row(["Weighted score", "Starting band: " + _s(r.get("startBandLabel")), "", "", "100%", "%.1f" % score], y - 12, True)
     y -= 18
-    cv.setFillColor(MUTED); cv.setFont("Helvetica", 7.5)
-    cv.drawString(M + 4, y - 7, "Bands: 0 to 4.0 Decline · 4.1 to 5.4 Lower Conditional · 5.5 to 7.0 Upper Conditional · 7.1 to 10 Approve. "
-                  "Caps and knockouts can only lower the band.")
-    y -= 16
+    if fs >= 8.5:   # the banner's bar already shows the edges; drop this line when space is tight
+        cv.setFillColor(MUTED); cv.setFont("Helvetica", 7.5)
+        cv.drawString(M + 4, y - 7, "Bands: 0 to 4.0 Decline · 4.1 to 5.4 Lower Conditional · 5.5 to 7.0 Upper Conditional · 7.1 to 10 Approve. "
+                      "Caps and knockouts can only lower the band.")
+        y -= 16
+    else:
+        y -= 6
 
     # ---- two columns: income | rules ----
     top = y

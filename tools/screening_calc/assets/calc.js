@@ -31,7 +31,7 @@
       { min: 600, pts: 4,  text: "600 to 649" },
       { min: 550, pts: 2,  text: "550 to 599" },
       { min: -1,  pts: 0,  text: "Under 550" } ] },
-    { key: "history", label: "Verifiable rental/mortgage history", weight: 15, tiers: [
+    { key: "history", label: "Verifiable rental/mortgage history", weight: 10, tiers: [
       { min: 24, pts: 10, text: "24+ months" },
       { min: 12, pts: 5,  text: "12 to 23 months" },
       { min: -1, pts: 0,  text: "Under 12 months" } ] },
@@ -47,7 +47,12 @@
       { min: -1, pts: 0, text: "Recent (3 yrs) or 2+" } ] },
     { key: "bankruptcy", label: "Bankruptcy (last 5 yrs)", weight: 5, tiers: [
       { min: 1, pts: 10, text: "None" },
-      { min: -1, pts: 0, text: "Filed or discharged" } ] }
+      { min: -1, pts: 0, text: "Filed or discharged" } ] },
+    // lower is better: "below" = under that %, "upTo" = that % or less
+    { key: "dti", label: "Debt-to-income (Boom)", weight: 5, tiers: [
+      { below: 43, pts: 10, text: "Under 43%" },
+      { upTo: 50,  pts: 5,  text: "43% to 50%" },
+      { min: -Infinity, pts: 0, text: "Over 50%" } ] }
   ];
   var NO_CREDIT_PTS = 4; // thin file / no score: treated like 600-649, and flagged for the PM
 
@@ -88,7 +93,8 @@
   }
   function tierFor(factor, value) {
     for (var i = 0; i < factor.tiers.length; i++) {
-      if (value >= factor.tiers[i].min) return factor.tiers[i];
+      var t = factor.tiers[i];
+      if (t.below != null ? value < t.below : t.upTo != null ? value <= t.upTo : value >= t.min) return t;
     }
     return factor.tiers[factor.tiers.length - 1];
   }
@@ -180,6 +186,9 @@
     var collBig = collBal >= RULES.collectionsBalanceLine;
     var collVal = coll === "none" ? 3 : coll === "general" ? (collBig ? 1 : 2) : (collBig ? -1 : 0);
     var bk = !!inp.bankruptcy;
+    var dtiKnown = !blank(inp.dti);
+    var dti = num(inp.dti);
+    if (!dtiKnown) r.missing.push("debt-to-income");
     var evVal = filings === 0 ? 2 : (filings === 1 && !recentFiling) ? 1 : 0;
     var values = {
       income: voucherFull ? 99 : ratio,
@@ -187,6 +196,7 @@
       history: hist,
       collections: collVal,
       bankruptcy: bk ? -1 : 1,
+      dti: dti,
       evictions: evVal
     };
     var detail = {
@@ -198,6 +208,7 @@
       history: histKnown ? Math.round(hist) + " months" : "Not entered",
       collections: coll === "none" ? "None" : (coll === "utility" ? "Utility" : "General") + (collBalKnown ? ", " + money(collBal) + " total" : ", balance not entered"),
       bankruptcy: bk ? "Yes" : "None",
+      dti: dtiKnown ? (Math.round(dti * 10) / 10) + "%" : "Not entered",
       evictions: filings === 0 ? "None" : filings + " filing" + (filings === 1 ? "" : "s") +
         (currentResFiling ? ", current home" : recentFiling ? ", within 3 yrs" : "")
     };
