@@ -53,6 +53,15 @@
   .stat b{display:block;font-size:17px}
   .stat.good b{color:#2c6b3a}.stat.bad b{color:#a3261c}
   .picks{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .picks button.rule{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+  .rec{border:1.5px solid var(--accent);border-radius:12px;padding:12px 14px;margin-top:10px;background:#fff}
+  .rec .rt{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-dark);font-weight:700;margin-bottom:8px}
+  .rec .opts{display:flex;gap:10px;flex-wrap:wrap}
+  .rec .opt{flex:1 1 150px;border-radius:10px;padding:10px 12px;background:var(--sub)}
+  .rec .opt small{display:block;font-size:11.5px;color:var(--gray);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .rec .opt b{display:block;font-size:22px;color:var(--accent-dark)}
+  .rec .opt span{font-size:12.5px;color:#444}
+  .rec .why{font-size:13px;color:#444;margin-top:8px;line-height:1.45}
   .picks button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:6px 11px;font-size:12.5px;cursor:pointer;color:var(--accent-dark);font-family:inherit}
   .ctab{width:100%;border-collapse:collapse;font-size:13.5px}
   .ctab th{text-align:left;font-size:11px;color:var(--gray);letter-spacing:.05em;text-transform:uppercase;padding:6px;border-bottom:2px solid var(--accent)}
@@ -165,6 +174,29 @@ function calc(p){
   const cur=num(p.current_rent), ren=num(p.renewal_rent), lo=num(p.market_low), hi=num(p.market_high);
   return {cur, ren, lo, hi, inc:(cur&&ren)?ren-cur:null, pct:(cur&&ren)?(ren-cur)/cur*100:null,
           blo:(ren&&lo)?lo-ren:null, bhi:(ren&&hi)?hi-ren:null};
+}
+/* ---------- Renewal rate rule (Nov 2026; replaces the 3–5% guideline and $100–$200 MTM premium) ----------
+   Spread = average comp rent − current rent.
+   Spread ≤ 5% of current rent: no 12-month increase; month-to-month = current + 7%.
+   Spread > 5%: 12-month = current + 35% of the spread; month-to-month = 12-month + 10%.
+   Everything rounds to the nearest $5. */
+const RULE = {threshold_pct:5, share:0.35, mtm_low_pct:7, mtm_high_pct:10, round_to:5};
+const r5 = v => Math.round(v/RULE.round_to)*RULE.round_to;
+function ruleRec(p){
+  const cur=num(p.current_rent);
+  const rents=(p.comps||[]).filter(c=>!c.outlier).map(c=>num(c.rent)).filter(v=>v>0);
+  if(!cur || !rents.length) return null;
+  const avg=rents.reduce((a,b)=>a+b,0)/rents.length, spread=avg-cur, spct=spread/cur*100;
+  let twelve, mtm, why;
+  if(spct<=RULE.threshold_pct){
+    twelve=cur; mtm=r5(cur*(1+RULE.mtm_low_pct/100));
+    why = spread<0 ? `Current rent is already above the comp average, so no 12-month increase. Month-to-month is current rent +${RULE.mtm_low_pct}%.`
+                   : `The spread is ${spct.toFixed(1)}% (${RULE.threshold_pct}% or less), so no 12-month increase. Month-to-month is current rent +${RULE.mtm_low_pct}%.`;
+  } else {
+    twelve=r5(cur+RULE.share*spread); mtm=r5(twelve*(1+RULE.mtm_high_pct/100));
+    why = `The spread is ${money(spread)} (${spct.toFixed(1)}%), over ${RULE.threshold_pct}%, so the 12-month rent goes up ${Math.round(RULE.share*100)}% of the spread. Month-to-month is the 12-month rent +${RULE.mtm_high_pct}%.`;
+  }
+  return {cur, avg, n:rents.length, spread, spct, twelve, mtm, why};
 }
 function shown(p){ return p.comps.filter(c=>c.show).slice(0,4); }
 
@@ -293,9 +325,10 @@ function propHTML(p,i){
     <div><div class="sub">Rent</div><div class="grid">
       <div class="f"><label for="lo${i}">Market range low</label><input id="lo${i}" type="number" step="25" data-i="${i}" data-f="market_low" value="${p.market_low??''}"></div>
       <div class="f"><label for="hi${i}">Market range high</label><input id="hi${i}" type="number" step="25" data-i="${i}" data-f="market_high" value="${p.market_high??''}"></div>
-      <div class="f"><label for="rr${i}">Recommended renewal rent</label><input id="rr${i}" type="number" step="25" data-i="${i}" data-f="renewal_rent" value="${p.renewal_rent??''}">
+      <div class="f"><label for="rr${i}">Recommended renewal rent</label><input id="rr${i}" type="number" step="5" data-i="${i}" data-f="renewal_rent" value="${p.renewal_rent??''}">
         <div class="picks" id="picks${i}"></div></div>
     </div>
+    <div id="rec${i}"></div>
     <div class="stats" id="stats${i}"></div></div>
 
     <div><div class="sub">Comps shown to the owner</div>
@@ -345,8 +378,17 @@ function refreshCalc(i){
   if(c.blo!=null) st+=`<div class="stat ${c.blo>0?'good':'bad'}"><span>${c.blo>0?'Still below market by':'Above market low by'}</span><b>${c.blo>0?money(c.blo)+' – '+money(c.bhi):money(-c.blo)}</b></div>`;
   if(c.inc!=null) st+=`<div class="stat"><span>Added per year</span><b>${money(c.inc*12)}</b></div>`;
   $('stats'+i).innerHTML = st || '<span class="muted">Enter the current rent, market range and renewal rent to see the math.</span>';
+  const rr=ruleRec(p);
+  $('rec'+i).innerHTML = rr ? `<div class="rec"><div class="rt">Our rule · internal only</div>
+    <div class="opts">
+      <div class="opt"><small>Avg comp rent (${rr.n} comp${rr.n>1?'s':''})</small><b>${money(rr.avg)}</b><span>Spread ${money(rr.spread)} (${rr.spct>=0?'+':''}${rr.spct.toFixed(1)}%)</span></div>
+      <div class="opt"><small>12-month</small><b>${money(rr.twelve)}</b><span>${rr.twelve===rr.cur?'No change':'+'+money(rr.twelve-rr.cur)+' ('+((rr.twelve-rr.cur)/rr.cur*100).toFixed(1)+'%)'}</span></div>
+      <div class="opt"><small>Month-to-month</small><b>${money(rr.mtm)}</b><span>+${money(rr.mtm-rr.cur)} (${((rr.mtm-rr.cur)/rr.cur*100).toFixed(1)}%)</span></div>
+    </div><div class="why">${esc(rr.why)} Outlier comps are left out of the average.</div></div>`
+    : (c.cur ? '' : '');
   let pk='';
-  if(c.cur){ const seen=new Set(), opts=[5,10,15].map(x=>['+'+x+'%', r25(c.cur*(1+x/100))]);
+  if(rr) pk+=`<button type="button" class="rule" data-act="pick" data-i="${i}" data-v="${rr.twelve}">Our rule · ${money(rr.twelve)}</button>`;
+  if(c.cur){ const seen=new Set(rr?[rr.twelve]:[]), opts=[5,10,15].map(x=>['+'+x+'%', r25(c.cur*(1+x/100))]);
     if(c.lo && c.lo>c.cur) opts.push(['⅓ of the gap', r25(c.cur+(c.lo-c.cur)/3)]);
     opts.forEach(([lab,v])=>{ if(seen.has(v)) return; seen.add(v);
       pk+=`<button type="button" data-act="pick" data-i="${i}" data-v="${v}">${lab} · ${money(v)}</button>`; }); }
@@ -418,6 +460,7 @@ async function extractFor(i, btn){
     if(!p.city_line && s.city_line) p.city_line=s.city_line;
     if(d.market_low) p.market_low=d.market_low; if(d.market_high) p.market_high=d.market_high;
     p.comps=(d.comps||[]).map(c=>({...c, show:false})); autoPick(p);
+    { const rr=ruleRec(p); if(rr && num(p.renewal_rent)==null) p.renewal_rent=rr.twelve; }
     p.estimates=d.estimates||[]; p.notes=d.notes||[]; p.files=d.files||[];
     pending[i]=[]; reading[i]=false; markDirty(); renderProps();
     $('xmsg'+i).innerHTML=`<span class="muted">Found ${p.comps.length} comps. The suggested market range and the 4 best comps are filled in; check them before sending.</span>`;
