@@ -104,7 +104,15 @@ expiring leases, and keeps every proposal in a history list so the team can reop
 Flow: owner name → **Owner's month-to-month leases** (or search Rentvine by address/tenant) → for each
 property upload the comp reports (Rentometer, RentRange, Zillow Rent Zestimate PDFs) → **Read reports**
 fills the property facts, every comp, a suggested market range and the 4 best comps → set the renewal
-rent (quick picks: +5/10/15%, a third of the gap) → **Download PDF** and copy the email.
+rent → **Download PDF** and copy the email.
+
+**Renewal rate rule** (Nov 2026, replaces the 3–5% guideline and $100–$200 MTM premium). Once the
+comps are read, an internal "Our rule" box shows the average comp rent (outliers left out), the spread
+(average − current rent), and the recommended rates, and the 12-month rate fills the renewal rent box:
+- spread ≤ 5% of current rent → no 12-month increase; month-to-month = current + 7%
+- spread > 5% → 12-month = current + 35% of the spread; month-to-month = 12-month + 10%
+- rounded to the nearest $5. The numbers live in `RULE` at the top of the editor script.
+The old quick picks (+5/10/15%, a third of the gap) are still there after the rule's pick.
 
 - **Owners never see data-source names.** The PDF and email show only market ranges and comps. The
   Zillow/RentRange/Rentometer estimates appear in the editor in a grey "internal only" box.
